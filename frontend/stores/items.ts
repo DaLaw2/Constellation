@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import type { Tag } from './tags'
 
 export interface Item {
   id: number
@@ -90,11 +91,21 @@ export const useItemsStore = defineStore('items', () => {
 
   async function getTagsForItem(itemId: number) {
     try {
-      const tagIds = await invoke<number[]>('get_tags_for_item', { itemId })
-      return tagIds
+      const tags = await invoke<Tag[]>('get_tags_for_item', { itemId })
+      return tags
     } catch (e) {
       error.value = e as string
       console.error('Failed to get tags for item:', e)
+      throw e
+    }
+  }
+
+  async function updateItemTags(itemId: number, tagIds: number[]) {
+    try {
+      await invoke('update_item_tags', { itemId, tagIds })
+    } catch (e) {
+      error.value = e as string
+      console.error('Failed to update item tags:', e)
       throw e
     }
   }
@@ -109,5 +120,6 @@ export const useItemsStore = defineStore('items', () => {
     addTagToItem,
     removeTagFromItem,
     getTagsForItem,
+    updateItemTags,
   }
 })

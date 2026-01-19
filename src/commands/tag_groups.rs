@@ -77,44 +77,61 @@ pub async fn update_tag_group(
     let conn = state.db_pool.get().await?;
 
     conn.interact(move |conn: &mut Connection| {
-        // Check if tag group exists
-        let exists: bool = conn.query_row(
-            "SELECT COUNT(*) FROM tag_groups WHERE id = ?1",
-            [id],
-            |row| row.get::<_, i64>(0).map(|count| count > 0),
-        )?;
+        // Begin transaction for atomic multi-statement update
+        conn.execute("BEGIN IMMEDIATE", [])?;
 
-        if !exists {
-            return Err(rusqlite::Error::QueryReturnedNoRows);
-        }
+        let result = (|| {
+            // Check if tag group exists
+            let exists: bool = conn.query_row(
+                "SELECT COUNT(*) FROM tag_groups WHERE id = ?1",
+                [id],
+                |row| row.get::<_, i64>(0).map(|count| count > 0),
+            )?;
 
-        // Update fields that are provided
-        if let Some(name) = name {
-            let name = name.trim();
-            if name.is_empty() {
-                return Err(rusqlite::Error::InvalidQuery);
+            if !exists {
+                return Err(rusqlite::Error::QueryReturnedNoRows);
             }
-            conn.execute(
-                "UPDATE tag_groups SET name = ?1, updated_at = unixepoch() WHERE id = ?2",
-                (name, id),
-            )?;
-        }
 
-        if let Some(color) = color {
-            conn.execute(
-                "UPDATE tag_groups SET color = ?1, updated_at = unixepoch() WHERE id = ?2",
-                (color, id),
-            )?;
-        }
+            // Update fields that are provided
+            if let Some(name) = name {
+                let name = name.trim();
+                if name.is_empty() {
+                    return Err(rusqlite::Error::InvalidQuery);
+                }
+                conn.execute(
+                    "UPDATE tag_groups SET name = ?1, updated_at = unixepoch() WHERE id = ?2",
+                    (name, id),
+                )?;
+            }
 
-        if let Some(display_order) = display_order {
-            conn.execute(
-                "UPDATE tag_groups SET display_order = ?1, updated_at = unixepoch() WHERE id = ?2",
-                (display_order, id),
-            )?;
-        }
+            if let Some(color) = color {
+                conn.execute(
+                    "UPDATE tag_groups SET color = ?1, updated_at = unixepoch() WHERE id = ?2",
+                    (color, id),
+                )?;
+            }
 
-        Ok::<(), rusqlite::Error>(())
+            if let Some(display_order) = display_order {
+                conn.execute(
+                    "UPDATE tag_groups SET display_order = ?1, updated_at = unixepoch() WHERE id = ?2",
+                    (display_order, id),
+                )?;
+            }
+
+            Ok::<(), rusqlite::Error>(())
+        })();
+
+        // Commit on success, rollback on error
+        match result {
+            Ok(_) => {
+                conn.execute("COMMIT", [])?;
+                Ok(())
+            }
+            Err(e) => {
+                conn.execute("ROLLBACK", [])?;
+                Err(e)
+            }
+        }
     })
     .await??;
 

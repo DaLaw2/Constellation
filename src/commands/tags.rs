@@ -116,29 +116,46 @@ pub async fn update_tag(
     let conn = state.db_pool.get().await?;
 
     conn.interact(move |conn: &mut Connection| {
-        // Check if tag exists
-        let exists: bool = conn.query_row(
-            "SELECT COUNT(*) FROM tags WHERE id = ?1",
-            [id],
-            |row| row.get::<_, i64>(0).map(|count| count > 0),
-        )?;
+        // Begin transaction for atomic update operation
+        conn.execute("BEGIN IMMEDIATE", [])?;
 
-        if !exists {
-            return Err(rusqlite::Error::QueryReturnedNoRows);
-        }
-
-        if let Some(value) = value {
-            let value = value.trim();
-            if value.is_empty() {
-                return Err(rusqlite::Error::InvalidQuery);
-            }
-            conn.execute(
-                "UPDATE tags SET value = ?1, updated_at = unixepoch() WHERE id = ?2",
-                (value, id),
+        let result = (|| {
+            // Check if tag exists
+            let exists: bool = conn.query_row(
+                "SELECT COUNT(*) FROM tags WHERE id = ?1",
+                [id],
+                |row| row.get::<_, i64>(0).map(|count| count > 0),
             )?;
-        }
 
-        Ok::<(), rusqlite::Error>(())
+            if !exists {
+                return Err(rusqlite::Error::QueryReturnedNoRows);
+            }
+
+            if let Some(value) = value {
+                let value = value.trim();
+                if value.is_empty() {
+                    return Err(rusqlite::Error::InvalidQuery);
+                }
+                conn.execute(
+                    "UPDATE tags SET value = ?1, updated_at = unixepoch() WHERE id = ?2",
+                    (value, id),
+                )?;
+            }
+
+            Ok::<(), rusqlite::Error>(())
+        })();
+
+        // Commit on success, rollback on error
+        match result {
+            Ok(_) => {
+                conn.execute("COMMIT", [])?;
+                Ok(())
+            }
+            Err(e) => {
+                conn.execute("ROLLBACK", [])?;
+                Err(e)
+            }
+        }
     })
     .await??;
 
