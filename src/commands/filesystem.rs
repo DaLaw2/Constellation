@@ -1,7 +1,42 @@
 use crate::error::{AppError, AppResult};
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
+
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
+/// Validate path to prevent path traversal attacks using ./ or ../
+/// Allows access to any directory, but blocks relative path manipulation
+fn validate_path(path: &str) -> AppResult<PathBuf> {
+    let path_buf = PathBuf::from(path);
+
+    // Check for path traversal patterns in components
+    for component in path_buf.components() {
+        match component {
+            Component::ParentDir => {
+                return Err(AppError::InvalidInput(
+                    "Path traversal not allowed: '..' detected".to_string()
+                ));
+            }
+            Component::CurDir => {
+                return Err(AppError::InvalidInput(
+                    "Path traversal not allowed: '.' detected".to_string()
+                ));
+            }
+            _ => {}
+        }
+    }
+
+    // Also check raw string for encoded or hidden traversal patterns
+    if path.contains("..") || path.contains("./") || path.contains(".\\") {
+        return Err(AppError::InvalidInput(
+            "Path traversal patterns not allowed".to_string()
+        ));
+    }
+
+    Ok(path_buf)
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DriveInfo {
@@ -161,7 +196,8 @@ fn get_drive_space(drive_path: &str) -> (Option<u64>, Option<u64>) {
 /// Read directory contents
 #[tauri::command]
 pub async fn read_directory(path: String) -> AppResult<Vec<FileEntry>> {
-    let path_buf = PathBuf::from(&path);
+    // Validate path to prevent traversal attacks
+    let path_buf = validate_path(&path)?;
 
     if !path_buf.exists() {
         return Err(AppError::InvalidInput(format!("Path does not exist: {}", path)));
@@ -271,7 +307,8 @@ fn is_hidden_file(path: &Path) -> bool {
 /// Get detailed file metadata
 #[tauri::command]
 pub async fn get_file_metadata(path: String) -> AppResult<FileMetadata> {
-    let path_buf = PathBuf::from(&path);
+    // Validate path to prevent traversal attacks
+    let path_buf = validate_path(&path)?;
 
     if !path_buf.exists() {
         return Err(AppError::InvalidInput(format!("Path does not exist: {}", path)));
@@ -313,7 +350,8 @@ pub async fn get_file_metadata(path: String) -> AppResult<FileMetadata> {
 /// Open file with default application
 #[tauri::command]
 pub async fn open_file_external(path: String) -> AppResult<()> {
-    let path_buf = PathBuf::from(&path);
+    // Validate path to prevent traversal attacks
+    let path_buf = validate_path(&path)?;
 
     if !path_buf.exists() {
         return Err(AppError::InvalidInput(format!("File does not exist: {}", path)));
@@ -330,7 +368,8 @@ pub async fn open_file_external(path: String) -> AppResult<()> {
 /// Reveal file in Windows Explorer
 #[tauri::command]
 pub async fn reveal_in_explorer(path: String) -> AppResult<()> {
-    let path_buf = PathBuf::from(&path);
+    // Validate path to prevent traversal attacks
+    let path_buf = validate_path(&path)?;
 
     if !path_buf.exists() {
         return Err(AppError::InvalidInput(format!("Path does not exist: {}", path)));
@@ -338,12 +377,16 @@ pub async fn reveal_in_explorer(path: String) -> AppResult<()> {
 
     #[cfg(target_os = "windows")]
     {
-        // Use Windows Explorer to show the file
-        let explorer_path = "explorer.exe";
-        let arg = format!("/select,\"{}\"", path_buf.display());
+        // Canonicalize path to get absolute path and prevent command injection
+        let canonical_path = path_buf.canonicalize()
+            .map_err(|e| AppError::InvalidInput(format!("Invalid path: {}", e)))?;
 
-        match std::process::Command::new(explorer_path)
-            .arg(arg)
+        // Use separate arguments to prevent command injection
+        // The /select, argument must include the comma with the path
+        let select_arg = format!("/select,{}", canonical_path.display());
+
+        match std::process::Command::new("explorer.exe")
+            .raw_arg(&select_arg)
             .spawn()
         {
             Ok(_) => Ok(()),

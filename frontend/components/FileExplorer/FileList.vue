@@ -61,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import { useFileExplorerStore } from '../../stores/fileExplorer'
 import { useFileContextMenu } from '../../composables/useFileContextMenu'
@@ -76,7 +76,10 @@ const currentPath = computed(() => fileExplorerStore.currentPath)
 const files = computed(() => fileExplorerStore.currentFiles)
 const loading = computed(() => fileExplorerStore.loading)
 const error = computed(() => fileExplorerStore.error)
-const selectedPath = computed(() => fileExplorerStore.currentPath)
+
+// Local selection state (writable ref, not computed)
+// Selection is a UI concern separate from navigation
+const selectedPath = ref<string | null>(null)
 
 const canNavigateUp = computed(() => {
   if (!currentPath.value) return false
@@ -86,16 +89,18 @@ const canNavigateUp = computed(() => {
 
 function navigateUp() {
   fileExplorerStore.navigateUp()
+  selectedPath.value = null // Clear selection on navigation
 }
 
 function refresh() {
   if (currentPath.value) {
     fileExplorerStore.readDirectory(currentPath.value)
+    selectedPath.value = null // Clear selection on refresh
   }
 }
 
 function handleFileClick(entry: FileEntry) {
-  // Single click - just select
+  // Single click - update local selection state
   selectedPath.value = entry.path
 }
 
@@ -103,6 +108,7 @@ function handleFileDoubleClick(entry: FileEntry) {
   if (entry.is_directory) {
     // Navigate into directory
     fileExplorerStore.navigateTo(entry.path)
+    selectedPath.value = null // Clear selection on navigation
   } else {
     // Open file with default application
     fileExplorerStore.openFileExternal(entry.path)
@@ -110,6 +116,9 @@ function handleFileDoubleClick(entry: FileEntry) {
 }
 
 function handleFileContextMenu(entry: FileEntry, event: MouseEvent) {
+  // Select file before showing context menu
+  selectedPath.value = entry.path
+
   showFileContextMenu({
     entry,
     x: event.x,

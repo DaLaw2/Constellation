@@ -1,9 +1,10 @@
 ---
-status: pending
+status: completed
 priority: p1
 issue_id: "002"
 tags: [code-review, security, critical, frontend]
 dependencies: []
+completed_at: 2026-01-19
 ---
 
 # Content Security Policy Disabled - CRITICAL

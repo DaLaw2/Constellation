@@ -2,7 +2,40 @@ use crate::db::models::{Item, Tag};
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
 use rusqlite::{Connection, OptionalExtension};
+use std::path::{Component, PathBuf};
 use tauri::State;
+
+/// Validate path to prevent path traversal attacks using ./ or ../
+/// Allows any valid path, but blocks relative path manipulation
+fn validate_path(path: &str) -> AppResult<String> {
+    let path_buf = PathBuf::from(path);
+
+    // Check for path traversal patterns in components
+    for component in path_buf.components() {
+        match component {
+            Component::ParentDir => {
+                return Err(AppError::InvalidInput(
+                    "Path traversal not allowed: '..' detected".to_string()
+                ));
+            }
+            Component::CurDir => {
+                return Err(AppError::InvalidInput(
+                    "Path traversal not allowed: '.' detected".to_string()
+                ));
+            }
+            _ => {}
+        }
+    }
+
+    // Also check raw string for encoded or hidden traversal patterns
+    if path.contains("..") || path.contains("./") || path.contains(".\\") {
+        return Err(AppError::InvalidInput(
+            "Path traversal patterns not allowed".to_string()
+        ));
+    }
+
+    Ok(path.to_string())
+}
 
 #[tauri::command]
 pub async fn create_item(
@@ -16,6 +49,9 @@ pub async fn create_item(
     if path.is_empty() {
         return Err(AppError::InvalidInput("Path cannot be empty".to_string()));
     }
+
+    // Validate path to prevent traversal attacks
+    let path = validate_path(&path)?;
 
     let conn = state.db_pool.get().await?;
 
@@ -66,6 +102,9 @@ pub async fn get_item(id: i64, state: State<'_, AppState>) -> AppResult<Item> {
 
 #[tauri::command]
 pub async fn get_item_by_path(path: String, state: State<'_, AppState>) -> AppResult<Option<Item>> {
+    // Validate path to prevent traversal attacks
+    let path = validate_path(&path)?;
+
     let conn = state.db_pool.get().await?;
 
     let item = conn
@@ -109,6 +148,12 @@ pub async fn update_item(
     modified_time: Option<i64>,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
+    // Validate path if provided (before database operations)
+    let validated_path = match &path {
+        Some(p) => Some(validate_path(p)?),
+        None => None,
+    };
+
     let conn = state.db_pool.get().await?;
 
     conn.interact(move |conn: &mut Connection| {
@@ -127,7 +172,7 @@ pub async fn update_item(
                 return Err(rusqlite::Error::QueryReturnedNoRows);
             }
 
-            if let Some(path) = path {
+            if let Some(path) = validated_path {
                 let path = path.trim();
                 if path.is_empty() {
                     return Err(rusqlite::Error::InvalidQuery);
