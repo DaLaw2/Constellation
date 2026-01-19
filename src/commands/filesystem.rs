@@ -1,0 +1,358 @@
+use crate::error::{AppError, AppResult};
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::{Path, PathBuf};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DriveInfo {
+    pub letter: String,
+    pub label: Option<String>,
+    pub drive_type: String,
+    pub total_space: Option<u64>,
+    pub available_space: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileEntry {
+    pub name: String,
+    pub path: String,
+    pub is_directory: bool,
+    pub size: Option<u64>,
+    pub modified_time: Option<i64>,
+    pub is_hidden: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileMetadata {
+    pub path: String,
+    pub size: Option<u64>,
+    pub modified_time: Option<i64>,
+    pub created_time: Option<i64>,
+    pub is_directory: bool,
+    pub is_readonly: bool,
+}
+
+/// Get all available drives on Windows
+#[tauri::command]
+pub async fn get_drives() -> AppResult<Vec<DriveInfo>> {
+    #[cfg(target_os = "windows")]
+    {
+        use std::ffi::OsStr;
+        use std::os::windows::ffi::OsStrExt;
+
+        let mut drives = Vec::new();
+
+        // Get logical drives bitmask
+        let drives_mask = unsafe { winapi::um::fileapi::GetLogicalDrives() };
+
+        for i in 0..26 {
+            if (drives_mask & (1 << i)) != 0 {
+                let letter = (b'A' + i) as char;
+                let drive_path = format!("{}:\\", letter);
+
+                // Get drive type
+                let wide_path: Vec<u16> = OsStr::new(&drive_path)
+                    .encode_wide()
+                    .chain(std::iter::once(0))
+                    .collect();
+
+                let drive_type = unsafe { winapi::um::fileapi::GetDriveTypeW(wide_path.as_ptr()) };
+
+                let drive_type_str = match drive_type {
+                    winapi::um::winbase::DRIVE_FIXED => "fixed",
+                    winapi::um::winbase::DRIVE_REMOVABLE => "removable",
+                    winapi::um::winbase::DRIVE_REMOTE => "network",
+                    winapi::um::winbase::DRIVE_CDROM => "cdrom",
+                    winapi::um::winbase::DRIVE_RAMDISK => "ramdisk",
+                    _ => "unknown",
+                };
+
+                // Only include fixed and removable drives
+                if drive_type_str == "fixed" || drive_type_str == "removable" {
+                    // Try to get drive label and space info
+                    let label = get_drive_label(&drive_path);
+                    let (total_space, available_space) = get_drive_space(&drive_path);
+
+                    drives.push(DriveInfo {
+                        letter: letter.to_string(),
+                        label,
+                        drive_type: drive_type_str.to_string(),
+                        total_space,
+                        available_space,
+                    });
+                }
+            }
+        }
+
+        Ok(drives)
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        Err(AppError::InvalidInput("This application only supports Windows".to_string()))
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn get_drive_label(drive_path: &str) -> Option<String> {
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+
+    let wide_path: Vec<u16> = OsStr::new(drive_path)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+
+    let mut volume_name_buffer = vec![0u16; 256];
+
+    let result = unsafe {
+        winapi::um::fileapi::GetVolumeInformationW(
+            wide_path.as_ptr(),
+            volume_name_buffer.as_mut_ptr(),
+            volume_name_buffer.len() as u32,
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+            0,
+        )
+    };
+
+    if result != 0 {
+        let len = volume_name_buffer.iter().position(|&c| c == 0).unwrap_or(0);
+        if len > 0 {
+            return String::from_utf16(&volume_name_buffer[..len]).ok();
+        }
+    }
+
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn get_drive_space(drive_path: &str) -> (Option<u64>, Option<u64>) {
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+
+    let wide_path: Vec<u16> = OsStr::new(drive_path)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+
+    let mut available_bytes = 0u64;
+    let mut total_bytes = 0u64;
+    let mut free_bytes = 0u64;
+
+    let result = unsafe {
+        winapi::um::fileapi::GetDiskFreeSpaceExW(
+            wide_path.as_ptr(),
+            &mut available_bytes as *mut _ as *mut _,
+            &mut total_bytes as *mut _ as *mut _,
+            &mut free_bytes as *mut _ as *mut _,
+        )
+    };
+
+    if result != 0 {
+        (Some(total_bytes), Some(available_bytes))
+    } else {
+        (None, None)
+    }
+}
+
+/// Read directory contents
+#[tauri::command]
+pub async fn read_directory(path: String) -> AppResult<Vec<FileEntry>> {
+    let path_buf = PathBuf::from(&path);
+
+    if !path_buf.exists() {
+        return Err(AppError::InvalidInput(format!("Path does not exist: {}", path)));
+    }
+
+    if !path_buf.is_dir() {
+        return Err(AppError::InvalidInput(format!("Path is not a directory: {}", path)));
+    }
+
+    let mut entries = Vec::new();
+
+    match fs::read_dir(&path_buf) {
+        Ok(dir_entries) => {
+            for entry_result in dir_entries {
+                match entry_result {
+                    Ok(entry) => {
+                        let entry_path = entry.path();
+                        let metadata = entry.metadata();
+
+                        let file_name = entry.file_name()
+                            .to_string_lossy()
+                            .to_string();
+
+                        // Check if hidden (Windows)
+                        let is_hidden = is_hidden_file(&entry_path);
+
+                        // Skip hidden files by default
+                        if is_hidden {
+                            continue;
+                        }
+
+                        if let Ok(meta) = metadata {
+                            let size = if meta.is_file() {
+                                Some(meta.len())
+                            } else {
+                                None
+                            };
+
+                            let modified_time = meta.modified()
+                                .ok()
+                                .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+                                .map(|duration| duration.as_secs() as i64);
+
+                            entries.push(FileEntry {
+                                name: file_name,
+                                path: entry_path.to_string_lossy().to_string(),
+                                is_directory: meta.is_dir(),
+                                size,
+                                modified_time,
+                                is_hidden,
+                            });
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Error reading directory entry: {}", e);
+                        // Continue with other entries
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            return Err(AppError::InvalidInput(format!("Failed to read directory: {}", e)));
+        }
+    }
+
+    // Sort entries: directories first, then files, alphabetically
+    entries.sort_by(|a, b| {
+        match (a.is_directory, b.is_directory) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
+        }
+    });
+
+    Ok(entries)
+}
+
+#[cfg(target_os = "windows")]
+fn is_hidden_file(path: &Path) -> bool {
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
+    use winapi::um::fileapi::{GetFileAttributesW, INVALID_FILE_ATTRIBUTES};
+    use winapi::um::winnt::FILE_ATTRIBUTE_HIDDEN;
+
+    let wide_path: Vec<u16> = OsStr::new(path)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+
+    let attributes = unsafe { GetFileAttributesW(wide_path.as_ptr()) };
+
+    if attributes == INVALID_FILE_ATTRIBUTES {
+        return false;
+    }
+
+    (attributes & FILE_ATTRIBUTE_HIDDEN) != 0
+}
+
+#[cfg(not(target_os = "windows"))]
+fn is_hidden_file(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .map(|name| name.starts_with('.'))
+        .unwrap_or(false)
+}
+
+/// Get detailed file metadata
+#[tauri::command]
+pub async fn get_file_metadata(path: String) -> AppResult<FileMetadata> {
+    let path_buf = PathBuf::from(&path);
+
+    if !path_buf.exists() {
+        return Err(AppError::InvalidInput(format!("Path does not exist: {}", path)));
+    }
+
+    match fs::metadata(&path_buf) {
+        Ok(meta) => {
+            let size = if meta.is_file() {
+                Some(meta.len())
+            } else {
+                None
+            };
+
+            let modified_time = meta.modified()
+                .ok()
+                .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|duration| duration.as_secs() as i64);
+
+            let created_time = meta.created()
+                .ok()
+                .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+                .map(|duration| duration.as_secs() as i64);
+
+            Ok(FileMetadata {
+                path: path.clone(),
+                size,
+                modified_time,
+                created_time,
+                is_directory: meta.is_dir(),
+                is_readonly: meta.permissions().readonly(),
+            })
+        }
+        Err(e) => {
+            Err(AppError::InvalidInput(format!("Failed to get file metadata: {}", e)))
+        }
+    }
+}
+
+/// Open file with default application
+#[tauri::command]
+pub async fn open_file_external(path: String) -> AppResult<()> {
+    let path_buf = PathBuf::from(&path);
+
+    if !path_buf.exists() {
+        return Err(AppError::InvalidInput(format!("File does not exist: {}", path)));
+    }
+
+    // Use the opener crate to open with default application
+    if let Err(e) = opener::open(&path_buf) {
+        return Err(AppError::InvalidInput(format!("Failed to open file: {}", e)));
+    }
+
+    Ok(())
+}
+
+/// Reveal file in Windows Explorer
+#[tauri::command]
+pub async fn reveal_in_explorer(path: String) -> AppResult<()> {
+    let path_buf = PathBuf::from(&path);
+
+    if !path_buf.exists() {
+        return Err(AppError::InvalidInput(format!("Path does not exist: {}", path)));
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        // Use Windows Explorer to show the file
+        let explorer_path = "explorer.exe";
+        let arg = format!("/select,\"{}\"", path_buf.display());
+
+        match std::process::Command::new(explorer_path)
+            .arg(arg)
+            .spawn()
+        {
+            Ok(_) => Ok(()),
+            Err(e) => Err(AppError::InvalidInput(format!("Failed to open Explorer: {}", e))),
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        Err(AppError::InvalidInput("This feature is only supported on Windows".to_string()))
+    }
+}

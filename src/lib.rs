@@ -59,6 +59,12 @@ pub fn run() {
             commands::items::add_tag_to_item,
             commands::items::remove_tag_from_item,
             commands::items::get_tags_for_item,
+            // File System commands
+            commands::filesystem::get_drives,
+            commands::filesystem::read_directory,
+            commands::filesystem::get_file_metadata,
+            commands::filesystem::open_file_external,
+            commands::filesystem::reveal_in_explorer,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

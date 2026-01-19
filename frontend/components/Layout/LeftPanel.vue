@@ -17,13 +17,7 @@
 
     <div class="panel-content">
       <div v-if="currentMode === 'file-browser'" class="file-browser-panel">
-        <div class="empty-state">
-          <div class="empty-state-icon">📁</div>
-          <div class="empty-state-title">File Browser</div>
-          <div class="empty-state-description">
-            Directory tree will be implemented in Phase 1.3
-          </div>
-        </div>
+        <DirectoryTree />
       </div>
 
       <div v-else class="tag-management-panel">
@@ -38,6 +32,7 @@ import { computed } from 'vue'
 import { useAppStore } from '../../stores/app'
 import type { ViewMode } from '../../stores/app'
 import TagPanel from '../TagManagement/TagPanel.vue'
+import DirectoryTree from '../FileExplorer/DirectoryTree.vue'
 
 const appStore = useAppStore()
 
