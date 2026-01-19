@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_compound-engineering_context7__resolve-library-id",
+      "WebSearch",
+      "Bash(tree:*)",
+      "mcp__plugin_compound-engineering_context7__query-docs",
+      "Skill(compound-engineering:deepen-plan)",
+      "WebFetch(domain:www.powersync.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.rs)",
+      "WebFetch(domain:phiresky.github.io)",
+      "WebFetch(domain:docs.velociraptor.app)",
+      "WebFetch(domain:charlesleifer.com)",
+      "WebFetch(domain:cj.rs)",
+      "Skill(compound-engineering:\\\\workflows:work)",
+      "Bash(npm create:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(cargo build:*)",
+      "Bash(cargo clean:*)",
+      "Bash(npm run tauri:*)",
+      "Bash(timeout 30 tail:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
