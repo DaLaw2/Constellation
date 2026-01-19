@@ -112,43 +112,60 @@ pub async fn update_item(
     let conn = state.db_pool.get().await?;
 
     conn.interact(move |conn: &mut Connection| {
-        // Check if item exists
-        let exists: bool = conn.query_row(
-            "SELECT COUNT(*) FROM items WHERE id = ?1",
-            [id],
-            |row| row.get::<_, i64>(0).map(|count| count > 0),
-        )?;
+        // Begin transaction for atomic multi-statement update
+        conn.execute("BEGIN IMMEDIATE", [])?;
 
-        if !exists {
-            return Err(rusqlite::Error::QueryReturnedNoRows);
-        }
+        let result = (|| {
+            // Check if item exists
+            let exists: bool = conn.query_row(
+                "SELECT COUNT(*) FROM items WHERE id = ?1",
+                [id],
+                |row| row.get::<_, i64>(0).map(|count| count > 0),
+            )?;
 
-        if let Some(path) = path {
-            let path = path.trim();
-            if path.is_empty() {
-                return Err(rusqlite::Error::InvalidQuery);
+            if !exists {
+                return Err(rusqlite::Error::QueryReturnedNoRows);
             }
-            conn.execute(
-                "UPDATE items SET path = ?1, updated_at = unixepoch() WHERE id = ?2",
-                (path, id),
-            )?;
-        }
 
-        if let Some(size) = size {
-            conn.execute(
-                "UPDATE items SET size = ?1, updated_at = unixepoch() WHERE id = ?2",
-                (size, id),
-            )?;
-        }
+            if let Some(path) = path {
+                let path = path.trim();
+                if path.is_empty() {
+                    return Err(rusqlite::Error::InvalidQuery);
+                }
+                conn.execute(
+                    "UPDATE items SET path = ?1, updated_at = unixepoch() WHERE id = ?2",
+                    (path, id),
+                )?;
+            }
 
-        if let Some(modified_time) = modified_time {
-            conn.execute(
-                "UPDATE items SET modified_time = ?1, updated_at = unixepoch() WHERE id = ?2",
-                (modified_time, id),
-            )?;
-        }
+            if let Some(size) = size {
+                conn.execute(
+                    "UPDATE items SET size = ?1, updated_at = unixepoch() WHERE id = ?2",
+                    (size, id),
+                )?;
+            }
 
-        Ok::<(), rusqlite::Error>(())
+            if let Some(modified_time) = modified_time {
+                conn.execute(
+                    "UPDATE items SET modified_time = ?1, updated_at = unixepoch() WHERE id = ?2",
+                    (modified_time, id),
+                )?;
+            }
+
+            Ok::<(), rusqlite::Error>(())
+        })();
+
+        // Commit on success, rollback on error
+        match result {
+            Ok(_) => {
+                conn.execute("COMMIT", [])?;
+                Ok(())
+            }
+            Err(e) => {
+                conn.execute("ROLLBACK", [])?;
+                Err(e)
+            }
+        }
     })
     .await??;
 

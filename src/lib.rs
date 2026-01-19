@@ -4,7 +4,7 @@ mod error;
 mod state;
 
 use state::{AppConfig, AppState};
-use std::path::PathBuf;
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
