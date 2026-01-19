@@ -26,7 +26,7 @@ export default defineConfig(async () => ({
       : undefined,
     watch: {
       // 3. tell Vite to ignore watching Rust files
-      ignored: ["**/src/**", "**/target/**", "**/Cargo.toml", "**/Cargo.lock"],
+      ignored: ["../src/**", "../target/**", "../Cargo.toml", "../Cargo.lock"],
     },
   },
 }));
