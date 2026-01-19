@@ -100,6 +100,16 @@ export const useItemsStore = defineStore('items', () => {
     }
   }
 
+  async function updateItemTags(itemId: number, tagIds: number[]) {
+    try {
+      await invoke('update_item_tags', { itemId, tagIds })
+    } catch (e) {
+      error.value = e as string
+      console.error('Failed to update item tags:', e)
+      throw e
+    }
+  }
+
   return {
     items,
     loading,
@@ -110,5 +120,6 @@ export const useItemsStore = defineStore('items', () => {
     addTagToItem,
     removeTagFromItem,
     getTagsForItem,
+    updateItemTags,
   }
 })

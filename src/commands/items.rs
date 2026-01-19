@@ -415,3 +415,62 @@ pub async fn get_tags_for_item(
 
     Ok(tags)
 }
+
+/// Update all tags for an item atomically (replaces existing tags)
+#[tauri::command]
+pub async fn update_item_tags(
+    item_id: i64,
+    tag_ids: Vec<i64>,
+    state: State<'_, AppState>,
+) -> AppResult<()> {
+    let conn = state.db_pool.get().await?;
+
+    conn.interact(move |conn: &mut Connection| {
+        // Begin transaction for atomic tag replacement
+        conn.execute("BEGIN IMMEDIATE", [])?;
+
+        let result = (|| {
+            // Check if item exists and is not deleted
+            let exists: bool = conn.query_row(
+                "SELECT COUNT(*) FROM items WHERE id = ?1 AND is_deleted = 0",
+                [item_id],
+                |row| row.get::<_, i64>(0).map(|count| count > 0),
+            )?;
+
+            if !exists {
+                return Err(rusqlite::Error::QueryReturnedNoRows);
+            }
+
+            // Delete all existing tags for this item
+            conn.execute(
+                "DELETE FROM item_tags WHERE item_id = ?1",
+                [item_id],
+            )?;
+
+            // Insert new tags
+            for tag_id in tag_ids {
+                conn.execute(
+                    "INSERT INTO item_tags (item_id, tag_id) VALUES (?1, ?2)",
+                    (item_id, tag_id),
+                )?;
+            }
+
+            Ok::<(), rusqlite::Error>(())
+        })();
+
+        // Commit on success, rollback on error
+        match result {
+            Ok(_) => {
+                conn.execute("COMMIT", [])?;
+                Ok(())
+            }
+            Err(e) => {
+                conn.execute("ROLLBACK", [])?;
+                Err(e)
+            }
+        }
+    })
+    .await??;
+
+    Ok(())
+}

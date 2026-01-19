@@ -19,12 +19,24 @@
         </span>
       </div>
     </div>
+    <div class="file-tags" @click.stop>
+      <TagCell
+        :item-tags="itemTags"
+        :tag-groups="tagGroups"
+        :tags="allTags"
+        @update:tags="handleTagsUpdate"
+        @create-tag="handleCreateTag"
+      />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import type { FileEntry } from '../../stores/fileExplorer'
+import { useTagsStore, type Tag, type TagGroup } from '../../stores/tags'
+import { useItemsStore } from '../../stores/items'
+import TagCell from '../TagManagement/TagCell.vue'
 
 interface Props {
   entry: FileEntry
@@ -38,7 +50,85 @@ const emit = defineEmits<{
   contextMenu: [entry: FileEntry, event: MouseEvent]
 }>()
 
+const tagsStore = useTagsStore()
+const itemsStore = useItemsStore()
+
 const isSelected = computed(() => props.selected)
+const tagGroups = computed(() => tagsStore.tagGroups)
+const allTags = computed(() => tagsStore.tags)
+
+// Track tags for this specific file item
+const itemTags = ref<Tag[]>([])
+const itemId = ref<number | null>(null)
+
+// Load item and its tags when entry changes
+watch(() => props.entry.path, async (newPath) => {
+  try {
+    // First, check if this file is tracked in the database
+    const item = await itemsStore.getItemByPath(newPath)
+    if (item) {
+      itemId.value = item.id
+      // Load tags for this item
+      const tags = await itemsStore.getTagsForItem(item.id)
+      itemTags.value = tags
+    } else {
+      itemId.value = null
+      itemTags.value = []
+    }
+  } catch (e) {
+    console.error('Failed to load item tags:', e)
+    itemTags.value = []
+  }
+}, { immediate: true })
+
+async function handleTagsUpdate(tagIds: number[]) {
+  try {
+    // If item doesn't exist in database, create it first
+    if (itemId.value === null) {
+      const newId = await itemsStore.createItem(
+        props.entry.path,
+        props.entry.is_directory,
+        props.entry.size,
+        props.entry.modified_time
+      )
+      itemId.value = newId
+    }
+
+    // Update tags
+    await itemsStore.updateItemTags(itemId.value, tagIds)
+
+    // Refresh tags display
+    const tags = await itemsStore.getTagsForItem(itemId.value)
+    itemTags.value = tags
+  } catch (e) {
+    console.error('Failed to update tags:', e)
+  }
+}
+
+async function handleCreateTag(groupId: number, value: string) {
+  try {
+    const newTagId = await tagsStore.createTag(groupId, value)
+    // Automatically select the new tag
+    if (itemId.value !== null) {
+      const currentIds = itemTags.value.map(t => t.id)
+      await itemsStore.updateItemTags(itemId.value, [...currentIds, newTagId])
+      const tags = await itemsStore.getTagsForItem(itemId.value)
+      itemTags.value = tags
+    }
+  } catch (e) {
+    console.error('Failed to create tag:', e)
+  }
+}
+
+// Load tag groups and tags on mount
+onMounted(() => {
+  if (tagsStore.tagGroups.length === 0) {
+    tagsStore.loadTagGroups()
+  }
+  if (tagsStore.tags.length === 0) {
+    tagsStore.loadTags()
+  }
+})
 
 function handleClick() {
   emit('click', props.entry)
@@ -214,5 +304,12 @@ function formatDate(timestamp: number): string {
 .file-size,
 .file-date {
   white-space: nowrap;
+}
+
+.file-tags {
+  flex-shrink: 0;
+  min-width: 150px;
+  max-width: 250px;
+  position: relative;
 }
 </style>

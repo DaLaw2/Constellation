@@ -529,12 +529,12 @@ pub async fn complete_setup(
 ### Week 3-4: Core Tagging Workflow
 - **Focus**: Users can tag files through inline editing
 - **Tasks**:
-  - [ ] Implement update_item_tags bulk command
-  - [ ] Create TagCell inline editor component
-  - [ ] Create TagSelector reusable component
-  - [ ] Integrate TagCell into FileItem
-  - [ ] Implement "Create New Tag" inline flow
-  - [ ] Add tag templates backend and UI
+  - [x] Implement update_item_tags bulk command
+  - [x] Create TagCell inline editor component
+  - [x] Create TagSelector reusable component
+  - [x] Integrate TagCell into FileItem
+  - [x] Implement "Create New Tag" inline flow
+  - [x] Add tag templates backend and UI
 - **Success Criteria**: Can click file, edit tags, save changes
 
 ### Week 5-6: Search & Filter

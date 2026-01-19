@@ -59,6 +59,13 @@ pub fn run() {
             commands::items::add_tag_to_item,
             commands::items::remove_tag_from_item,
             commands::items::get_tags_for_item,
+            commands::items::update_item_tags,
+            // Tag Template commands
+            commands::tag_templates::create_tag_template,
+            commands::tag_templates::get_tag_templates,
+            commands::tag_templates::apply_tag_template,
+            commands::tag_templates::delete_tag_template,
+            commands::tag_templates::update_tag_template,
             // File System commands
             commands::filesystem::get_drives,
             commands::filesystem::read_directory,
