@@ -1,4 +1,4 @@
-use crate::db::models::Item;
+use crate::db::models::{Item, Tag};
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
 use rusqlite::{Connection, OptionalExtension};
@@ -339,22 +339,34 @@ pub async fn remove_tag_from_item(
 pub async fn get_tags_for_item(
     item_id: i64,
     state: State<'_, AppState>,
-) -> AppResult<Vec<i64>> {
+) -> AppResult<Vec<Tag>> {
     let conn = state.db_pool.get().await?;
 
-    let tag_ids = conn
+    let tags = conn
         .interact(move |conn: &mut Connection| {
             let mut stmt = conn.prepare(
-                "SELECT tag_id FROM item_tags WHERE item_id = ?1"
+                "SELECT t.id, t.group_id, t.value, t.created_at, t.updated_at
+                 FROM tags t
+                 INNER JOIN item_tags it ON it.tag_id = t.id
+                 WHERE it.item_id = ?1
+                 ORDER BY t.value ASC"
             )?;
 
             let tags = stmt
-                .query_map([item_id], |row| row.get(0))?
-                .collect::<Result<Vec<i64>, _>>()?;
+                .query_map([item_id], |row| {
+                    Ok(Tag {
+                        id: row.get(0)?,
+                        group_id: row.get(1)?,
+                        value: row.get(2)?,
+                        created_at: row.get(3)?,
+                        updated_at: row.get(4)?,
+                    })
+                })?
+                .collect::<Result<Vec<Tag>, _>>()?;
 
-            Ok::<Vec<i64>, rusqlite::Error>(tags)
+            Ok::<Vec<Tag>, rusqlite::Error>(tags)
         })
         .await??;
 
-    Ok(tag_ids)
+    Ok(tags)
 }
