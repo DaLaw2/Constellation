@@ -5,13 +5,19 @@
         :class="['tab-btn', { active: currentMode === 'file-browser' }]"
         @click="setMode('file-browser')"
       >
-        🗂️ File Browser
+        🗂️ Files
       </button>
       <button
         :class="['tab-btn', { active: currentMode === 'tag-management' }]"
         @click="setMode('tag-management')"
       >
-        🏷️ Tag Management
+        🏷️ Tags
+      </button>
+      <button
+        :class="['tab-btn', { active: currentMode === 'search' }]"
+        @click="setMode('search')"
+      >
+        🔍 Search
       </button>
     </div>
 
@@ -20,8 +26,12 @@
         <DirectoryTree />
       </div>
 
-      <div v-else class="tag-management-panel">
+      <div v-else-if="currentMode === 'tag-management'" class="tag-management-panel">
         <TagPanel />
+      </div>
+
+      <div v-else class="search-panel">
+        <FilterPanel />
       </div>
     </div>
   </div>
@@ -33,6 +43,7 @@ import { useAppStore } from '../../stores/app'
 import type { ViewMode } from '../../stores/app'
 import TagPanel from '../TagManagement/TagPanel.vue'
 import DirectoryTree from '../FileExplorer/DirectoryTree.vue'
+import FilterPanel from '../Search/FilterPanel.vue'
 
 const appStore = useAppStore()
 
@@ -88,7 +99,8 @@ function setMode(mode: ViewMode) {
 }
 
 .file-browser-panel,
-.tag-management-panel {
+.tag-management-panel,
+.search-panel {
   height: 100%;
   overflow: auto;
 }

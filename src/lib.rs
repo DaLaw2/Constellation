@@ -12,7 +12,10 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             // Initialize database
-            let app_data_dir = app.path().app_data_dir().expect("Failed to get app data directory");
+            let app_data_dir = app
+                .path()
+                .app_data_dir()
+                .expect("Failed to get app data directory");
             std::fs::create_dir_all(&app_data_dir).expect("Failed to create app data directory");
 
             let db_path = app_data_dir.join("constellation.db");
@@ -47,6 +50,8 @@ pub fn run() {
             commands::tags::get_all_tags,
             commands::tags::update_tag,
             commands::tags::delete_tag,
+            commands::tags::get_tag_usage_counts,
+            commands::tags::search_tags,
             // Item commands
             commands::items::create_item,
             commands::items::get_item,
@@ -72,6 +77,11 @@ pub fn run() {
             commands::filesystem::get_file_metadata,
             commands::filesystem::open_file_external,
             commands::filesystem::reveal_in_explorer,
+            // Search commands
+            commands::search::search_items_by_tags_and,
+            commands::search::search_items_by_tags_or,
+            commands::search::search_items_by_filename,
+            commands::search::search_items,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
