@@ -39,6 +39,7 @@
                   v-model="newTagValue"
                   type="text"
                   placeholder="New tag name..."
+                  :class="{ error: isDuplicate }"
                   @keyup.enter="createTag(group.id)"
                   @keyup.escape="cancelCreate"
                 />
@@ -90,6 +91,7 @@ const emit = defineEmits<{
 const creatingInGroup = ref<number | null>(null)
 const newTagValue = ref('')
 const newTagInputRef = ref<HTMLInputElement | null>(null)
+const isDuplicate = ref(false)
 
 function getTagsByGroup(groupId: number): Tag[] {
   return props.tags.filter(tag => tag.group_id === groupId)
@@ -115,6 +117,7 @@ function toggleTag(tagId: number) {
 function startCreate(groupId: number) {
   creatingInGroup.value = groupId
   newTagValue.value = ''
+  isDuplicate.value = false
   nextTick(() => {
     newTagInputRef.value?.focus()
   })
@@ -123,16 +126,40 @@ function startCreate(groupId: number) {
 function cancelCreate() {
   creatingInGroup.value = null
   newTagValue.value = ''
+  isDuplicate.value = false
 }
 
 function createTag(groupId: number) {
   const value = newTagValue.value.trim()
-  if (value) {
-    emit('create-tag', groupId, value)
-    newTagValue.value = ''
-    // Keep the input open for adding more tags
+  if (!value) return
+
+  // Check for duplicates (case-insensitive)
+  const groupTags = getTagsByGroup(groupId)
+  const isDup = groupTags.some(t => t.value.toLowerCase() === value.toLowerCase())
+
+  if (isDup) {
+    isDuplicate.value = true
+    nextTick(() => {
+        // Shake animation could be added here if desired, 
+        // but for now the red border is the feedback
+        newTagInputRef.value?.focus()
+    })
+    return
   }
+
+  emit('create-tag', groupId, value)
+  newTagValue.value = ''
+  isDuplicate.value = false
+  // Keep the input open for adding more tags
 }
+
+// Clear duplicate error when typing
+import { watch } from 'vue'
+watch(newTagValue, () => {
+    if (isDuplicate.value) {
+        isDuplicate.value = false
+    }
+})
 </script>
 
 <style scoped>
@@ -371,6 +398,18 @@ function createTag(groupId: number) {
   border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 14px; /* Increased */
+  transition: border-color 0.2s;
+}
+
+.new-tag-input input.error {
+  border-color: #ef5350;
+  background-color: #ffebee;
+}
+
+.new-tag-input input.error:focus {
+  outline: none;
+  border-color: #ef5350;
+  box-shadow: 0 0 0 2px rgba(239, 83, 80, 0.2);
 }
 
 .btn-small {

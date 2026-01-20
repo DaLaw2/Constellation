@@ -100,6 +100,35 @@ export const useTagsStore = defineStore('tags', () => {
     }
   }
 
+  async function updateTagGroup(id: number, name?: string, color?: string) {
+    try {
+      await invoke('update_tag_group', {
+        id,
+        name: name || null,
+        color: color || null,
+      })
+      await loadTagGroups()
+    } catch (e) {
+      error.value = e as string
+      console.error('Failed to update tag group:', e)
+      throw e
+    }
+  }
+
+  async function updateTag(id: number, value: string) {
+    try {
+      await invoke('update_tag', {
+        id,
+        value,
+      })
+      await loadTags()
+    } catch (e) {
+      error.value = e as string
+      console.error('Failed to update tag:', e)
+      throw e
+    }
+  }
+
   function getTagsByGroup(groupId: number): Tag[] {
     return tags.value.filter(tag => tag.group_id === groupId)
   }
@@ -120,6 +149,31 @@ export const useTagsStore = defineStore('tags', () => {
     }
   }
 
+  async function deleteTagGroup(id: number) {
+    try {
+      await invoke('delete_tag_group', { id })
+      await loadTagGroups()
+      // Also reload tags as cascade delete might happen or tags become orphaned
+      await loadTags()
+    } catch (e) {
+      error.value = e as string
+      console.error('Failed to delete tag group:', e)
+      throw e
+    }
+  }
+
+  async function deleteTag(id: number) {
+    try {
+      await invoke('delete_tag', { id })
+      await loadTags()
+      await loadUsageCounts()
+    } catch (e) {
+      error.value = e as string
+      console.error('Failed to delete tag:', e)
+      throw e
+    }
+  }
+
   return {
     tagGroups,
     tags,
@@ -131,8 +185,12 @@ export const useTagsStore = defineStore('tags', () => {
     loadUsageCounts,
     searchTags,
     createTagGroup,
+    updateTagGroup,
     createTag,
+    updateTag,
     getTagsByGroup,
     reorderTagGroups,
+    deleteTagGroup,
+    deleteTag,
   }
 })
