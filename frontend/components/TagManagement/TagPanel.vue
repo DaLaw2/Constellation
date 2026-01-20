@@ -41,6 +41,13 @@
         <div v-if="expandedGroups.has(group.id)" class="tag-list">
           <div v-for="tag in getTagsByGroup(group.id)" :key="tag.id" class="tag-item">
             <span class="tag-value">{{ tag.value }}</span>
+            <span
+              class="tag-count-badge"
+              :class="{ 'tag-count-zero': !usageCounts[tag.id] }"
+              :title="getUsageTooltip(tag.id)"
+            >
+              {{ usageCounts[tag.id] || 0 }}
+            </span>
           </div>
           <button class="btn-add-tag" @click="showAddTagDialog(group.id)">
             + Add Tag
@@ -49,7 +56,7 @@
       </div>
     </div>
 
-    <!-- Simple create group dialog -->
+    <!-- Create Group Dialog -->
     <div v-if="showCreateGroupDialog" class="dialog-overlay" @click.self="showCreateGroupDialog = false">
       <div class="dialog">
         <h3>Create Tag Group</h3>
@@ -67,12 +74,51 @@
         </div>
       </div>
     </div>
+
+    <!-- Create Tag Dialog -->
+    <div v-if="showTagDialog" class="dialog-overlay" @click.self="showTagDialog = false">
+      <div class="dialog">
+        <h3>Create Tag</h3>
+        <div class="form-group">
+          <label>Tag Value:</label>
+          <input
+            type="text"
+            v-model="newTagValue"
+            placeholder="e.g., English"
+            @input="handleTagSearchDebounced"
+            @keydown.enter.prevent="handleEnterKey"
+            @keydown.down.prevent="navigateSuggestion(1)"
+            @keydown.up.prevent="navigateSuggestion(-1)"
+            @keydown.escape="closeSuggestions"
+            ref="tagInput"
+          />
+          <div v-if="searchResults.length > 0" class="search-suggestions">
+            <div class="suggestion-label">Similar existing tags:</div>
+            <div
+              v-for="(res, index) in searchResults"
+              :key="res.id"
+              class="suggestion-item"
+              :class="{ 'suggestion-selected': index === selectedSuggestionIndex }"
+              @click="selectSuggestion(res)"
+              @mouseenter="selectedSuggestionIndex = index"
+            >
+              <span class="suggestion-value">{{ res.value }}</span>
+              <span class="suggestion-group">{{ getGroupName(res.group_id) }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn" @click="showTagDialog = false">Cancel</button>
+          <button class="btn btn-primary" @click="createTag">Create</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useTagsStore } from '../../stores/tags'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useTagsStore, type Tag } from '../../stores/tags'
 
 const tagsStore = useTagsStore()
 
@@ -88,7 +134,10 @@ const newGroupColor = ref('#3B82F6')
 onMounted(() => {
   tagsStore.loadTagGroups()
   tagsStore.loadTags()
+  tagsStore.loadUsageCounts()
 })
+
+const usageCounts = computed(() => tagsStore.usageCounts)
 
 function toggleGroup(groupId: number) {
   if (expandedGroups.value.has(groupId)) {
@@ -100,6 +149,11 @@ function toggleGroup(groupId: number) {
 
 function getTagsByGroup(groupId: number) {
   return tagsStore.getTagsByGroup(groupId)
+}
+
+function getUsageTooltip(tagId: number): string {
+  const count = usageCounts.value[tagId] || 0
+  return count === 1 ? 'Used by 1 file' : `Used by ${count} files`
 }
 
 async function createGroup() {
@@ -115,10 +169,89 @@ async function createGroup() {
   }
 }
 
+// Tag Creation / Autocomplete State
+const showTagDialog = ref(false)
+const targetGroupId = ref<number | null>(null)
+const newTagValue = ref('')
+const searchResults = ref<Tag[]>([])
+const selectedSuggestionIndex = ref(-1)
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
 function showAddTagDialog(groupId: number) {
-  const value = prompt('Enter tag value:')
-  if (value) {
-    tagsStore.createTag(groupId, value.trim())
+  targetGroupId.value = groupId
+  newTagValue.value = ''
+  searchResults.value = []
+  selectedSuggestionIndex.value = -1
+  showTagDialog.value = true
+}
+
+function handleTagSearchDebounced() {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+  }
+  searchDebounceTimer = setTimeout(handleTagSearch, 300)
+}
+
+async function handleTagSearch() {
+  if (!newTagValue.value.trim()) {
+    searchResults.value = []
+    selectedSuggestionIndex.value = -1
+    return
+  }
+  // Global search (no groupId) to catch duplicates across all groups
+  searchResults.value = await tagsStore.searchTags(newTagValue.value)
+  selectedSuggestionIndex.value = -1
+}
+
+function getGroupName(groupId: number): string {
+  const group = tagGroups.value.find(g => g.id === groupId)
+  return group ? group.name : ''
+}
+
+function navigateSuggestion(direction: number) {
+  if (searchResults.value.length === 0) return
+
+  const newIndex = selectedSuggestionIndex.value + direction
+  if (newIndex >= -1 && newIndex < searchResults.value.length) {
+    selectedSuggestionIndex.value = newIndex
+  }
+}
+
+function selectSuggestion(tag: Tag) {
+  newTagValue.value = tag.value
+  searchResults.value = []
+  selectedSuggestionIndex.value = -1
+}
+
+function handleEnterKey() {
+  if (selectedSuggestionIndex.value >= 0 && selectedSuggestionIndex.value < searchResults.value.length) {
+    selectSuggestion(searchResults.value[selectedSuggestionIndex.value])
+  } else {
+    createTag()
+  }
+}
+
+function closeSuggestions() {
+  searchResults.value = []
+  selectedSuggestionIndex.value = -1
+}
+
+onUnmounted(() => {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+  }
+})
+
+async function createTag() {
+  if (!newTagValue.value.trim() || !targetGroupId.value) return
+  
+  try {
+    await tagsStore.createTag(targetGroupId.value, newTagValue.value.trim())
+    showTagDialog.value = false
+    newTagValue.value = ''
+    searchResults.value = []
+  } catch (e) {
+    console.error('Failed to create tag:', e)
   }
 }
 </script>
@@ -203,6 +336,9 @@ function showAddTagDialog(groupId: number) {
 }
 
 .tag-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 0.5rem;
   margin-bottom: 0.25rem;
   background: var(--background);
@@ -289,5 +425,77 @@ function showAddTagDialog(groupId: number) {
   gap: 0.5rem;
   justify-content: flex-end;
   margin-top: 1.5rem;
+}
+
+.tag-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--primary-color);
+  background: rgba(25, 118, 210, 0.1);
+  border-radius: 9px;
+  cursor: default;
+}
+
+.tag-count-badge.tag-count-zero {
+  color: var(--text-secondary);
+  background: rgba(128, 128, 128, 0.1);
+  opacity: 0.7;
+}
+
+.search-suggestions {
+  margin-top: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  max-height: 150px;
+  overflow-y: auto;
+  background: var(--surface);
+}
+
+.suggestion-label {
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: rgba(0,0,0,0.02);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-item:hover,
+.suggestion-item.suggestion-selected {
+  background: rgba(25, 118, 210, 0.08);
+}
+
+.suggestion-value {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.suggestion-group {
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 2px 6px;
+  background: rgba(128, 128, 128, 0.1);
+  border-radius: 4px;
 }
 </style>
