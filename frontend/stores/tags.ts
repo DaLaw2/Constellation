@@ -24,6 +24,7 @@ export const useTagsStore = defineStore('tags', () => {
   const tags = ref<Tag[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const usageCounts = ref<Record<number, number>>({})
 
   async function loadTagGroups() {
     loading.value = true
@@ -48,6 +49,23 @@ export const useTagsStore = defineStore('tags', () => {
       console.error('Failed to load tags:', e)
     } finally {
       loading.value = false
+    }
+  }
+
+  async function loadUsageCounts() {
+    try {
+      usageCounts.value = await invoke<Record<number, number>>('get_tag_usage_counts')
+    } catch (e) {
+      console.error('Failed to load usage counts:', e)
+    }
+  }
+
+  async function searchTags(query: string, groupId?: number): Promise<Tag[]> {
+    try {
+      return await invoke<Tag[]>('search_tags', { query, groupId })
+    } catch (e) {
+      console.error('Failed to search tags:', e)
+      return []
     }
   }
 
@@ -89,10 +107,13 @@ export const useTagsStore = defineStore('tags', () => {
   return {
     tagGroups,
     tags,
+    usageCounts,
     loading,
     error,
     loadTagGroups,
     loadTags,
+    loadUsageCounts,
+    searchTags,
     createTagGroup,
     createTag,
     getTagsByGroup,

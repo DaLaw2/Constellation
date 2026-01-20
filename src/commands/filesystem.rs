@@ -16,12 +16,12 @@ fn validate_path(path: &str) -> AppResult<PathBuf> {
         match component {
             Component::ParentDir => {
                 return Err(AppError::InvalidInput(
-                    "Path traversal not allowed: '..' detected".to_string()
+                    "Path traversal not allowed: '..' detected".to_string(),
                 ));
             }
             Component::CurDir => {
                 return Err(AppError::InvalidInput(
-                    "Path traversal not allowed: '.' detected".to_string()
+                    "Path traversal not allowed: '.' detected".to_string(),
                 ));
             }
             _ => {}
@@ -31,7 +31,7 @@ fn validate_path(path: &str) -> AppResult<PathBuf> {
     // Also check raw string for encoded or hidden traversal patterns
     if path.contains("..") || path.contains("./") || path.contains(".\\") {
         return Err(AppError::InvalidInput(
-            "Path traversal patterns not allowed".to_string()
+            "Path traversal patterns not allowed".to_string(),
         ));
     }
 
@@ -124,7 +124,9 @@ pub async fn get_drives() -> AppResult<Vec<DriveInfo>> {
 
     #[cfg(not(target_os = "windows"))]
     {
-        Err(AppError::InvalidInput("This application only supports Windows".to_string()))
+        Err(AppError::InvalidInput(
+            "This application only supports Windows".to_string(),
+        ))
     }
 }
 
@@ -200,11 +202,17 @@ pub async fn read_directory(path: String) -> AppResult<Vec<FileEntry>> {
     let path_buf = validate_path(&path)?;
 
     if !path_buf.exists() {
-        return Err(AppError::InvalidInput(format!("Path does not exist: {}", path)));
+        return Err(AppError::InvalidInput(format!(
+            "Path does not exist: {}",
+            path
+        )));
     }
 
     if !path_buf.is_dir() {
-        return Err(AppError::InvalidInput(format!("Path is not a directory: {}", path)));
+        return Err(AppError::InvalidInput(format!(
+            "Path is not a directory: {}",
+            path
+        )));
     }
 
     let mut entries = Vec::new();
@@ -217,9 +225,7 @@ pub async fn read_directory(path: String) -> AppResult<Vec<FileEntry>> {
                         let entry_path = entry.path();
                         let metadata = entry.metadata();
 
-                        let file_name = entry.file_name()
-                            .to_string_lossy()
-                            .to_string();
+                        let file_name = entry.file_name().to_string_lossy().to_string();
 
                         // Check if hidden (Windows)
                         let is_hidden = is_hidden_file(&entry_path);
@@ -236,7 +242,8 @@ pub async fn read_directory(path: String) -> AppResult<Vec<FileEntry>> {
                                 None
                             };
 
-                            let modified_time = meta.modified()
+                            let modified_time = meta
+                                .modified()
                                 .ok()
                                 .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
                                 .map(|duration| duration.as_secs() as i64);
@@ -259,17 +266,18 @@ pub async fn read_directory(path: String) -> AppResult<Vec<FileEntry>> {
             }
         }
         Err(e) => {
-            return Err(AppError::InvalidInput(format!("Failed to read directory: {}", e)));
+            return Err(AppError::InvalidInput(format!(
+                "Failed to read directory: {}",
+                e
+            )));
         }
     }
 
     // Sort entries: directories first, then files, alphabetically
-    entries.sort_by(|a, b| {
-        match (a.is_directory, b.is_directory) {
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
-        }
+    entries.sort_by(|a, b| match (a.is_directory, b.is_directory) {
+        (true, false) => std::cmp::Ordering::Less,
+        (false, true) => std::cmp::Ordering::Greater,
+        _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
     });
 
     Ok(entries)
@@ -311,7 +319,10 @@ pub async fn get_file_metadata(path: String) -> AppResult<FileMetadata> {
     let path_buf = validate_path(&path)?;
 
     if !path_buf.exists() {
-        return Err(AppError::InvalidInput(format!("Path does not exist: {}", path)));
+        return Err(AppError::InvalidInput(format!(
+            "Path does not exist: {}",
+            path
+        )));
     }
 
     match fs::metadata(&path_buf) {
@@ -322,12 +333,14 @@ pub async fn get_file_metadata(path: String) -> AppResult<FileMetadata> {
                 None
             };
 
-            let modified_time = meta.modified()
+            let modified_time = meta
+                .modified()
                 .ok()
                 .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
                 .map(|duration| duration.as_secs() as i64);
 
-            let created_time = meta.created()
+            let created_time = meta
+                .created()
                 .ok()
                 .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
                 .map(|duration| duration.as_secs() as i64);
@@ -341,9 +354,10 @@ pub async fn get_file_metadata(path: String) -> AppResult<FileMetadata> {
                 is_readonly: meta.permissions().readonly(),
             })
         }
-        Err(e) => {
-            Err(AppError::InvalidInput(format!("Failed to get file metadata: {}", e)))
-        }
+        Err(e) => Err(AppError::InvalidInput(format!(
+            "Failed to get file metadata: {}",
+            e
+        ))),
     }
 }
 
@@ -354,12 +368,18 @@ pub async fn open_file_external(path: String) -> AppResult<()> {
     let path_buf = validate_path(&path)?;
 
     if !path_buf.exists() {
-        return Err(AppError::InvalidInput(format!("File does not exist: {}", path)));
+        return Err(AppError::InvalidInput(format!(
+            "File does not exist: {}",
+            path
+        )));
     }
 
     // Use the opener crate to open with default application
     if let Err(e) = opener::open(&path_buf) {
-        return Err(AppError::InvalidInput(format!("Failed to open file: {}", e)));
+        return Err(AppError::InvalidInput(format!(
+            "Failed to open file: {}",
+            e
+        )));
     }
 
     Ok(())
@@ -372,13 +392,17 @@ pub async fn reveal_in_explorer(path: String) -> AppResult<()> {
     let path_buf = validate_path(&path)?;
 
     if !path_buf.exists() {
-        return Err(AppError::InvalidInput(format!("Path does not exist: {}", path)));
+        return Err(AppError::InvalidInput(format!(
+            "Path does not exist: {}",
+            path
+        )));
     }
 
     #[cfg(target_os = "windows")]
     {
         // Canonicalize path to get absolute path and prevent command injection
-        let canonical_path = path_buf.canonicalize()
+        let canonical_path = path_buf
+            .canonicalize()
             .map_err(|e| AppError::InvalidInput(format!("Invalid path: {}", e)))?;
 
         // Use separate arguments to prevent command injection
@@ -390,12 +414,17 @@ pub async fn reveal_in_explorer(path: String) -> AppResult<()> {
             .spawn()
         {
             Ok(_) => Ok(()),
-            Err(e) => Err(AppError::InvalidInput(format!("Failed to open Explorer: {}", e))),
+            Err(e) => Err(AppError::InvalidInput(format!(
+                "Failed to open Explorer: {}",
+                e
+            ))),
         }
     }
 
     #[cfg(not(target_os = "windows"))]
     {
-        Err(AppError::InvalidInput("This feature is only supported on Windows".to_string()))
+        Err(AppError::InvalidInput(
+            "This feature is only supported on Windows".to_string(),
+        ))
     }
 }

@@ -111,7 +111,7 @@ pub fn initialize_schema(conn: &Connection) -> Result<()> {
     )?;
 
     // Enable WAL mode for better concurrency
-    conn.execute("PRAGMA journal_mode=WAL", [])?;
+    let _mode: String = conn.query_row("PRAGMA journal_mode=WAL", [], |row| row.get(0))?;
     conn.execute("PRAGMA synchronous=NORMAL", [])?;
     conn.execute("PRAGMA cache_size=-32000", [])?; // 32MB cache
     conn.execute("PRAGMA foreign_keys=ON", [])?;

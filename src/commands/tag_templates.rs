@@ -22,7 +22,9 @@ pub async fn create_tag_template(
 ) -> AppResult<i64> {
     let name = name.trim().to_string();
     if name.is_empty() {
-        return Err(AppError::InvalidInput("Template name cannot be empty".to_string()));
+        return Err(AppError::InvalidInput(
+            "Template name cannot be empty".to_string(),
+        ));
     }
 
     let conn = state.db_pool.get().await?;
@@ -34,10 +36,7 @@ pub async fn create_tag_template(
 
             let result = (|| {
                 // Insert template
-                conn.execute(
-                    "INSERT INTO tag_templates (name) VALUES (?1)",
-                    [&name],
-                )?;
+                conn.execute("INSERT INTO tag_templates (name) VALUES (?1)", [&name])?;
                 let template_id = conn.last_insert_rowid();
 
                 // Insert template-tag associations
@@ -75,7 +74,7 @@ pub async fn get_tag_templates(state: State<'_, AppState>) -> AppResult<Vec<TagT
         .interact(move |conn: &mut Connection| {
             // Get all templates
             let mut stmt = conn.prepare(
-                "SELECT id, name, created_at, updated_at FROM tag_templates ORDER BY name ASC"
+                "SELECT id, name, created_at, updated_at FROM tag_templates ORDER BY name ASC",
             )?;
 
             let template_rows = stmt
@@ -98,7 +97,7 @@ pub async fn get_tag_templates(state: State<'_, AppState>) -> AppResult<Vec<TagT
                      FROM tags t
                      INNER JOIN template_tags tt ON tt.tag_id = t.id
                      WHERE tt.template_id = ?1
-                     ORDER BY t.value ASC"
+                     ORDER BY t.value ASC",
                 )?;
 
                 let tags = tag_stmt
@@ -154,9 +153,8 @@ pub async fn apply_tag_template(
             }
 
             // Get tags from template
-            let mut stmt = conn.prepare(
-                "SELECT tag_id FROM template_tags WHERE template_id = ?1"
-            )?;
+            let mut stmt =
+                conn.prepare("SELECT tag_id FROM template_tags WHERE template_id = ?1")?;
 
             let tag_ids: Vec<i64> = stmt
                 .query_map([template_id], |row| row.get(0))?
@@ -247,10 +245,7 @@ pub async fn update_tag_template(
             // Update tags if provided
             if let Some(tag_ids) = tag_ids {
                 // Delete existing associations
-                conn.execute(
-                    "DELETE FROM template_tags WHERE template_id = ?1",
-                    [id],
-                )?;
+                conn.execute("DELETE FROM template_tags WHERE template_id = ?1", [id])?;
 
                 // Insert new associations
                 for tag_id in tag_ids {

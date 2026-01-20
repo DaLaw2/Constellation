@@ -15,12 +15,12 @@ fn validate_path(path: &str) -> AppResult<String> {
         match component {
             Component::ParentDir => {
                 return Err(AppError::InvalidInput(
-                    "Path traversal not allowed: '..' detected".to_string()
+                    "Path traversal not allowed: '..' detected".to_string(),
                 ));
             }
             Component::CurDir => {
                 return Err(AppError::InvalidInput(
-                    "Path traversal not allowed: '.' detected".to_string()
+                    "Path traversal not allowed: '.' detected".to_string(),
                 ));
             }
             _ => {}
@@ -30,7 +30,7 @@ fn validate_path(path: &str) -> AppResult<String> {
     // Also check raw string for encoded or hidden traversal patterns
     if path.contains("..") || path.contains("./") || path.contains(".\\") {
         return Err(AppError::InvalidInput(
-            "Path traversal patterns not allowed".to_string()
+            "Path traversal patterns not allowed".to_string(),
         ));
     }
 
@@ -162,11 +162,10 @@ pub async fn update_item(
 
         let result = (|| {
             // Check if item exists
-            let exists: bool = conn.query_row(
-                "SELECT COUNT(*) FROM items WHERE id = ?1",
-                [id],
-                |row| row.get::<_, i64>(0).map(|count| count > 0),
-            )?;
+            let exists: bool =
+                conn.query_row("SELECT COUNT(*) FROM items WHERE id = ?1", [id], |row| {
+                    row.get::<_, i64>(0).map(|count| count > 0)
+                })?;
 
             if !exists {
                 return Err(rusqlite::Error::QueryReturnedNoRows);
@@ -381,10 +380,7 @@ pub async fn remove_tag_from_item(
 }
 
 #[tauri::command]
-pub async fn get_tags_for_item(
-    item_id: i64,
-    state: State<'_, AppState>,
-) -> AppResult<Vec<Tag>> {
+pub async fn get_tags_for_item(item_id: i64, state: State<'_, AppState>) -> AppResult<Vec<Tag>> {
     let conn = state.db_pool.get().await?;
 
     let tags = conn
@@ -394,7 +390,7 @@ pub async fn get_tags_for_item(
                  FROM tags t
                  INNER JOIN item_tags it ON it.tag_id = t.id
                  WHERE it.item_id = ?1
-                 ORDER BY t.value ASC"
+                 ORDER BY t.value ASC",
             )?;
 
             let tags = stmt
@@ -442,10 +438,7 @@ pub async fn update_item_tags(
             }
 
             // Delete all existing tags for this item
-            conn.execute(
-                "DELETE FROM item_tags WHERE item_id = ?1",
-                [item_id],
-            )?;
+            conn.execute("DELETE FROM item_tags WHERE item_id = ?1", [item_id])?;
 
             // Insert new tags
             for tag_id in tag_ids {

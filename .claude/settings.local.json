@@ -38,7 +38,17 @@
       "Bash(cargo audit:*)",
       "Bash(find:*)",
       "Bash(wc -l:*)",
-      "Bash(npm --version:*)"
+      "Bash(npm --version:*)",
+      "Bash(cargo run:*)",
+      "Bash(cargo tauri dev:*)",
+      "Bash(npx tauri dev)",
+      "Bash(./frontend/node_modules/.bin/tauri dev:*)",
+      "Bash(pnpm build:*)",
+      "Bash(cargo fmt:*)",
+      "Bash(npx vue-tsc:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(git push:*)"
     ]
   }
 }
