@@ -44,6 +44,7 @@ pub fn run() {
             commands::tag_groups::get_tag_groups,
             commands::tag_groups::update_tag_group,
             commands::tag_groups::delete_tag_group,
+            commands::tag_groups::reorder_tag_groups,
             // Tag commands
             commands::tags::create_tag,
             commands::tags::get_tags_by_group,

@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "constellation-app",
-        "width": 800,
-        "height": 600
+        "width": 1072,
+        "height": 630
       }
     ],
     "security": {

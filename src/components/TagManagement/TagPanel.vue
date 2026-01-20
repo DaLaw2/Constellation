@@ -24,9 +24,20 @@
     </div>
 
     <div v-else class="tag-groups-list">
-      <div v-for="group in tagGroups" :key="group.id" class="tag-group-item">
+      <div 
+        v-for="(group, index) in tagGroups" 
+        :key="group.id" 
+        class="tag-group-item"
+        :class="{ 'dragging': draggingIndex === index, 'drag-over': dragOverIndex === index }"
+        draggable="true"
+        @dragstart="handleDragStart(index, $event)"
+        @dragover.prevent="handleDragOver(index, $event)"
+        @drop="handleDrop(index, $event)"
+        @dragend="handleDragEnd"
+      >
         <div class="tag-group-header">
           <div class="group-info">
+            <span class="drag-handle" title="Drag to reorder">⋮⋮</span>
             <span
               class="group-color-badge"
               :style="{ backgroundColor: group.color || '#9e9e9e' }"
@@ -66,7 +77,20 @@
         </div>
         <div class="form-group">
           <label>Color:</label>
-          <input type="color" v-model="newGroupColor" />
+          <div class="color-presets">
+            <button
+              v-for="color in presetColors"
+              :key="color"
+              class="color-swatch"
+              :style="{ backgroundColor: color }"
+              :class="{ selected: newGroupColor === color }"
+              @click="newGroupColor = color"
+            ></button>
+          </div>
+          <div class="color-input-wrapper">
+             <input type="color" v-model="newGroupColor" />
+             <span class="color-value">{{ newGroupColor }}</span>
+          </div>
         </div>
         <div class="dialog-actions">
           <button class="btn" @click="showCreateGroupDialog = false">Cancel</button>
@@ -131,6 +155,29 @@ const showCreateGroupDialog = ref(false)
 const newGroupName = ref('')
 const newGroupColor = ref('#3B82F6')
 
+// Drag and drop state
+const draggingIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
+
+const presetColors = [
+  '#ef5350', // Red
+  '#ec407a', // Pink
+  '#ab47bc', // Purple
+  '#7e57c2', // Deep Purple
+  '#5c6bc0', // Indigo
+  '#42a5f5', // Blue
+  '#29b6f6', // Light Blue
+  '#26c6da', // Cyan
+  '#26a69a', // Teal
+  '#66bb6a', // Green
+  '#9ccc65', // Light Green
+  '#d4e157', // Lime
+  '#ffee58', // Yellow
+  '#ffca28', // Amber
+  '#ffa726', // Orange
+  '#ff7043', // Deep Orange
+]
+
 onMounted(() => {
   tagsStore.loadTagGroups()
   tagsStore.loadTags()
@@ -167,6 +214,47 @@ async function createGroup() {
   } catch (e) {
     console.error('Failed to create group:', e)
   }
+}
+
+// Drag and drop handlers
+function handleDragStart(index: number, event: DragEvent) {
+  draggingIndex.value = index
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', index.toString())
+  }
+}
+
+function handleDragOver(index: number, event: DragEvent) {
+  event.preventDefault()
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+  dragOverIndex.value = index
+}
+
+function handleDrop(dropIndex: number, event: DragEvent) {
+  event.preventDefault()
+  
+  if (draggingIndex.value === null || draggingIndex.value === dropIndex) {
+    return
+  }
+
+  const dragIndex = draggingIndex.value
+  const groups = [...tagGroups.value]
+  
+  // Reorder the array
+  const [draggedItem] = groups.splice(dragIndex, 1)
+  groups.splice(dropIndex, 0, draggedItem)
+  
+  // Update backend with new order
+  const orderedIds = groups.map(g => g.id)
+  tagsStore.reorderTagGroups(orderedIds)
+}
+
+function handleDragEnd() {
+  draggingIndex.value = null
+  dragOverIndex.value = null
 }
 
 // Tag Creation / Autocomplete State
@@ -298,6 +386,17 @@ async function createTag() {
   border: 1px solid var(--border-color);
   border-radius: 4px;
   background: var(--background);
+  cursor: move;
+  transition: opacity 0.2s, border-color 0.2s;
+}
+
+.tag-group-item.dragging {
+  opacity: 0.5;
+}
+
+.tag-group-item.drag-over {
+  border-color: var(--primary-color);
+  border-width: 2px;
 }
 
 .tag-group-header {
@@ -305,7 +404,6 @@ async function createTag() {
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem;
-  cursor: pointer;
 }
 
 .tag-group-header:hover {
@@ -316,6 +414,22 @@ async function createTag() {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.drag-handle {
+  cursor: grab;
+  color: var(--text-secondary);
+  font-size: 14px;
+  opacity: 0.5;
+  user-select: none;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.tag-group-item:hover .drag-handle {
+  opacity: 1;
 }
 
 .group-color-badge {
@@ -418,6 +532,44 @@ async function createTag() {
 .form-group input[type="color"] {
   height: 40px;
   padding: 4px;
+  cursor: pointer;
+}
+
+.color-presets {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.color-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.color-swatch:hover {
+  transform: scale(1.1);
+}
+
+.color-swatch.selected {
+  border-color: var(--text-primary);
+  transform: scale(1.1);
+}
+
+.color-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.color-value {
+  font-size: 13px;
+  font-family: monospace;
+  color: var(--text-secondary);
 }
 
 .dialog-actions {

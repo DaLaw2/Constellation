@@ -39,6 +39,10 @@ export const useFileExplorerStore = defineStore('fileExplorer', () => {
   // Link to app store for UI syncing
   const appStore = useAppStore()
 
+  // Navigation history
+  const history = ref<string[]>([])
+  const historyIndex = ref<number>(-1)
+
   async function getDrives() {
     try {
       loading.value = true
@@ -54,10 +58,28 @@ export const useFileExplorerStore = defineStore('fileExplorer', () => {
     }
   }
 
-  async function readDirectory(path: string) {
+  async function readDirectory(path: string, addToHistory = true) {
     try {
       loading.value = true
       error.value = null
+
+      // If adding to history (normal navigation), truncate forward history
+      if (addToHistory) {
+        if (currentPath.value && currentPath.value !== path) {
+          // If we are currently at some index, truncate anything after it
+          if (historyIndex.value < history.value.length - 1) {
+            history.value = history.value.slice(0, historyIndex.value + 1)
+          }
+          // Push new path
+          history.value.push(path)
+          historyIndex.value = history.value.length - 1
+        } else if (!currentPath.value && path) {
+          // First navigation
+          history.value.push(path)
+          historyIndex.value = history.value.length - 1
+        }
+      }
+
       currentFiles.value = await invoke<FileEntry[]>('read_directory', { path })
       currentPath.value = path
       // Sync with app store
@@ -109,20 +131,33 @@ export const useFileExplorerStore = defineStore('fileExplorer', () => {
     const pathParts = currentPath.value.split('\\').filter(Boolean)
     if (pathParts.length <= 1) {
       // At drive root, clear current path
-      currentPath.value = ''
-      currentFiles.value = []
-      // Sync with app store
-      appStore.setCurrentPath('')
+      navigateTo('')
     } else {
       // Go up one directory
       pathParts.pop()
       const parentPath = pathParts.join('\\') + '\\'
-      readDirectory(parentPath)
+      navigateTo(parentPath)
     }
   }
 
   function navigateTo(path: string) {
-    readDirectory(path)
+    readDirectory(path, true)
+  }
+
+  function goBack() {
+    if (historyIndex.value > 0) {
+      historyIndex.value--
+      const previousPath = history.value[historyIndex.value]
+      readDirectory(previousPath, false)
+    }
+  }
+
+  function goForward() {
+    if (historyIndex.value < history.value.length - 1) {
+      historyIndex.value++
+      const nextPath = history.value[historyIndex.value]
+      readDirectory(nextPath, false)
+    }
   }
 
   return {
@@ -131,6 +166,8 @@ export const useFileExplorerStore = defineStore('fileExplorer', () => {
     drives,
     loading,
     error,
+    history,
+    historyIndex,
     getDrives,
     readDirectory,
     getFileMetadata,
@@ -138,5 +175,7 @@ export const useFileExplorerStore = defineStore('fileExplorer', () => {
     revealInExplorer,
     navigateUp,
     navigateTo,
+    goBack,
+    goForward,
   }
 })

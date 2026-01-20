@@ -155,3 +155,45 @@ pub async fn delete_tag_group(id: i64, state: State<'_, AppState>) -> AppResult<
 
     Ok(())
 }
+
+#[derive(serde::Deserialize)]
+pub struct TagGroupOrder {
+    pub id: i64,
+    pub display_order: i32,
+}
+
+#[tauri::command]
+pub async fn reorder_tag_groups(
+    orders: Vec<TagGroupOrder>,
+    state: State<'_, AppState>,
+) -> AppResult<()> {
+    let conn = state.db_pool.get().await?;
+
+    conn.interact(move |conn: &mut Connection| {
+        conn.execute("BEGIN IMMEDIATE", [])?;
+
+        let result = (|| {
+            for order in orders {
+                conn.execute(
+                    "UPDATE tag_groups SET display_order = ?1, updated_at = unixepoch() WHERE id = ?2",
+                    (order.display_order, order.id),
+                )?;
+            }
+            Ok::<(), rusqlite::Error>(())
+        })();
+
+        match result {
+            Ok(_) => {
+                conn.execute("COMMIT", [])?;
+                Ok(())
+            }
+            Err(e) => {
+                conn.execute("ROLLBACK", [])?;
+                Err(e)
+            }
+        }
+    })
+    .await??;
+
+    Ok(())
+}

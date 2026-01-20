@@ -104,6 +104,22 @@ export const useTagsStore = defineStore('tags', () => {
     return tags.value.filter(tag => tag.group_id === groupId)
   }
 
+  async function reorderTagGroups(orderedIds: number[]) {
+    try {
+      const orders = orderedIds.map((id, index) => ({
+        id,
+        display_order: index,
+      }))
+
+      await invoke('reorder_tag_groups', { orders })
+      await loadTagGroups()
+    } catch (e) {
+      error.value = e as string
+      console.error('Failed to reorder tag groups:', e)
+      throw e
+    }
+  }
+
   return {
     tagGroups,
     tags,
@@ -117,5 +133,6 @@ export const useTagsStore = defineStore('tags', () => {
     createTagGroup,
     createTag,
     getTagsByGroup,
+    reorderTagGroups,
   }
 })

@@ -1,68 +1,72 @@
 <template>
-  <div class="tag-selector">
-    <div class="selector-header">
-      <span class="selector-title">Select Tags</span>
-      <button class="btn-close" @click="emit('close')">×</button>
-    </div>
-
-    <div class="selector-body">
-      <div v-for="group in tagGroups" :key="group.id" class="tag-group">
-        <div class="group-header">
-          <span
-            class="group-color"
-            :style="{ backgroundColor: group.color || '#9e9e9e' }"
-          ></span>
-          <span class="group-name">{{ group.name }}</span>
+  <Teleport to="body">
+    <div class="tag-selector-overlay" @click="emit('close')">
+      <div class="tag-selector" @click.stop>
+        <div class="selector-header">
+          <span class="selector-title">Select Tags</span>
+          <button class="btn-close" @click="emit('close')">×</button>
         </div>
 
-        <div class="group-tags">
-          <label
-            v-for="tag in getTagsByGroup(group.id)"
-            :key="tag.id"
-            class="tag-option"
-            :class="{ selected: isSelected(tag.id) }"
-          >
-            <input
-              type="checkbox"
-              :checked="isSelected(tag.id)"
-              @change="toggleTag(tag.id)"
-            />
-            <span class="tag-label">{{ tag.value }}</span>
-          </label>
+        <div class="selector-body">
+          <div v-for="group in tagGroups" :key="group.id" class="tag-group">
+            <div class="group-header">
+              <span
+                class="group-color"
+                :style="{ backgroundColor: group.color || '#9e9e9e' }"
+              ></span>
+              <span class="group-name">{{ group.name }}</span>
+            </div>
 
-          <!-- Create new tag inline -->
-          <div v-if="creatingInGroup === group.id" class="new-tag-input">
-            <input
-              ref="newTagInputRef"
-              v-model="newTagValue"
-              type="text"
-              placeholder="New tag name..."
-              @keyup.enter="createTag(group.id)"
-              @keyup.escape="cancelCreate"
-            />
-            <button class="btn-small" @click="createTag(group.id)">Add</button>
-            <button class="btn-small btn-cancel" @click="cancelCreate">×</button>
+            <div class="group-tags">
+              <label
+                v-for="tag in getTagsByGroup(group.id)"
+                :key="tag.id"
+                class="tag-option"
+                :class="{ selected: isSelected(tag.id) }"
+              >
+                <input
+                  type="checkbox"
+                  :checked="isSelected(tag.id)"
+                  @change="toggleTag(tag.id)"
+                />
+                <span class="tag-label">{{ tag.value }}</span>
+              </label>
+
+              <!-- Create new tag inline -->
+              <div v-if="creatingInGroup === group.id" class="new-tag-input">
+                <input
+                  ref="newTagInputRef"
+                  v-model="newTagValue"
+                  type="text"
+                  placeholder="New tag name..."
+                  @keyup.enter="createTag(group.id)"
+                  @keyup.escape="cancelCreate"
+                />
+                <button class="btn-small" @click="createTag(group.id)">Add</button>
+                <button class="btn-small btn-cancel" @click="cancelCreate">×</button>
+              </div>
+              <button
+                v-else
+                class="btn-add-tag"
+                @click="startCreate(group.id)"
+              >
+                + Add Tag
+              </button>
+            </div>
           </div>
-          <button
-            v-else
-            class="btn-add-tag"
-            @click="startCreate(group.id)"
-          >
-            + Add Tag
-          </button>
+
+          <div v-if="tagGroups.length === 0" class="empty-state">
+            No tag groups yet. Create groups in the Tag Panel first.
+          </div>
+        </div>
+
+        <div class="selector-footer">
+          <span class="selected-count">{{ selectedTagIds.length }} selected</span>
+          <button class="btn btn-primary" @click="emit('close')">Done</button>
         </div>
       </div>
-
-      <div v-if="tagGroups.length === 0" class="empty-state">
-        No tag groups yet. Create groups in the Tag Panel first.
-      </div>
     </div>
-
-    <div class="selector-footer">
-      <span class="selected-count">{{ selectedTagIds.length }} selected</span>
-      <button class="btn btn-primary" @click="emit('close')">Done</button>
-    </div>
-  </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -133,43 +137,155 @@ function createTag(groupId: number) {
 
 <style scoped>
 .tag-selector {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  z-index: 100;
-  min-width: 280px;
-  max-width: 400px;
-  max-height: 400px;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  min-width: 600px; /* Increased from 500px */
+  max-width: 95vw;
+  max-height: 85vh;
   background: var(--background);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
   display: flex;
   flex-direction: column;
+  font-size: 14px;
 }
+
+.selector-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.selector-title {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 0 4px;
+}
+
+.selector-body {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.tag-group {
+  margin-bottom: 20px;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.group-color {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+.group-name {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.group-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-left: 22px;
+}
+
+.tag-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.tag-option:hover {
+  background: var(--surface);
+}
+
+.tag-option.selected {
+  background: rgba(25, 118, 210, 0.1);
+}
+
+.tag-label {
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.btn-add-tag {
+  padding: 6px 12px;
+  border: 1px dashed var(--border-color);
+  background: transparent;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.new-tag-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.new-tag-input input {
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 14px;
+  width: 150px;
+}
+
+
 
 .selector-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px;
+  padding: 16px;
   border-bottom: 1px solid var(--border-color);
 }
 
 .selector-title {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 18px; /* Increased */
 }
 
 .btn-close {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   border: none;
   background: none;
-  font-size: 18px;
+  font-size: 24px; /* Increased */
   cursor: pointer;
   color: var(--text-secondary);
   border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-close:hover {
@@ -179,29 +295,29 @@ function createTag(groupId: number) {
 .selector-body {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: 16px; /* Increased padding */
 }
 
 .tag-group {
-  margin-bottom: 12px;
+  margin-bottom: 24px;
 }
 
 .group-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: 4px 8px;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 }
 
 .group-color {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
+  width: 14px; /* Increased */
+  height: 14px; /* Increased */
+  border-radius: 3px;
 }
 
 .group-name {
-  font-size: 12px;
+  font-size: 14px; /* Increased */
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
@@ -210,15 +326,15 @@ function createTag(groupId: number) {
 .group-tags {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding-left: 18px;
+  gap: 4px;
+  padding-left: 24px;
 }
 
 .tag-option {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
+  gap: 10px;
+  padding: 8px 12px; /* Increased padding */
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.15s ease;
@@ -234,33 +350,35 @@ function createTag(groupId: number) {
 
 .tag-option input[type="checkbox"] {
   cursor: pointer;
+  transform: scale(1.2); /* Make checkbox larger */
 }
 
 .tag-label {
-  font-size: 13px;
+  font-size: 15px; /* Increased */
+  color: var(--text-primary);
 }
 
 .new-tag-input {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
+  gap: 8px;
+  padding: 6px 12px;
 }
 
 .new-tag-input input {
   flex: 1;
-  padding: 4px 8px;
+  padding: 8px 12px;
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 14px; /* Increased */
 }
 
 .btn-small {
-  padding: 4px 8px;
+  padding: 6px 12px;
   border: 1px solid var(--border-color);
   background: var(--background);
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 13px; /* Increased */
   cursor: pointer;
 }
 
@@ -269,14 +387,14 @@ function createTag(groupId: number) {
 }
 
 .btn-cancel {
-  padding: 4px 6px;
+  padding: 6px 10px;
 }
 
 .btn-add-tag {
-  padding: 6px 8px;
+  padding: 8px 12px;
   border: none;
   background: none;
-  font-size: 12px;
+  font-size: 14px; /* Increased */
   color: var(--primary-color);
   cursor: pointer;
   text-align: left;
@@ -288,31 +406,31 @@ function createTag(groupId: number) {
 }
 
 .empty-state {
-  padding: 24px;
+  padding: 32px;
   text-align: center;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 15px; /* Increased */
 }
 
 .selector-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px;
+  padding: 16px;
   border-top: 1px solid var(--border-color);
 }
 
 .selected-count {
-  font-size: 12px;
+  font-size: 14px; /* Increased */
   color: var(--text-secondary);
 }
 
 .btn {
-  padding: 6px 16px;
+  padding: 8px 20px; /* Increased padding */
   border: 1px solid var(--border-color);
   background: var(--background);
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 14px; /* Increased */
   cursor: pointer;
 }
 
@@ -324,5 +442,18 @@ function createTag(groupId: number) {
 
 .btn-primary:hover {
   opacity: 0.9;
+}
+
+.tag-selector-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

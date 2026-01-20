@@ -12,12 +12,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useFileExplorerStore } from '../../stores/fileExplorer'
 import TopBar from './TopBar.vue'
 import LeftPanel from './LeftPanel.vue'
 import FileList from '../FileExplorer/FileList.vue'
 
-const sidebarWidth = ref(250)
+const fileExplorerStore = useFileExplorerStore()
+const sidebarWidth = ref(250) // Pixels
 const isResizing = ref(false)
 
 function startResize() {
@@ -44,8 +46,22 @@ function stopResize() {
   document.body.style.userSelect = ''
 }
 
+function handleMouseNavigation(event: MouseEvent) {
+  // Button 3 is Back, Button 4 is Forward
+  if (event.button === 3) {
+    fileExplorerStore.goBack()
+  } else if (event.button === 4) {
+    fileExplorerStore.goForward()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('mouseup', handleMouseNavigation)
+})
+
 onUnmounted(() => {
   stopResize()
+  window.removeEventListener('mouseup', handleMouseNavigation)
 })
 </script>
 
