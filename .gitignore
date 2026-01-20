@@ -24,7 +24,7 @@ dist-ssr
 *.sw?
 
 # Rust / Cargo
-/target/
+src-tauri/target/
 
 # Tauri
-/gen/schemas
+src-tauri/gen/schemas

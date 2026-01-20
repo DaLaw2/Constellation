@@ -2,12 +2,12 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "constellation-app",
   "version": "0.1.0",
-  "identifier": "com.dalaw2.constellation-app",
+  "identifier": "dalaw2.club",
   "build": {
-    "beforeDevCommand": "cd frontend && npm run dev",
+    "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "cd frontend && npm run build",
-    "frontendDist": "./frontend/dist"
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
   },
   "app": {
     "windows": [

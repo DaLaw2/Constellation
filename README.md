@@ -26,11 +26,10 @@ A Windows desktop application for tagging and organizing files using a flexible 
 ## Development
 
 ```bash
-# Install frontend dependencies
-cd frontend
+# Install dependencies
 npm install
 
-# Run in development mode (from project root)
+# Run in development mode
 cargo tauri dev
 ```
 
@@ -41,32 +40,39 @@ cargo tauri dev
 cargo tauri build
 ```
 
-The installer will be in `target/release/bundle/`.
+The installer will be in `src-tauri/target/release/bundle/`.
 
 ## Project Structure
 
 ```
 constellation/
-├── src/                    # Rust backend
-│   ├── commands/           # Tauri IPC commands
-│   │   ├── filesystem.rs   # Drive/directory operations
-│   │   ├── items.rs        # File item CRUD + tagging
-│   │   ├── tags.rs         # Tag CRUD
-│   │   ├── tag_groups.rs   # Tag group CRUD
-│   │   └── tag_templates.rs# Template management
-│   ├── db/                 # Database layer
-│   │   ├── schema.rs       # SQLite schema
-│   │   └── models.rs       # Data models
-│   ├── error.rs            # Error types
-│   └── lib.rs              # App initialization
-├── frontend/               # Vue frontend
+├── src/                    # Vue frontend source
 │   ├── components/
 │   │   ├── FileExplorer/   # File browser components
 │   │   ├── TagManagement/  # Tag editing components
 │   │   └── Layout/         # App layout
 │   ├── stores/             # Pinia stores
-│   └── composables/        # Vue composables
-└── tauri.conf.json         # Tauri configuration
+│   ├── composables/        # Vue composables
+│   ├── App.vue             # Root component
+│   └── main.ts             # Frontend entry point
+├── src-tauri/              # Rust backend
+│   ├── src/
+│   │   ├── commands/       # Tauri IPC commands
+│   │   │   ├── filesystem.rs
+│   │   │   ├── items.rs
+│   │   │   ├── tags.rs
+│   │   │   ├── tag_groups.rs
+│   │   │   └── tag_templates.rs
+│   │   ├── db/             # Database layer
+│   │   ├── error.rs
+│   │   └── lib.rs
+│   ├── Cargo.toml
+│   └── tauri.conf.json     # Tauri configuration
+├── public/                 # Static assets
+├── index.html              # App entry HTML
+├── package.json
+├── tsconfig.json
+└── vite.config.ts
 ```
 
 ## Database Schema
