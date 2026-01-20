@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-export type ViewMode = 'file-browser' | 'tag-management'
+export type ViewMode = 'file-browser' | 'tag-management' | 'search'
 export type DisplayMode = 'detail' | 'large-icons'
 
 export const useAppStore = defineStore('app', () => {
