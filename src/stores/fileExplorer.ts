@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { useAppStore } from './app'
 
 export interface DriveInfo {
   letter: string
@@ -35,6 +36,9 @@ export const useFileExplorerStore = defineStore('fileExplorer', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  // Link to app store for UI syncing
+  const appStore = useAppStore()
+
   async function getDrives() {
     try {
       loading.value = true
@@ -56,6 +60,8 @@ export const useFileExplorerStore = defineStore('fileExplorer', () => {
       error.value = null
       currentFiles.value = await invoke<FileEntry[]>('read_directory', { path })
       currentPath.value = path
+      // Sync with app store
+      appStore.setCurrentPath(path)
       return currentFiles.value
     } catch (e) {
       error.value = e as string
@@ -105,6 +111,8 @@ export const useFileExplorerStore = defineStore('fileExplorer', () => {
       // At drive root, clear current path
       currentPath.value = ''
       currentFiles.value = []
+      // Sync with app store
+      appStore.setCurrentPath('')
     } else {
       // Go up one directory
       pathParts.pop()

@@ -6,8 +6,13 @@
         ⬆️ Up
       </button>
       <div class="current-path">{{ currentPath }}</div>
-      <button class="refresh-btn" @click="refresh">
-        🔄
+      <button class="refresh-btn" @click="refresh" title="Refresh">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.5 2v6h-6"></path>
+          <path d="M2.5 22v-6h6"></path>
+          <path d="M2 11.5a10 10 0 0 1 18.8-4.3"></path>
+          <path d="M22 12.5a10 10 0 0 1-18.8 4.3"></path>
+        </svg>
       </button>
     </div>
 
@@ -19,7 +24,11 @@
 
     <!-- Empty state -->
     <div v-else-if="!currentPath" class="empty-state">
-      <div class="empty-state-icon">📂</div>
+      <div class="empty-state-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </div>
       <div class="empty-state-title">No Directory Selected</div>
       <div class="empty-state-description">
         Select a drive or directory from the tree on the left
@@ -28,7 +37,12 @@
 
     <!-- Empty directory -->
     <div v-else-if="files.length === 0" class="empty-state">
-      <div class="empty-state-icon">📭</div>
+      <div class="empty-state-icon">
+         <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          <line x1="9" y1="14" x2="15" y2="14"></line>
+        </svg>
+      </div>
       <div class="empty-state-title">Empty Directory</div>
       <div class="empty-state-description">
         This directory contains no visible files or folders

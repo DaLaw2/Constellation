@@ -34,7 +34,8 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted } from 'vue'
 import type { FileEntry } from '../../stores/fileExplorer'
-import { useTagsStore, type Tag, type TagGroup } from '../../stores/tags'
+import { useTagsStore } from '../../stores/tags'
+import type { Tag } from '../../stores/tags'
 import { useItemsStore } from '../../stores/items'
 import TagCell from '../TagManagement/TagCell.vue'
 
