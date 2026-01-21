@@ -2,13 +2,22 @@
   <div class="topbar">
     <div class="topbar-left">
       <h1 class="app-title">Constellation</h1>
-      <div class="path-breadcrumb">
+      
+      <!-- Expanded Mode Title -->
+      <div v-if="sidebarExpanded" class="expanded-title">
+        <span v-if="leftPanelMode === 'tag-management'">Tag Management</span>
+        <span v-else-if="leftPanelMode === 'search'">Search</span>
+      </div>
+
+      <!-- Normal Mode Breadcrumb -->
+      <div v-else class="path-breadcrumb">
         <span v-if="!currentPath" class="path-empty">No path selected</span>
         <span v-else class="path-text">{{ currentPath }}</span>
       </div>
     </div>
 
-    <div class="topbar-right">
+    <!-- Normal Mode Right Side -->
+    <div v-if="!sidebarExpanded" class="topbar-right">
       <div class="search-box">
         <input
           type="search"
@@ -48,6 +57,8 @@ const appStore = useAppStore()
 
 const currentPath = computed(() => appStore.currentPath)
 const displayMode = computed(() => appStore.displayMode)
+const sidebarExpanded = computed(() => appStore.sidebarExpanded)
+const leftPanelMode = computed(() => appStore.leftPanelMode)
 const searchQuery = computed({
   get: () => appStore.searchQuery,
   set: (value: string) => appStore.setSearchQuery(value),
@@ -93,6 +104,15 @@ function handleSearch() {
   min-width: 0;
   padding-left: 1rem;
   border-left: 1px solid var(--border-color);
+}
+
+.expanded-title {
+  flex: 1;
+  padding-left: 1rem;
+  border-left: 1px solid var(--border-color);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
 }
 
 .path-text {

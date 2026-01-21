@@ -2,6 +2,7 @@
   <div class="left-panel">
     <div class="panel-tabs">
       <button
+        v-if="!sidebarExpanded"
         :class="['tab-btn', { active: currentMode === 'file-browser' }]"
         @click="setMode('file-browser')"
       >
@@ -18,6 +19,15 @@
         @click="setMode('search')"
       >
         🔍 Search
+      </button>
+
+      <button
+        v-if="currentMode !== 'file-browser'"
+        class="toggle-expand-btn"
+        :title="sidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'"
+        @click="toggleExpand"
+      >
+        {{ sidebarExpanded ? '«' : '»' }}
       </button>
     </div>
 
@@ -48,9 +58,14 @@ import FilterPanel from '../Search/FilterPanel.vue'
 const appStore = useAppStore()
 
 const currentMode = computed(() => appStore.leftPanelMode)
+const sidebarExpanded = computed(() => appStore.sidebarExpanded)
 
 function setMode(mode: ViewMode) {
   appStore.setLeftPanelMode(mode)
+}
+
+function toggleExpand() {
+  appStore.toggleSidebarExpanded()
 }
 </script>
 
@@ -91,6 +106,24 @@ function setMode(mode: ViewMode) {
   border-bottom-color: var(--primary-color);
   color: var(--primary-color);
   font-weight: 500;
+}
+
+.toggle-expand-btn {
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toggle-expand-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--primary-color);
 }
 
 .panel-content {

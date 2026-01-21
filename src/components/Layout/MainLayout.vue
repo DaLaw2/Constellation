@@ -1,5 +1,9 @@
 <template>
-  <div class="main-layout" :style="{ '--sidebar-width': sidebarWidth + 'px' }">
+  <div 
+    class="main-layout" 
+    :class="{ 'sidebar-expanded': sidebarExpanded }"
+    :style="{ '--sidebar-width': sidebarWidth + 'px' }"
+  >
     <TopBar />
     <div class="content-area">
       <LeftPanel />
@@ -12,15 +16,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { useAppStore } from '../../stores/app'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useFileExplorerStore } from '../../stores/fileExplorer'
 import TopBar from './TopBar.vue'
 import LeftPanel from './LeftPanel.vue'
 import FileList from '../FileExplorer/FileList.vue'
 
+const appStore = useAppStore()
 const fileExplorerStore = useFileExplorerStore()
 const sidebarWidth = ref(250) // Pixels
 const isResizing = ref(false)
+
+const sidebarExpanded = computed(() => appStore.sidebarExpanded)
 
 function startResize() {
   isResizing.value = true
@@ -101,5 +109,33 @@ onUnmounted(() => {
   flex: 1;
   overflow: hidden;
   min-width: 0; /* Prevent flex overflow */
+}
+
+/* Expanded state styles */
+/* .main-layout.sidebar-expanded .content-area {
+   No changes needed for flex container 
+} */
+
+.main-layout.sidebar-expanded .resizer {
+  display: none;
+}
+
+.main-layout.sidebar-expanded .right-panel {
+  display: none;
+}
+
+/* When expanded, LeftPanel (child of content-area) will flex-grow if we tell it to, 
+   but LeftPanel has fixed width via style. We need to override that.
+   However, LeftPanel uses var(--sidebar-width). 
+   We can override the variable or the style in LeftPanel.
+   Let's use a deep selector or simple CSS cascade if LeftPanel allows.
+   Actually LeftPanel has scoped style: width: var(--sidebar-width).
+   We can override the variable locally here if we could, but var is set on .main-layout.
+   Better approach: force width 100% on the left panel via deep selector or 
+   changing the var value dynamically? 
+   Changing var is easy.
+*/
+.main-layout.sidebar-expanded {
+  --sidebar-width: 100% !important;
 }
 </style>

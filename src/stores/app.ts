@@ -17,9 +17,16 @@ export const useAppStore = defineStore('app', () => {
   // Search query
   const searchQuery = ref<string>('')
 
+  // Sidebar expansion state
+  const sidebarExpanded = ref<boolean>(false)
+
   // Actions
   function setLeftPanelMode(mode: ViewMode) {
     leftPanelMode.value = mode
+    // Auto-collapse when switching to file browser
+    if (mode === 'file-browser') {
+      sidebarExpanded.value = false
+    }
   }
 
   function setDisplayMode(mode: DisplayMode) {
@@ -34,14 +41,25 @@ export const useAppStore = defineStore('app', () => {
     searchQuery.value = query
   }
 
+  function setSidebarExpanded(expanded: boolean) {
+    sidebarExpanded.value = expanded
+  }
+
+  function toggleSidebarExpanded() {
+    sidebarExpanded.value = !sidebarExpanded.value
+  }
+
   return {
     leftPanelMode,
     displayMode,
     currentPath,
     searchQuery,
+    sidebarExpanded,
     setLeftPanelMode,
     setDisplayMode,
     setCurrentPath,
     setSearchQuery,
+    setSidebarExpanded,
+    toggleSidebarExpanded,
   }
 })
