@@ -484,7 +484,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "constellation-app"
+name = "constellation"
 version = "0.1.0"
 dependencies = [
  "deadpool 0.10.0",

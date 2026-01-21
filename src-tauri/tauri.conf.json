@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "constellation-app",
+  "productName": "Constellation",
   "version": "0.1.0",
   "identifier": "dalaw2.club",
   "build": {
@@ -12,9 +12,9 @@
   "app": {
     "windows": [
       {
-        "title": "constellation-app",
-        "width": 1072,
-        "height": 630,
+        "title": "Constellation",
+        "width": 1280,
+        "height": 720,
         "dragDropEnabled": false
       }
     ],

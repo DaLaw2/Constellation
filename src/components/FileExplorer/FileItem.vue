@@ -293,7 +293,7 @@ function formatDate(timestamp: number): string {
 
 .file-info {
   flex: 1 1 60%;
-  min-width: 200px;
+  min-width: 100px; /* Reduced from 200px to avoid overflow on small screens */
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -323,8 +323,8 @@ function formatDate(timestamp: number): string {
 .file-tags-container {
   position: relative;
   display: flex;
-  flex-shrink: 0;
-  min-width: 400px;
+  flex-shrink: 1; /* Allow shrinking if viewport is too narrow */
+  min-width: 150px; /* Lower min-width to prevent overflow, JS enforcement keeps it at desired size normally */
 }
 
 .resize-handle {
@@ -353,6 +353,7 @@ function formatDate(timestamp: number): string {
 
 .file-tags {
   flex: 1;
+  min-width: 0; /* Important: prevents flexing beyond parent */
   position: relative;
   padding-left: 8px;
 }

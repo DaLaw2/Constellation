@@ -25,7 +25,7 @@ import FileList from '../FileExplorer/FileList.vue'
 
 const appStore = useAppStore()
 const fileExplorerStore = useFileExplorerStore()
-const sidebarWidth = ref(250) // Pixels
+const sidebarWidth = ref(270) // Pixels
 const isResizing = ref(false)
 
 const sidebarExpanded = computed(() => appStore.sidebarExpanded)
@@ -80,7 +80,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  --sidebar-width: 250px; /* Default fallback */
+  --sidebar-width: 270px; /* Default fallback */
 }
 
 .content-area {
