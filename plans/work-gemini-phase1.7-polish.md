@@ -4,6 +4,7 @@
 - **Phase**: 1.7 - Polish & Bug Fixes
 - **Branch**: `feat/phase1.7-polish`
 - **Goal**: Fix critical bugs identified during testing, improve UX polish.
+- **Status**: 🟢 Nearly Complete (4/6 tasks completed, only polish tasks remaining)
 
 ## Constitution Reference (AGENTS_CONSTITUTION.md)
 - ❌ NO `unwrap()`/`expect()` without justification
@@ -17,8 +18,9 @@
 
 ## Critical Bugs
 
-### Bug 1: Foreign Keys Not Enforced (CASCADE Deletion Fails)
+### ✅ Bug 1: Foreign Keys Not Enforced (CASCADE Deletion Fails) (COMPLETED)
 **Priority**: P0 (Critical)
+**Status**: ✅ **COMPLETED**
 **Symptom**: Deleting tag groups or tags doesn't cascade properly; intermittent deletion failures.
 
 **Root Cause**: `PRAGMA foreign_keys=ON` is only set during schema initialization in `src-tauri/src/db/schema.rs:117`. SQLite's PRAGMA settings are **per-connection**, not per-database. When using `deadpool_sqlite` connection pool, new connections from the pool don't inherit this setting.
@@ -41,14 +43,15 @@ PRAGMA foreign_keys;  -- Returns 0 if not set
 PRAGMA foreign_keys=ON;  -- Must be called for each connection
 ```
 
-- [ ] 1.1 Add connection initialization hook to set `PRAGMA foreign_keys=ON` on every connection from the pool
-- [ ] 1.2 Verify cascade delete works by testing tag group deletion
-- [ ] 1.3 Verify cascade delete works by testing tag deletion (item_tags cleaned up)
+- [x] 1.1 Add connection initialization hook to set `PRAGMA foreign_keys=ON` on every connection from the pool
+- [x] 1.2 Verify cascade delete works by testing tag group deletion
+- [x] 1.3 Verify cascade delete works by testing tag deletion (item_tags cleaned up)
 
 ---
 
-### Bug 2: Self-Duplicate Error When Renaming Tags
+### ✅ Bug 2: Self-Duplicate Error When Renaming Tags (COMPLETED)
 **Priority**: P1 (High)
+**Status**: ✅ **COMPLETED**
 **Symptom**: When editing a tag and keeping the same name (clicking edit, then save without changes), the UI shows "Tag already exists in this group" error.
 
 **Location**: `src/components/TagManagement/TagPanel.vue` lines 503-515
@@ -75,15 +78,16 @@ const isDuplicateEditTag = computed(() => {
 3. Issue with how Vue's computed property tracks dependencies
 
 **Investigation Steps**:
-- [ ] 2.1 Add console.log debugging to trace the exact values being compared
-- [ ] 2.2 Verify `editingTag.value.id` and `t.id` are both numbers (not strings)
-- [ ] 2.3 Check if `loadTags()` is being called between opening the dialog and validation
-- [ ] 2.4 Apply fix after root cause is identified
+- [x] 2.1 Add console.log debugging to trace the exact values being compared
+- [x] 2.2 Verify `editingTag.value.id` and `t.id` are both numbers (not strings)
+- [x] 2.3 Check if `loadTags()` is being called between opening the dialog and validation
+- [x] 2.4 Apply fix after root cause is identified
 
 ---
 
-### Bug 3: Tag Group Reordering Not Persisting/Reflecting
+### ✅ Bug 3: Tag Group Reordering Not Persisting/Reflecting (COMPLETED)
 **Priority**: P1 (High)
+**Status**: ✅ **COMPLETED**
 **Symptom**: Drag-and-drop reordering of tag groups doesn't update the UI immediately; order may not persist.
 
 **Location**: `src/components/TagManagement/TagPanel.vue` lines 614-631
@@ -121,16 +125,23 @@ async function handleDrop(dropIndex: number, event: DragEvent) {
 }
 ```
 
-- [ ] 3.1 Make `handleDrop` async and await `reorderTagGroups`
-- [ ] 3.2 Add error handling/feedback for reorder failures
-- [ ] 3.3 Test reordering persists after page refresh
+- [x] 3.1 Make `handleDrop` async and await `reorderTagGroups`
+- [x] 3.2 Add error handling/feedback for reorder failures
+- [x] 3.3 Test reordering persists after page refresh
+
+**Solution Implemented**: Used `vuedraggable` library with proper configuration:
+- Added `dragDropEnabled: false` to `tauri.conf.json` to prevent native drag-drop interference
+- Added CSS properties: `-webkit-user-drag: none`, `pointer-events: auto`, `user-select: none`
+- Added `@click.stop` to drag handle to prevent event propagation
+- Implemented proper error handling in `handleReorder` function
 
 ---
 
 ## UI/UX Polish
 
-### Bug 4: Toggle Button Black Border on Click
+### ✅ Bug 4: Toggle Button Black Border on Click (COMPLETED)
 **Priority**: P2 (Medium)
+**Status**: ✅ **COMPLETED**
 **Symptom**: Chevron toggle button shows black border when clicked.
 
 **Location**:
@@ -156,8 +167,8 @@ async function handleDrop(dropIndex: number, event: DragEvent) {
 }
 ```
 
-- [ ] 4.1 Add `border: none` to `.btn-icon` in `src/assets/styles/main.css`
-- [ ] 4.2 Verify toggle buttons no longer show border on click
+- [x] 4.1 Add `border: none` to `.btn-icon` in `src/assets/styles/main.css`
+- [x] 4.2 Verify toggle buttons no longer show border on click
 
 ---
 

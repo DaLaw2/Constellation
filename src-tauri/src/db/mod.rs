@@ -33,8 +33,13 @@ pub async fn init_database(db_path: &Path) -> Result<Pool, Box<dyn std::error::E
 
     // Initialize schema on first connection
     let conn = pool.get().await?;
-    conn.interact(|conn: &mut Connection| schema::initialize_schema(conn))
-        .await??;
+    conn.interact(|conn: &mut Connection| {
+        schema::initialize_schema(conn)?;
+        // Run migration to fix existing tag group orders
+        schema::migrate_tag_group_order(conn)?;
+        Ok::<(), rusqlite::Error>(())
+    })
+    .await??;
 
     Ok(pool)
 }

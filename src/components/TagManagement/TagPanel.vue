@@ -24,63 +24,67 @@
     </div>
 
     <div v-else class="tag-groups-list">
-      <div 
-        v-for="(group, index) in tagGroups" 
-        :key="group.id" 
-        class="tag-group-item"
-        :class="{ 'dragging': draggingIndex === index, 'drag-over': dragOverIndex === index }"
-        draggable="true"
-        @dragstart="handleDragStart(index, $event)"
-        @dragover.prevent="handleDragOver(index, $event)"
-        @drop="handleDrop(index, $event)"
-        @dragend="handleDragEnd"
+      <draggable 
+        v-model="localTagGroups" 
+        item-key="id"
+        handle=".drag-handle"
+        @start="handleDragStart"
+        @end="handleReorder"
+        :animation="200"
+        ghost-class="ghost"
+        chosen-class="chosen"
+        drag-class="dragging"
       >
-        <div 
-          class="tag-group-header"
-          @click="toggleGroup(group.id)"
-          @contextmenu.prevent="showContextMenu($event, group)"
-        >
-          <div class="group-info">
-            <span class="drag-handle" title="Drag to reorder" @click.stop>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-drag"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
-            </span>
-            <span
-              class="group-color-badge"
-              :style="{ backgroundColor: group.color || '#9e9e9e' }"
-            ></span>
-            <span class="group-name">{{ group.name }}</span>
-          </div>
-          <div class="group-actions">
-            <button class="btn-icon toggle-btn">
-              <svg v-if="expandedGroups.has(group.id)" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-              <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
-          </div>
-        </div>
+        <template #item="{ element: group }">
+          <div class="tag-group-item">
+            <div 
+              class="tag-group-header"
+              @click="toggleGroup(group.id)"
+              @contextmenu.prevent="showContextMenu($event, group)"
+            >
+              <div class="group-info">
+                <span class="drag-handle" title="Drag to reorder" @click.stop>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-drag"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+                </span>
+                <span
+                  class="group-color-badge"
+                  :style="{ backgroundColor: group.color || '#9e9e9e' }"
+                ></span>
+                <span class="group-name">{{ group.name }}</span>
+              </div>
+              <div class="group-actions">
+                <button class="btn-icon toggle-btn">
+                  <svg v-if="expandedGroups.has(group.id)" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+            </div>
 
-        <div v-if="expandedGroups.has(group.id)" class="tag-list">
-          <div 
-            v-for="tag in getTagsByGroup(group.id)" 
-            :key="tag.id" 
-            class="tag-item"
-            @contextmenu.prevent="showTagContextMenu($event, tag)"
-          >
-            <span class="tag-value">{{ tag.value }}</span>
-            <div class="tag-actions">
-              <span
-                class="tag-count-badge"
-                :class="{ 'tag-count-zero': !usageCounts[tag.id] }"
-                :title="getUsageTooltip(tag.id)"
+            <div v-if="expandedGroups.has(group.id)" class="tag-list">
+              <div 
+                v-for="tag in getTagsByGroup(group.id)" 
+                :key="tag.id" 
+                class="tag-item"
+                @contextmenu.prevent="showTagContextMenu($event, tag)"
               >
-                {{ usageCounts[tag.id] || 0 }}
-              </span>
+                <span class="tag-value">{{ tag.value }}</span>
+                <div class="tag-actions">
+                  <span
+                    class="tag-count-badge"
+                    :class="{ 'tag-count-zero': !usageCounts[tag.id] }"
+                    :title="getUsageTooltip(tag.id)"
+                  >
+                    {{ usageCounts[tag.id] || 0 }}
+                  </span>
+                </div>
+              </div>
+              <button class="btn-add-tag" @click="showAddTagDialog(group.id)">
+                + Add Tag
+              </button>
             </div>
           </div>
-          <button class="btn-add-tag" @click="showAddTagDialog(group.id)">
-            + Add Tag
-          </button>
-        </div>
-      </div>
+        </template>
+      </draggable>
     </div>
 
     <!-- Edit Group Dialog -->
@@ -282,12 +286,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useTagsStore, type Tag } from '../../stores/tags'
+import draggable from 'vuedraggable'
 
 const tagsStore = useTagsStore()
 
-const tagGroups = computed(() => tagsStore.tagGroups)
+// Create local writable copy for VueDraggable
+const localTagGroups = ref(tagsStore.tagGroups)
+const tagGroups = computed(() => localTagGroups.value)
+
+// Watch store changes and update local copy
+watch(() => tagsStore.tagGroups, (newGroups) => {
+  localTagGroups.value = [...newGroups]
+}, { deep: true })
 const loading = computed(() => tagsStore.loading)
 const error = computed(() => tagsStore.error)
 
@@ -316,10 +328,6 @@ const isDuplicateEditGroup = computed(() => {
   return isDup
 })
 
-
-// Drag and drop state
-const draggingIndex = ref<number | null>(null)
-const dragOverIndex = ref<number | null>(null)
 
 // Confirmation Dialog State
 const showConfirmDialog = ref(false)
@@ -609,50 +617,22 @@ function handleContextDeleteTag() {
   }
 }
 
-// Drag and drop handlers
-function handleDragStart(index: number, event: DragEvent) {
-  draggingIndex.value = index
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', index.toString())
-  }
+// Drag and drop handlers (using VueDraggable)
+function handleDragStart(_evt: any) {
+  // Drag started
 }
 
-function handleDragOver(index: number, event: DragEvent) {
-  event.preventDefault()
-  if (event.dataTransfer) {
-    event.dataTransfer.dropEffect = 'move'
-  }
-  dragOverIndex.value = index
-}
-
-async function handleDrop(dropIndex: number, event: DragEvent) {
-  event.preventDefault()
-  
-  if (draggingIndex.value === null || draggingIndex.value === dropIndex) {
-    return
-  }
-
-  const dragIndex = draggingIndex.value
-  const groups = [...tagGroups.value]
-  
-  // Reorder the array
-  const [draggedItem] = groups.splice(dragIndex, 1)
-  groups.splice(dropIndex, 0, draggedItem)
-  
-  // Update backend with new order
-  const orderedIds = groups.map(g => g.id)
+async function handleReorder(_evt: any) {
+  // VueDraggable already updated localTagGroups.value order
+  // Just need to sync to backend
+  const orderedIds = localTagGroups.value.map(g => g.id)
   try {
     await tagsStore.reorderTagGroups(orderedIds)
   } catch (e) {
     console.error('Failed to reorder tag groups:', e)
-    // Optionally revert UI in a real app, but store reload will fix it eventually
+    // Reload to revert on error
+    await tagsStore.loadTagGroups()
   }
-}
-
-function handleDragEnd() {
-  draggingIndex.value = null
-  dragOverIndex.value = null
 }
 
 // Tag Creation / Autocomplete State
@@ -810,15 +790,33 @@ async function createTag() {
 .drag-handle {
   cursor: grab;
   color: var(--text-secondary);
-  opacity: 0.3;
-  display: flex; /* Fix alignment */
+  opacity: 0.6;
+  display: flex;
   align-items: center;
-  margin-right: 4px; /* Add some spacing */
+  margin-right: 4px;
+  padding: 2px;
+  border-radius: 4px;
+  transition: opacity 0.2s, background-color 0.2s;
+  min-width: 12px;
+  min-height: 12px;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: auto;
 }
 
 .drag-handle svg {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.drag-handle:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  opacity: 1;
 }
 
 .tag-group-item:hover .drag-handle {
@@ -955,10 +953,6 @@ button:focus {
   max-width: 400px;
 }
 
-.btn-icon-small {
-  /* Inherit generic button resets if needed */
-}
-
 
 .panel-header h3 {
   font-size: 14px;
@@ -983,12 +977,18 @@ button:focus {
 }
 
 .tag-group-item {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: 8px;
   background: var(--background);
-  cursor: move;
-  transition: opacity 0.2s, border-color 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.tag-group-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  border-color: rgba(0, 0, 0, 0.15);
 }
 
 .tag-group-item.dragging {
@@ -1000,21 +1000,40 @@ button:focus {
   border-width: 2px;
 }
 
+/* VueDraggable states */
+.ghost {
+  opacity: 0.5;
+  background: var(--surface);
+}
+
+.chosen {
+  border-color: var(--primary-color);
+  cursor: grabbing !important;
+}
+
+.dragging {
+  opacity: 0.8;
+  cursor: grabbing !important;
+}
+
 .tag-group-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem;
+  padding: 0.875rem 1rem 0.875rem 0.625rem;
+  user-select: none;
+  transition: background-color 0.15s ease;
+  border-radius: 8px 8px 0 0;
 }
 
 .tag-group-header:hover {
-  background: var(--surface);
+  background: rgba(0, 0, 0, 0.02);
 }
 
 .group-info {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.375rem;
 }
 
 .drag-handle {
@@ -1034,54 +1053,73 @@ button:focus {
 }
 
 .group-color-badge {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 .group-name {
   font-weight: 500;
-  font-size: 13px;
+  font-size: 14px;
+  color: var(--text-primary);
 }
 
 .tag-list {
-  padding: 0.5rem;
-  border-top: 1px solid var(--border-color);
-  background: var(--surface);
+  padding: 0.75rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.015);
 }
 
 .tag-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem;
-  margin-bottom: 0.25rem;
+  padding: 0.5rem 0.625rem;
+  margin-bottom: 0.375rem;
   background: var(--background);
-  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 5px;
   font-size: 12px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.tag-item:hover {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.1);
+  transform: translateX(2px);
+}
+
+.tag-item:last-of-type {
+  margin-bottom: 0;
 }
 
 .tag-value {
   color: var(--text-primary);
+  font-weight: 450;
 }
 
 .btn-add-tag {
   width: 100%;
   padding: 0.5rem;
   margin-top: 0.5rem;
-  border: 1px dashed var(--border-color);
+  border: 1.5px dashed rgba(0, 0, 0, 0.15);
   background: transparent;
-  border-radius: 4px;
+  border-radius: 5px;
   font-size: 12px;
+  font-weight: 500;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: var(--transition-fast);
+  transition: all 0.2s ease;
 }
 
 .btn-add-tag:hover {
   border-color: var(--primary-color);
+  border-style: solid;
   color: var(--primary-color);
-  background: rgba(25, 118, 210, 0.04);
+  background: rgba(25, 118, 210, 0.06);
+  transform: translateY(-1px);
 }
 
 .dialog-overlay {
@@ -1184,22 +1222,24 @@ button:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 20px;
-  height: 18px;
-  padding: 0 6px;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 7px;
   margin-left: 8px;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--primary-color);
-  background: rgba(25, 118, 210, 0.1);
-  border-radius: 9px;
+  background: rgba(25, 118, 210, 0.12);
+  border-radius: 10px;
   cursor: default;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .tag-count-badge.tag-count-zero {
   color: var(--text-secondary);
-  background: rgba(128, 128, 128, 0.1);
-  opacity: 0.7;
+  background: rgba(128, 128, 128, 0.08);
+  opacity: 0.65;
+  box-shadow: none;
 }
 
 .search-suggestions {

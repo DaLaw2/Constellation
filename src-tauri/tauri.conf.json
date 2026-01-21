@@ -14,7 +14,8 @@
       {
         "title": "constellation-app",
         "width": 1072,
-        "height": 630
+        "height": 630,
+        "dragDropEnabled": false
       }
     ],
     "security": {

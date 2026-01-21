@@ -140,8 +140,10 @@ export const useTagsStore = defineStore('tags', () => {
         display_order: index,
       }))
 
+      console.log('Reordering tag groups:', orders)
       await invoke('reorder_tag_groups', { orders })
       await loadTagGroups()
+      console.log('Tag groups reordered successfully')
     } catch (e) {
       error.value = e as string
       console.error('Failed to reorder tag groups:', e)

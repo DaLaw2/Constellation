@@ -19,10 +19,24 @@ pub async fn create_tag_group(
     }
 
     let conn = state.db_pool.get().await?;
-    let display_order = display_order.unwrap_or(0);
 
     let id = conn
         .interact(move |conn: &mut Connection| {
+            // Auto-assign next display_order if not provided
+            let display_order = if let Some(order) = display_order {
+                order
+            } else {
+                // Get max display_order and add 1
+                let max_order: i32 = conn
+                    .query_row(
+                        "SELECT COALESCE(MAX(display_order), -1) FROM tag_groups",
+                        [],
+                        |row| row.get(0),
+                    )
+                    .unwrap_or(-1);
+                max_order + 1
+            };
+
             conn.execute(
                 "INSERT INTO tag_groups (name, color, display_order) VALUES (?1, ?2, ?3)",
                 (&name, &color, &display_order),

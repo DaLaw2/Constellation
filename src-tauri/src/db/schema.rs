@@ -119,3 +119,31 @@ pub fn initialize_schema(conn: &Connection) -> Result<()> {
 
     Ok(())
 }
+
+/// Migrate existing tag groups to have sequential display_order values
+/// This fixes the issue where all groups have display_order = 0
+pub fn migrate_tag_group_order(conn: &Connection) -> Result<()> {
+    // Check if migration is needed (multiple groups with same display_order)
+    let needs_migration: bool = conn.query_row(
+        "SELECT COUNT(*) > 1 FROM tag_groups WHERE display_order = 0",
+        [],
+        |row| row.get::<_, i64>(0).map(|count| count > 1),
+    )?;
+
+    if needs_migration {
+        // Assign sequential order based on current order (by name, then id)
+        conn.execute(
+            "UPDATE tag_groups 
+             SET display_order = (
+                 SELECT COUNT(*) 
+                 FROM tag_groups t2 
+                 WHERE t2.name < tag_groups.name 
+                    OR (t2.name = tag_groups.name AND t2.id < tag_groups.id)
+             ),
+             updated_at = unixepoch()",
+            [],
+        )?;
+    }
+
+    Ok(())
+}
