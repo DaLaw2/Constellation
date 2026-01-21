@@ -1,105 +1,92 @@
 # Constellation
 
-A Windows desktop application for tagging and organizing files using a flexible tag system.
+<p align="center">
+  <strong>Organize your universe of files.</strong>
+</p>
 
-## Features
+<p align="center">
+  <img src="assets/preview_01.png" alt="Constellation Main View" width="800" />
+</p>
 
-- **File Browser** - Navigate drives and directories with lazy-loaded tree view
-- **Tag System** - Organize files with hierarchical tag groups and tags
-- **Inline Tagging** - Click on any file to add/remove tags directly
-- **Tag Templates** - Save and apply common tag combinations
-- **Virtual Scrolling** - Handle directories with thousands of files smoothly
+Constellation is a modern, high-performance desktop application for organizing files using a flexible and powerful tag system. Built with **Rust** and **Tauri**, it offers a blazing fast experience for managing your digital assets.
 
-## Tech Stack
+---
 
-- **Backend**: Rust + Tauri 2.0
-- **Frontend**: Vue 3 + TypeScript + Pinia
-- **Database**: SQLite (via rusqlite + deadpool)
-- **Build**: Vite
+## 📸 Functionality Previews
 
-## Prerequisites
+| **Tag Management** | **Search & Filtering** |
+|:---:|:---:|
+| <img src="assets/preview_02.png" width="400" /> | <img src="assets/preview_03.png" width="400" /> |
+| *Organize tags with groups and colors* | *Powerful search with fuzzy matching* |
 
+---
+
+## ✨ Key Features
+
+- **🚀 Smart File Browser**
+  - **Tree View**: Navigate drives and directories with a familiar, lazy-loaded interface.
+  - **Virtual Scrolling**: Smoothly handle folders containing thousands of files.
+  - **Local Trace**: Instantly filter files in the current view with fuzzy matching.
+
+- **🏷️ Advanced Tag System**
+  - **Dynamic Tags**: Tag display automatically adapts to window size, ensuring visibility.
+  - **Tag Groups**: Color-coded categories (e.g., "Priority", "Status") for better organization.
+  - **Inline Editing**: Add, remove, and manage tags directly from the file list.
+  - **Tag Templates**: Save frequent tag combinations for one-click application.
+
+- **🔍 Powerful Search**
+  - **Global Tag Search**: Find files across your entire library by selecting multiple tags.
+  - **Tag List Search**: Quickly locate specific tags within your collection using the search bar.
+
+- **🧘 Zen Mode**
+  - Expand the tag management sidebar to focus purely on organization.
+  - Adaptive UI hides unnecessary elements for a cleaner, focused workflow.
+
+## 🛠️ Tech Stack
+
+- **Core**: [Rust](https://www.rust-lang.org/) + [Tauri 2.0](https://tauri.app/)
+- **Frontend**: [Vue 3](https://vuejs.org/) + TypeScript + Pinia
+- **Database**: SQLite (via rusqlite)
+- **Styling**: Modern CSS variables & Flexbox/Grid
+
+## 🚀 Getting Started
+
+### Prerequisites
 - [Rust](https://rustup.rs/) (latest stable)
 - [Node.js](https://nodejs.org/) (v18+)
-- [pnpm](https://pnpm.io/) or npm
 
-## Development
+### Installation
 
 ```bash
-# Install dependencies
+# 1. Install dependencies
 npm install
 
-# Run in development mode
-cargo tauri dev
+# 2. Run in development mode
+npm run tauri dev
 ```
 
-## Build
+### Building for Production
 
 ```bash
-# Build for production
-cargo tauri build
+npm run tauri build
 ```
+The executable will be located in `src-tauri/target/release/bundle/`.
 
-The installer will be in `src-tauri/target/release/bundle/`.
+## 📂 Project Structure
 
-## Project Structure
-
-```
+```bash
 constellation/
-├── src/                    # Vue frontend source
-│   ├── components/
-│   │   ├── FileExplorer/   # File browser components
-│   │   ├── TagManagement/  # Tag editing components
-│   │   └── Layout/         # App layout
-│   ├── stores/             # Pinia stores
-│   ├── composables/        # Vue composables
-│   ├── App.vue             # Root component
-│   └── main.ts             # Frontend entry point
-├── src-tauri/              # Rust backend
-│   ├── src/
-│   │   ├── commands/       # Tauri IPC commands
-│   │   │   ├── filesystem.rs
-│   │   │   ├── items.rs
-│   │   │   ├── tags.rs
-│   │   │   ├── tag_groups.rs
-│   │   │   └── tag_templates.rs
-│   │   ├── db/             # Database layer
-│   │   ├── error.rs
-│   │   └── lib.rs
-│   ├── Cargo.toml
-│   └── tauri.conf.json     # Tauri configuration
-├── public/                 # Static assets
-├── index.html              # App entry HTML
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
+├── src/                    # Frontend Source (Vue)
+│   ├── components/         # UI Components
+│   └── stores/             # State Management
+├── src-tauri/              # Backend Source (Rust)
+│   ├── src/                # Rust Logic & DB Layer
+│   └── tauri.conf.json     # Configuration
+└── assets/                 # Project assets & screenshots
 ```
 
-## Database Schema
+## 📄 License
+GNU GPLv3
 
-- **tag_groups** - Categories for tags (e.g., "Language", "Status")
-- **tags** - Individual tags belonging to groups
-- **items** - Tracked files/folders with metadata
-- **item_tags** - Many-to-many relationship between items and tags
-- **tag_templates** - Saved tag combinations for quick application
-
-## Roadmap
-
-### Phase 1 (Current)
-- [x] Database layer with SQLite
-- [x] Tag group and tag management
-- [x] File browser with drive enumeration
-- [x] Inline tag editing
-- [x] Tag templates
-- [ ] Search and filter by tags
-- [ ] First-run setup wizard
-
-### Phase 2 (Planned)
-- [ ] Batch operations
-- [ ] Import/export tags
-- [ ] Keyboard shortcuts
-- [ ] Custom tag colors
-
-## License
-
-MIT
+## 👏 Acknowledgements
+- App Icons designed by [Freepik](https://www.flaticon.com/) from [Flaticon](https://www.flaticon.com/).
