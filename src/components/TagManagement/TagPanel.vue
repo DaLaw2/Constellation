@@ -181,7 +181,9 @@
             @keydown.up.prevent="navigateSuggestion(-1)"
             @keydown.escape="closeSuggestions"
             ref="tagInput"
+            :class="{ 'input-error': isDuplicateNewTag }"
           />
+          <span v-if="isDuplicateNewTag" class="error-text">Tag already exists in this group</span>
           <div v-if="searchResults.length > 0" class="search-suggestions">
             <div class="suggestion-label">Similar existing tags:</div>
             <div
@@ -199,7 +201,7 @@
         </div>
         <div class="dialog-actions">
           <button class="btn" @click="showTagDialog = false">Cancel</button>
-          <button class="btn btn-primary" @click="createTag">Create</button>
+          <button class="btn btn-primary" @click="createTag" :disabled="!newTagValue.trim() || isDuplicateNewTag">Create</button>
         </div>
       </div>
     </div>
@@ -301,9 +303,17 @@ const isDuplicateNewGroup = computed(() => {
 
 const isDuplicateEditGroup = computed(() => {
   if (!editingGroup.value || !editGroupName.value.trim()) return false
-  // Don't flag if checking against itself (unchanged name) which isDuplicateGroupName handles via excludeId if passed correctly, 
-  // but here we need to pass the ID.
-  return isDuplicateGroupName(editGroupName.value, editingGroup.value.id)
+  
+  const normalized = editGroupName.value.trim().toLowerCase()
+  const currentId = editingGroup.value.id
+  
+  const isDup = tagGroups.value.some(g => {
+    if (g.id === currentId) return false
+    return g.name.toLowerCase() === normalized
+  })
+  
+  console.log('isDuplicateEditGroup:', { currentId, normalized, isDup, groups: tagGroups.value.map(g => ({ id: g.id, name: g.name })) })
+  return isDup
 })
 
 
@@ -502,16 +512,21 @@ function closeEditTagDialog() {
 
 const isDuplicateEditTag = computed(() => {
   if (!editingTag.value || !editTagValue.value.trim()) return false
+  
   const normalized = editTagValue.value.trim().toLowerCase()
   const groupId = editingTag.value.group_id
+  const currentId = editingTag.value.id
   
   // Get tags in same group
   const groupTags = getTagsByGroup(groupId)
   
-  return groupTags.some(t => {
-    if (t.id === editingTag.value?.id) return false
+  const isDup = groupTags.some(t => {
+    if (t.id === currentId) return false
     return t.value.toLowerCase() === normalized
   })
+  
+  console.log('isDuplicateEditTag:', { currentId, normalized, isDup, tags: groupTags.map(t => ({ id: t.id, value: t.value })) })
+  return isDup
 })
 
 async function saveEditTag() {
@@ -611,7 +626,7 @@ function handleDragOver(index: number, event: DragEvent) {
   dragOverIndex.value = index
 }
 
-function handleDrop(dropIndex: number, event: DragEvent) {
+async function handleDrop(dropIndex: number, event: DragEvent) {
   event.preventDefault()
   
   if (draggingIndex.value === null || draggingIndex.value === dropIndex) {
@@ -627,7 +642,12 @@ function handleDrop(dropIndex: number, event: DragEvent) {
   
   // Update backend with new order
   const orderedIds = groups.map(g => g.id)
-  tagsStore.reorderTagGroups(orderedIds)
+  try {
+    await tagsStore.reorderTagGroups(orderedIds)
+  } catch (e) {
+    console.error('Failed to reorder tag groups:', e)
+    // Optionally revert UI in a real app, but store reload will fix it eventually
+  }
 }
 
 function handleDragEnd() {
@@ -708,8 +728,20 @@ onUnmounted(() => {
   }
 })
 
+const isDuplicateNewTag = computed(() => {
+  if (!newTagValue.value.trim() || !targetGroupId.value) return false
+  const normalized = newTagValue.value.trim().toLowerCase()
+  const groupTags = getTagsByGroup(targetGroupId.value)
+  return groupTags.some(t => t.value.toLowerCase() === normalized)
+})
+
 async function createTag() {
   if (!newTagValue.value.trim() || !targetGroupId.value) return
+  
+  if (isDuplicateNewTag.value) {
+    // blocked by UI state
+    return
+  }
   
   try {
     await tagsStore.createTag(targetGroupId.value, newTagValue.value.trim())

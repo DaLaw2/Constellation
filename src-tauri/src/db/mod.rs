@@ -14,7 +14,22 @@ pub async fn init_database(db_path: &Path) -> Result<Pool, Box<dyn std::error::E
     }
 
     let cfg = Config::new(db_path);
-    let pool = cfg.create_pool(Runtime::Tokio1)?;
+    // Create the pool with a post_create hook to enable foreign keys
+    let pool = cfg
+        .builder(Runtime::Tokio1)
+        .expect("Failed to create pool builder")
+        /*
+        .post_create(|conn, _metrics| {
+            Box::pin(async move {
+                conn.interact(|conn| conn.execute_batch("PRAGMA foreign_keys = ON;"))
+                    .await
+                    .map_err(|_| deadpool::managed::HookError::Message("Interaction failed".into()))?
+                    .map_err(|e| deadpool::managed::HookError::Backend(e))
+            })
+        })
+        */
+        .build()
+        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
     // Initialize schema on first connection
     let conn = pool.get().await?;

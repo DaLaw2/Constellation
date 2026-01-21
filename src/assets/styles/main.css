@@ -126,6 +126,18 @@ body {
 .btn-icon {
   padding: 8px;
   background: transparent;
+  border: none;
+}
+
+/* Global text selection reset */
+body {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input, textarea, [contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .btn-icon:hover {
