@@ -8,7 +8,17 @@
         </div>
 
         <div class="selector-body">
-          <div v-for="group in tagGroups" :key="group.id" class="tag-group">
+          <div class="search-bar-container">
+            <input 
+              v-model="searchQuery" 
+              type="text" 
+              placeholder="Search tags..." 
+              class="tag-search-input"
+              ref="searchInputRef"
+            />
+          </div>
+
+          <div v-for="group in filteredTagGroups" :key="group.id" class="tag-group">
             <div class="group-header">
               <span
                 class="group-color"
@@ -19,7 +29,7 @@
 
             <div class="group-tags">
               <label
-                v-for="tag in getTagsByGroup(group.id)"
+                v-for="tag in getFilteredTagsByGroup(group.id)"
                 :key="tag.id"
                 class="tag-option"
                 :class="{ selected: isSelected(tag.id) }"
@@ -32,7 +42,7 @@
                 <span class="tag-label">{{ tag.value }}</span>
               </label>
 
-              <!-- Create new tag inline -->
+              <!-- Create new tag inline (only show when not searching or exact match not found) -->
               <div v-if="creatingInGroup === group.id" class="new-tag-input">
                 <input
                   ref="newTagInputRef"
@@ -47,7 +57,7 @@
                 <button class="btn-small btn-cancel" @click="cancelCreate">×</button>
               </div>
               <button
-                v-else
+                v-else-if="!searchQuery"
                 class="btn-add-tag"
                 @click="startCreate(group.id)"
               >
@@ -58,6 +68,9 @@
 
           <div v-if="tagGroups.length === 0" class="empty-state">
             No tag groups yet. Create groups in the Tag Panel first.
+          </div>
+          <div v-else-if="filteredTagGroups.length === 0" class="empty-state">
+            No tags match "{{ searchQuery }}"
           </div>
         </div>
 
@@ -71,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, computed, onMounted } from 'vue'
 import type { Tag, TagGroup } from '../../stores/tags'
 
 interface Props {
@@ -91,11 +104,39 @@ const emit = defineEmits<{
 const creatingInGroup = ref<number | null>(null)
 const newTagValue = ref('')
 const newTagInputRef = ref<HTMLInputElement | null>(null)
+const searchInputRef = ref<HTMLInputElement | null>(null)
 const isDuplicate = ref(false)
+const searchQuery = ref('')
+
+// Focus search on mount
+onMounted(() => {
+  nextTick(() => {
+    searchInputRef.value?.focus()
+  })
+})
 
 function getTagsByGroup(groupId: number): Tag[] {
   return props.tags.filter(tag => tag.group_id === groupId)
 }
+
+function getFilteredTagsByGroup(groupId: number): Tag[] {
+  const query = searchQuery.value.trim().toLowerCase()
+  const tags = getTagsByGroup(groupId)
+  
+  if (!query) return tags
+  
+  return tags.filter(tag => tag.value.toLowerCase().includes(query))
+}
+
+const filteredTagGroups = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) return props.tagGroups
+  
+  return props.tagGroups.filter(group => {
+    const groupTags = getTagsByGroup(group.id)
+    return groupTags.some(tag => tag.value.toLowerCase().includes(query))
+  })
+})
 
 function isSelected(tagId: number): boolean {
   return props.selectedTagIds.includes(tagId)
@@ -207,6 +248,29 @@ watch(newTagValue, () => {
   padding: 16px;
   overflow-y: auto;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-bar-container {
+  padding-bottom: 12px;
+  position: sticky;
+  top: 0;
+  background: var(--background);
+  z-index: 5;
+}
+
+.tag-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.tag-search-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
 }
 
 .tag-group {

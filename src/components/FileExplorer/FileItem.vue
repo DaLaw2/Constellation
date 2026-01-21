@@ -19,14 +19,20 @@
         </span>
       </div>
     </div>
-    <div class="file-tags" @click.stop>
-      <TagCell
-        :item-tags="itemTags"
-        :tag-groups="tagGroups"
-        :tags="allTags"
-        @update:tags="handleTagsUpdate"
-        @create-tag="handleCreateTag"
-      />
+    <div class="file-tags-container" :style="{ width: tagAreaWidth + 'px' }">
+      <div 
+        class="resize-handle"
+        @mousedown="startResize"
+      ></div>
+      <div class="file-tags" @click.stop>
+        <TagCell
+          :item-tags="itemTags"
+          :tag-groups="tagGroups"
+          :tags="allTags"
+          @update:tags="handleTagsUpdate"
+          @create-tag="handleCreateTag"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -42,6 +48,7 @@ import TagCell from '../TagManagement/TagCell.vue'
 interface Props {
   entry: FileEntry
   selected?: boolean
+  tagAreaWidth: number
 }
 
 const props = defineProps<Props>()
@@ -49,6 +56,7 @@ const emit = defineEmits<{
   click: [entry: FileEntry]
   doubleClick: [entry: FileEntry]
   contextMenu: [entry: FileEntry, event: MouseEvent]
+  resizeStart: [event: MouseEvent]
 }>()
 
 const tagsStore = useTagsStore()
@@ -119,6 +127,11 @@ async function handleCreateTag(groupId: number, value: string) {
   } catch (e) {
     console.error('Failed to create tag:', e)
   }
+}
+
+// Resize handler - emit to parent
+function startResize(e: MouseEvent) {
+  emit('resizeStart', e)
 }
 
 // Load tag groups and tags on mount
@@ -279,8 +292,8 @@ function formatDate(timestamp: number): string {
 }
 
 .file-info {
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 60%;
+  min-width: 200px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -307,10 +320,40 @@ function formatDate(timestamp: number): string {
   white-space: nowrap;
 }
 
-.file-tags {
-  flex-shrink: 0;
-  min-width: 150px;
-  max-width: 250px;
+.file-tags-container {
   position: relative;
+  display: flex;
+  flex-shrink: 0;
+  min-width: 400px;
+}
+
+.resize-handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  z-index: 5;
+  transition: background-color 0.2s ease;
+}
+
+.resize-handle:hover {
+  background-color: var(--primary-color);
+}
+
+.resize-handle::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  top: 0;
+  bottom: 0;
+}
+
+.file-tags {
+  flex: 1;
+  position: relative;
+  padding-left: 8px;
 }
 </style>

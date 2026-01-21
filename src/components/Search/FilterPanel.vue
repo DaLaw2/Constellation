@@ -50,6 +50,15 @@
         </span>
       </label>
 
+      <div class="tag-filter-input-container">
+        <input
+          type="text"
+          v-model="tagFilterQuery"
+          placeholder="Filter tags..."
+          class="tag-filter-input"
+        />
+      </div>
+
       <div v-if="tagsLoading" class="loading-state">Loading tags...</div>
 
       <div v-else-if="tagGroups.length === 0" class="empty-state">
@@ -57,7 +66,7 @@
       </div>
 
       <div v-else class="tag-groups-list">
-        <div v-for="group in tagGroups" :key="group.id" class="tag-group">
+        <div v-for="group in filteredTagGroups" :key="group.id" class="tag-group">
           <div class="group-header">
             <span
               class="group-color"
@@ -67,7 +76,7 @@
           </div>
           <div class="tag-checkboxes">
             <label
-              v-for="tag in getTagsByGroup(group.id)"
+              v-for="tag in getFilteredTagsByGroup(group.id)"
               :key="tag.id"
               class="tag-checkbox"
               :class="{ checked: isTagSelected(tag.id) }"
@@ -133,10 +142,21 @@ const tagsStore = useTagsStore()
 const appStore = useAppStore()
 
 const filenameInput = ref('')
+const tagFilterQuery = ref('')
 const hasSearched = ref(false)
 const tagsLoading = ref(false)
 
 const tagGroups = computed(() => tagsStore.tagGroups)
+
+const filteredTagGroups = computed(() => {
+  const query = tagFilterQuery.value.trim().toLowerCase()
+  if (!query) return tagGroups.value
+  
+  return tagGroups.value.filter(group => {
+    const groupTags = tagsStore.getTagsByGroup(group.id)
+    return groupTags.some(tag => tag.value.toLowerCase().includes(query))
+  })
+})
 
 const hasAnyCriteria = computed(() => {
   return searchStore.selectedTagIds.length > 0 || filenameInput.value.trim().length > 0
@@ -158,6 +178,14 @@ function getTagsByGroup(groupId: number) {
   return tagsStore.getTagsByGroup(groupId)
 }
 
+function getFilteredTagsByGroup(groupId: number) {
+  const query = tagFilterQuery.value.trim().toLowerCase()
+  const tags = getTagsByGroup(groupId)
+  
+  if (!query) return tags
+  return tags.filter(tag => tag.value.toLowerCase().includes(query))
+}
+
 function isTagSelected(tagId: number): boolean {
   return searchStore.selectedTagIds.includes(tagId)
 }
@@ -170,6 +198,7 @@ async function executeSearch() {
 
 function clearAll() {
   filenameInput.value = ''
+  tagFilterQuery.value = ''
   searchStore.clearSearch()
   hasSearched.value = false
 }
@@ -293,6 +322,24 @@ function getParentPath(path: string): string {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.tag-filter-input-container {
+  padding-bottom: 8px;
+}
+
+.tag-filter-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 12px;
+  background: var(--background);
+}
+
+.tag-filter-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
 }
 
 .tag-groups-list {
