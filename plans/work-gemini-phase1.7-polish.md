@@ -4,7 +4,7 @@
 - **Phase**: 1.7 - Polish & Bug Fixes
 - **Branch**: `feat/phase1.7-polish`
 - **Goal**: Fix critical bugs identified during testing, improve UX polish.
-- **Status**: 🟢 Nearly Complete (4/6 tasks completed, only polish tasks remaining)
+- **Status**: ✅ **COMPLETED** (6/6 tasks completed)
 
 ## Constitution Reference (AGENTS_CONSTITUTION.md)
 - ❌ NO `unwrap()`/`expect()` without justification
@@ -172,8 +172,9 @@ async function handleDrop(dropIndex: number, event: DragEvent) {
 
 ---
 
-### Task 5: Disable Text Selection Globally
+### ✅ Task 5: Disable Text Selection Globally (COMPLETED)
 **Priority**: P3 (Low)
+**Status**: ✅ **COMPLETED**
 **Goal**: Prevent accidental text selection in UI (except in input fields).
 
 **Location**: `src/assets/styles/main.css`
@@ -192,13 +193,14 @@ input, textarea, [contenteditable="true"] {
 }
 ```
 
-- [ ] 5.1 Add global text selection prevention to main.css
-- [ ] 5.2 Verify inputs are still selectable
+- [x] 5.1 Add global text selection prevention to main.css
+- [x] 5.2 Verify inputs are still selectable
 
 ---
 
-### Task 6: Restrict Global Context Menu
+### ✅ Task 6: Restrict Global Context Menu (COMPLETED)
 **Priority**: P3 (Low)
+**Status**: ✅ **COMPLETED**
 **Goal**: Disable default browser right-click menu except in specific areas.
 
 **Location**: `src/App.vue`
@@ -215,8 +217,8 @@ onMounted(() => {
 })
 ```
 
-- [ ] 6.1 Add global contextmenu prevention in App.vue
-- [ ] 6.2 Mark areas that should allow context menu with `.allow-context-menu` class
+- [x] 6.1 Add global contextmenu prevention in App.vue
+- [x] 6.2 Mark areas that should allow context menu with `.allow-context-menu` class
 
 ---
 
