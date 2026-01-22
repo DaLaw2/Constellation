@@ -85,7 +85,7 @@
 
 <script setup lang="ts">
 import { ref, nextTick, computed, onMounted } from 'vue'
-import type { Tag, TagGroup } from '../../stores/tags'
+import type { Tag, TagGroup } from '@/types'
 
 interface Props {
   selectedTagIds: number[]

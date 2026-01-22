@@ -49,8 +49,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useAppStore } from '../../stores/app'
-import type { ViewMode } from '../../stores/app'
+import { useAppStore } from '@/stores/app'
+import type { ViewMode } from '@/types'
 import TagPanel from '../TagManagement/TagPanel.vue'
 import DirectoryTree from '../FileExplorer/DirectoryTree.vue'
 import FilterPanel from '../Search/FilterPanel.vue'

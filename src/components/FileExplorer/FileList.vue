@@ -54,7 +54,7 @@
       v-else
       class="file-scroller"
       :items="filteredFiles"
-      :item-size="60"
+      :item-size="LAYOUT.FILE_ITEM_HEIGHT"
       key-field="path"
       v-slot="{ item }"
     >
@@ -77,13 +77,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref } from 'vue'
 import { RecycleScroller } from 'vue-virtual-scroller'
-import { useFileExplorerStore } from '../../stores/fileExplorer'
-import { useAppStore } from '../../stores/app'
-import { useFileContextMenu } from '../../composables/useFileContextMenu'
+import { useFileExplorerStore } from '@/stores/fileExplorer'
+import { useAppStore } from '@/stores/app'
+import { useFileContextMenu, useResizable, useLocalStorage } from '@/composables'
+import { fuzzyMatch } from '@/utils'
+import { LAYOUT, STORAGE_KEYS } from '@/constants'
 import FileItem from './FileItem.vue'
-import type { FileEntry } from '../../stores/fileExplorer'
+import type { FileEntry } from '@/types'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 
 const fileExplorerStore = useFileExplorerStore()
@@ -95,49 +97,25 @@ const files = computed(() => fileExplorerStore.currentFiles)
 const loading = computed(() => fileExplorerStore.loading)
 const error = computed(() => fileExplorerStore.error)
 
-// Simple fuzzy search matching
-function fuzzyMatch(text: string, query: string): boolean {
-  // Empty query matches everything
-  if (!query) return true
-  
-  text = text.toLowerCase()
-  query = query.toLowerCase()
-  
-  // Fast path for substring match
-  if (text.includes(query)) return true
-  
-  // Fuzzy match (characters in order)
-  let queryIdx = 0
-  let textIdx = 0
-  
-  while (queryIdx < query.length && textIdx < text.length) {
-    if (query[queryIdx] === text[textIdx]) {
-      queryIdx++
-    }
-    textIdx++
-  }
-  
-  return queryIdx === query.length
-}
-
 const filteredFiles = computed(() => {
   const query = appStore.searchQuery.trim()
   if (!query) return files.value
-  
+
   return files.value.filter(file => fuzzyMatch(file.name, query))
 })
 
-// Local selection state (writable ref, not computed)
-// Selection is a UI concern separate from navigation
+// Local selection state
 const selectedPath = ref<string | null>(null)
 
-// Shared tag area width for all file items
-const MIN_TAG_WIDTH = 400
-const STORAGE_KEY = 'fileList.tagAreaWidth'
-const tagAreaWidth = ref<number>(500)
-const isResizing = ref(false)
-const resizeStartX = ref(0)
-const resizeStartWidth = ref(0)
+// Shared tag area width for all file items with persistence
+const savedTagWidth = useLocalStorage<number>(STORAGE_KEYS.TAG_AREA_WIDTH, LAYOUT.DEFAULT_TAG_AREA_WIDTH)
+
+const { width: tagAreaWidth, handleResizeStart } = useResizable(savedTagWidth.value, {
+  minWidth: LAYOUT.MIN_TAG_AREA_WIDTH,
+  onResizeEnd: (width) => {
+    savedTagWidth.value = width
+  },
+})
 
 const canNavigateUp = computed(() => {
   if (!currentPath.value) return false
@@ -147,62 +125,30 @@ const canNavigateUp = computed(() => {
 
 function navigateUp() {
   fileExplorerStore.navigateUp()
-  selectedPath.value = null // Clear selection on navigation
+  selectedPath.value = null
 }
 
 function refresh() {
   if (currentPath.value) {
     fileExplorerStore.readDirectory(currentPath.value)
-    selectedPath.value = null // Clear selection on refresh
-  }
-}
-
-// Resize handlers for tag area
-function handleResizeStart(e: MouseEvent) {
-  isResizing.value = true
-  resizeStartX.value = e.clientX
-  resizeStartWidth.value = tagAreaWidth.value
-  
-  document.addEventListener('mousemove', handleResize)
-  document.addEventListener('mouseup', handleResizeStop)
-}
-
-function handleResize(e: MouseEvent) {
-  if (!isResizing.value) return
-  
-  const delta = e.clientX - resizeStartX.value
-  const newWidth = Math.max(MIN_TAG_WIDTH, resizeStartWidth.value - delta)
-  tagAreaWidth.value = newWidth
-}
-
-function handleResizeStop() {
-  if (isResizing.value) {
-    isResizing.value = false
-    localStorage.setItem(STORAGE_KEY, tagAreaWidth.value.toString())
-    
-    document.removeEventListener('mousemove', handleResize)
-    document.removeEventListener('mouseup', handleResizeStop)
+    selectedPath.value = null
   }
 }
 
 function handleFileClick(entry: FileEntry) {
-  // Single click - update local selection state
   selectedPath.value = entry.path
 }
 
 function handleFileDoubleClick(entry: FileEntry) {
   if (entry.is_directory) {
-    // Navigate into directory
     fileExplorerStore.navigateTo(entry.path)
-    selectedPath.value = null // Clear selection on navigation
+    selectedPath.value = null
   } else {
-    // Open file with default application
     fileExplorerStore.openFileExternal(entry.path)
   }
 }
 
 function handleFileContextMenu(entry: FileEntry, event: MouseEvent) {
-  // Select file before showing context menu
   selectedPath.value = entry.path
 
   showFileContextMenu({
@@ -211,19 +157,6 @@ function handleFileContextMenu(entry: FileEntry, event: MouseEvent) {
     y: event.y,
   })
 }
-
-// Load saved tag area width on mount
-onMounted(() => {
-  const saved = localStorage.getItem(STORAGE_KEY)
-  if (saved) {
-    tagAreaWidth.value = Math.max(MIN_TAG_WIDTH, parseInt(saved))
-  }
-})
-
-onUnmounted(() => {
-  document.removeEventListener('mousemove', handleResize)
-  document.removeEventListener('mouseup', handleResizeStop)
-})
 </script>
 
 <style scoped>

@@ -1,15 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
-import type { Tag } from './tags'
-
-export interface TagTemplate {
-  id: number
-  name: string
-  tags: Tag[]
-  created_at: number
-  updated_at: number
-}
+import type { TagTemplate } from '@/types'
 
 export const useTagTemplatesStore = defineStore('tagTemplates', () => {
   const templates = ref<TagTemplate[]>([])

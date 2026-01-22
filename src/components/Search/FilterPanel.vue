@@ -133,9 +133,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useSearchStore, type Item } from '../../stores/search'
-import { useTagsStore } from '../../stores/tags'
-import { useAppStore } from '../../stores/app'
+import { useSearchStore } from '@/stores/search'
+import { useTagsStore } from '@/stores/tags'
+import { useAppStore } from '@/stores/app'
+import { getFileName, getParentPath } from '@/utils/path'
+import type { Item } from '@/types'
 
 const searchStore = useSearchStore()
 const tagsStore = useTagsStore()
@@ -203,22 +205,11 @@ function clearAll() {
   hasSearched.value = false
 }
 
-function getFileName(path: string): string {
-  const parts = path.replace(/\\/g, '/').split('/')
-  return parts[parts.length - 1] || path
-}
-
 function openItem(item: Item) {
   // Navigate to the item's directory in file browser
   const dirPath = item.is_directory ? item.path : getParentPath(item.path)
   appStore.setCurrentPath(dirPath)
   appStore.setLeftPanelMode('file-browser')
-}
-
-function getParentPath(path: string): string {
-  const normalized = path.replace(/\\/g, '/')
-  const lastSlash = normalized.lastIndexOf('/')
-  return lastSlash > 0 ? normalized.substring(0, lastSlash) : normalized
 }
 </script>
 

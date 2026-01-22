@@ -287,7 +287,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { useTagsStore, type Tag } from '../../stores/tags'
+import { useTagsStore } from '@/stores/tags'
+import type { Tag } from '@/types'
 import draggable from 'vuedraggable'
 
 const tagsStore = useTagsStore()

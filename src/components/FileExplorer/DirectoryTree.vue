@@ -50,9 +50,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useFileExplorerStore } from '../../stores/fileExplorer'
+import { useFileExplorerStore } from '@/stores/fileExplorer'
 import DirectoryNode from './DirectoryNode.vue'
-import type { DriveInfo, FileEntry } from '../../stores/fileExplorer'
+import type { DriveInfo, FileEntry } from '@/types'
 
 const fileExplorerStore = useFileExplorerStore()
 

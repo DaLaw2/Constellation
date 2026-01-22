@@ -3,7 +3,7 @@
     <!-- Tag display (always visible, dimmed during editing) -->
     <div class="tag-cell-display" :class="{ editing: editing }">
       <!-- Left: Tags display area (non-clickable) -->
-      <div 
+      <div
         ref="tagsContainerRef"
         class="tags-display-area"
       >
@@ -21,9 +21,9 @@
             :title="tag.value"
           >
             <span class="tag-text">{{ tag.value }}</span>
-            <button 
+            <button
               v-if="!editing"
-              class="tag-delete-btn" 
+              class="tag-delete-btn"
               @click.stop="handleDeleteTag(tag.id)"
               title="Remove tag"
             >
@@ -38,7 +38,7 @@
           +{{ remainingCount }}
         </span>
       </div>
-      
+
       <!-- Right: Add Tag button (always visible, dimmed during editing) -->
       <button class="add-tag-btn" @click.stop="startEdit" title="Add tags">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -65,7 +65,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import TagSelector from './TagSelector.vue'
-import type { Tag, TagGroup } from '../../stores/tags'
+import { getTagTextWidth } from '@/utils'
+import { TAG_DISPLAY } from '@/constants'
+import type { Tag, TagGroup } from '@/types'
 
 interface Props {
   itemTags: Tag[]
@@ -75,7 +77,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  maxDisplay: 999 // Default to high number since we calculate dynamically
+  maxDisplay: 999
 })
 
 const emit = defineEmits<{
@@ -86,7 +88,7 @@ const emit = defineEmits<{
 const editing = ref(false)
 const selectedTagIds = ref<number[]>([])
 const tagsContainerRef = ref<HTMLElement | null>(null)
-const visibleCount = ref(3) // Start with safe default
+const visibleCount = ref<number>(TAG_DISPLAY.DEFAULT_VISIBLE_COUNT)
 const containerWidth = ref(0)
 let resizeObserver: ResizeObserver | null = null
 
@@ -98,20 +100,18 @@ watch(() => props.itemTags, (newTags) => {
 // Sort tags by group order, then alphabetically within group
 const sortedTags = computed(() => {
   const tags = [...props.itemTags]
-  
+
   return tags.sort((a, b) => {
     const groupA = props.tagGroups.find(g => g.id === a.group_id)
     const groupB = props.tagGroups.find(g => g.id === b.group_id)
-    
-    // First, sort by group display_order
+
     const orderA = groupA?.display_order ?? 999
     const orderB = groupB?.display_order ?? 999
-    
+
     if (orderA !== orderB) {
       return orderA - orderB
     }
-    
-    // Within same group, sort alphabetically (case-insensitive)
+
     return a.value.toLowerCase().localeCompare(b.value.toLowerCase())
   })
 })
@@ -124,78 +124,35 @@ const remainingCount = computed(() => {
   return Math.max(0, sortedTags.value.length - visibleCount.value)
 })
 
-// Canvas for text measurement
-const canvas = document.createElement('canvas')
-const context = canvas.getContext('2d')
-if (context) {
-  context.font = '500 11px sans-serif' // Match .tag-badge font
-}
-
-function getExactTagWidth(text: string): number {
-  if (!context) return text.length * 7 + 30 // Fallback
-  
-  const textMetrics = context.measureText(text)
-  // padding-left: 10px (css: 10px)
-  // padding-right: 8px (css: 8px)
-  // gap: 4px
-  // icon placeholder? No icon in text, but badge has properties.
-  // .tag-badge has padding: 3px 10px; padding-right: 8px.
-  // width = text + 10 + 8
-  const width = Math.ceil(textMetrics.width) + 18
-  
-  // Max width constraint (css: max-width: 120px)
-  return Math.min(120, width)
-}
-
 function calculateVisibleTags() {
   if (!tagsContainerRef.value || sortedTags.value.length === 0) return
 
   const availableWidth = tagsContainerRef.value.clientWidth
-  // Width of "+N" badge. "+99" approx 35px. "+9" approx 28px.
-  // padding: 3px 8px. font 11px.
-  const overflowWidth = 35 
-  const gap = 4
-  const minTagWidth = 45 // Allow tag to be compressed down to this width
-  
+
   let currentWidth = 0
   let count = 0
-  
-  // Loop through tags
+
   for (let i = 0; i < sortedTags.value.length; i++) {
     const tag = sortedTags.value[i]
-    const tagWidth = getExactTagWidth(tag.value)
+    const tagWidth = getTagTextWidth(tag.value, TAG_DISPLAY.MAX_TAG_WIDTH)
     const isLast = i === sortedTags.value.length - 1
-    
-    // Logic:
-    // 1. Try to fit full tag
-    // 2. If fails, try to fit truncated tag (minTagWidth)
-    
+
     let spaceForTag = availableWidth - currentWidth
-    // If not last, we must reserve space for overflow badge
     if (!isLast) {
-      spaceForTag -= (gap + overflowWidth)
+      spaceForTag -= (TAG_DISPLAY.TAG_GAP + TAG_DISPLAY.OVERFLOW_BADGE_WIDTH)
     }
-    
+
     if (spaceForTag >= tagWidth) {
-      // Fits fully
-      currentWidth += tagWidth + gap
+      currentWidth += tagWidth + TAG_DISPLAY.TAG_GAP
       count++
-    } else if (spaceForTag >= minTagWidth) {
-      // Fits truncated
-      // We accept this tag, but since it's truncated, it effectively fills the remaining space (visually)
-      // And we stop here because we can't fit fully effectively.
-      // Actually, if we squeeze this one, we definitely can't fit the next full one?
-      // Not necessarily, but for simplicity, if we have to truncate one, 
-      // usually it's the last one we show.
+    } else if (spaceForTag >= TAG_DISPLAY.MIN_TAG_WIDTH) {
       count++
-      break 
+      break
     } else {
-      // Doesn't fit even truncated
       break
     }
   }
-  
-  // Ensure we don't show 0 tags if we have tags (unless really small)
+
   visibleCount.value = Math.max(0, count)
 }
 
@@ -242,7 +199,7 @@ function handleClickOutside(event: MouseEvent) {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
-  
+
   if (tagsContainerRef.value) {
     resizeObserver = new ResizeObserver(entries => {
       for (const entry of entries) {
@@ -285,16 +242,15 @@ onUnmounted(() => {
 }
 
 .tags-display-area {
-  flex: 1; /* Restore flex: 1 to take available space */
-  min-width: 0; /* CRITICAL: Prevent flex item from growing by content */
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 4px; /* Gap used in calculation */
-  /* flex-wrap: wrap;  REMOVE wrap so we can correct calculate single line capacity */
+  gap: 4px;
   min-height: 32px;
   padding: 4px 8px;
   border-radius: 4px;
-  overflow: hidden; /* Hide overflow */
+  overflow: hidden;
 }
 
 .no-tags {
@@ -306,8 +262,8 @@ onUnmounted(() => {
 .tag-badge-wrapper {
   display: inline-flex;
   position: relative;
-  min-width: 0; /* Allow shrinking */
-  max-width: 100%; /* Prevent overflow */
+  min-width: 0;
+  max-width: 100%;
 }
 
 .tag-badge {
@@ -321,7 +277,7 @@ onUnmounted(() => {
   font-weight: 500;
   color: white;
   max-width: 120px;
-  min-width: 30px; /* Ensure badge has some robust width */
+  min-width: 30px;
   transition: padding-right 0.2s ease;
 }
 
@@ -416,4 +372,3 @@ onUnmounted(() => {
   z-index: 10;
 }
 </style>
-

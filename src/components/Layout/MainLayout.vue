@@ -16,9 +16,9 @@
 </template>
 
 <script setup lang="ts">
-import { useAppStore } from '../../stores/app'
+import { useAppStore } from '@/stores/app'
 import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { useFileExplorerStore } from '../../stores/fileExplorer'
+import { useFileExplorerStore } from '@/stores/fileExplorer'
 import TopBar from './TopBar.vue'
 import LeftPanel from './LeftPanel.vue'
 import FileList from '../FileExplorer/FileList.vue'

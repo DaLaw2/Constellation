@@ -2,32 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useAppStore } from './app'
-
-export interface DriveInfo {
-  letter: string
-  label: string | null
-  drive_type: string
-  total_space: number | null
-  available_space: number | null
-}
-
-export interface FileEntry {
-  name: string
-  path: string
-  is_directory: boolean
-  size: number | null
-  modified_time: number | null
-  is_hidden: boolean
-}
-
-export interface FileMetadata {
-  path: string
-  size: number | null
-  modified_time: number | null
-  created_time: number | null
-  is_directory: boolean
-  is_readonly: boolean
-}
+import type { DriveInfo, FileEntry, FileMetadata } from '@/types'
 
 export const useFileExplorerStore = defineStore('fileExplorer', () => {
   const currentPath = ref<string>('')

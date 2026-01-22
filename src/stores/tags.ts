@@ -1,23 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
-
-export interface TagGroup {
-  id: number
-  name: string
-  color: string | null
-  display_order: number
-  created_at: number
-  updated_at: number
-}
-
-export interface Tag {
-  id: number
-  group_id: number
-  value: string
-  created_at: number
-  updated_at: number
-}
+import type { Tag, TagGroup } from '@/types'
 
 export const useTagsStore = defineStore('tags', () => {
   const tagGroups = ref<TagGroup[]>([])
@@ -140,10 +124,8 @@ export const useTagsStore = defineStore('tags', () => {
         display_order: index,
       }))
 
-      console.log('Reordering tag groups:', orders)
       await invoke('reorder_tag_groups', { orders })
       await loadTagGroups()
-      console.log('Tag groups reordered successfully')
     } catch (e) {
       error.value = e as string
       console.error('Failed to reorder tag groups:', e)

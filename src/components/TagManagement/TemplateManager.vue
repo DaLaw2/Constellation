@@ -106,8 +106,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useTagTemplatesStore } from '../../stores/tagTemplates'
-import { useTagsStore, type Tag } from '../../stores/tags'
+import { useTagTemplatesStore } from '@/stores/tagTemplates'
+import { useTagsStore } from '@/stores/tags'
+import type { Tag } from '@/types'
 
 const templatesStore = useTagTemplatesStore()
 const tagsStore = useTagsStore()

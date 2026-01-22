@@ -33,8 +33,8 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useFileExplorerStore } from '../../stores/fileExplorer'
-import type { FileEntry } from '../../stores/fileExplorer'
+import { useFileExplorerStore } from '@/stores/fileExplorer'
+import type { FileEntry } from '@/types'
 
 interface Props {
   entry: FileEntry

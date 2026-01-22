@@ -1,8 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-
-export type ViewMode = 'file-browser' | 'tag-management' | 'search'
-export type DisplayMode = 'detail' | 'large-icons'
+import type { ViewMode, DisplayMode } from '@/types'
 
 export const useAppStore = defineStore('app', () => {
   // Left panel mode

@@ -1,6 +1,6 @@
 import { ContextMenu } from '@imengyu/vue3-context-menu'
-import { useFileExplorerStore } from '../stores/fileExplorer'
-import type { FileEntry } from '../stores/fileExplorer'
+import { useFileExplorerStore } from '@/stores/fileExplorer'
+import type { FileEntry } from '@/types'
 
 export interface ContextMenuOptions {
   entry: FileEntry

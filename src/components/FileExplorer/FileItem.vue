@@ -12,15 +12,15 @@
       <div class="file-name">{{ entry.name }}</div>
       <div class="file-meta">
         <span v-if="!entry.is_directory && entry.size !== null" class="file-size">
-          {{ formatBytes(entry.size) }}
+          {{ formatFileSize(entry.size) }}
         </span>
         <span v-if="entry.modified_time" class="file-date">
-          {{ formatDate(entry.modified_time) }}
+          {{ formatRelativeDate(entry.modified_time) }}
         </span>
       </div>
     </div>
     <div class="file-tags-container" :style="{ width: tagAreaWidth + 'px' }">
-      <div 
+      <div
         class="resize-handle"
         @mousedown="startResize"
       ></div>
@@ -39,11 +39,10 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, onMounted } from 'vue'
-import type { FileEntry } from '../../stores/fileExplorer'
-import { useTagsStore } from '../../stores/tags'
-import type { Tag } from '../../stores/tags'
-import { useItemsStore } from '../../stores/items'
+import { useTagsStore } from '@/stores/tags'
+import { useItemsStore } from '@/stores/items'
 import TagCell from '../TagManagement/TagCell.vue'
+import type { FileEntry, Tag } from '@/types'
 
 interface Props {
   entry: FileEntry
@@ -73,11 +72,9 @@ const itemId = ref<number | null>(null)
 // Load item and its tags when entry changes
 watch(() => props.entry.path, async (newPath) => {
   try {
-    // First, check if this file is tracked in the database
     const item = await itemsStore.getItemByPath(newPath)
     if (item) {
       itemId.value = item.id
-      // Load tags for this item
       const tags = await itemsStore.getTagsForItem(item.id)
       itemTags.value = tags
     } else {
@@ -92,7 +89,6 @@ watch(() => props.entry.path, async (newPath) => {
 
 async function handleTagsUpdate(tagIds: number[]) {
   try {
-    // If item doesn't exist in database, create it first
     if (itemId.value === null) {
       const newId = await itemsStore.createItem(
         props.entry.path,
@@ -103,10 +99,7 @@ async function handleTagsUpdate(tagIds: number[]) {
       itemId.value = newId
     }
 
-    // Update tags
     await itemsStore.updateItemTags(itemId.value, tagIds)
-
-    // Refresh tags display
     const tags = await itemsStore.getTagsForItem(itemId.value)
     itemTags.value = tags
   } catch (e) {
@@ -117,7 +110,6 @@ async function handleTagsUpdate(tagIds: number[]) {
 async function handleCreateTag(groupId: number, value: string) {
   try {
     const newTagId = await tagsStore.createTag(groupId, value)
-    // Automatically select the new tag
     if (itemId.value !== null) {
       const currentIds = itemTags.value.map(t => t.id)
       await itemsStore.updateItemTags(itemId.value, [...currentIds, newTagId])
@@ -129,12 +121,10 @@ async function handleCreateTag(groupId: number, value: string) {
   }
 }
 
-// Resize handler - emit to parent
 function startResize(e: MouseEvent) {
   emit('resizeStart', e)
 }
 
-// Load tag groups and tags on mount
 onMounted(() => {
   if (tagsStore.tagGroups.length === 0) {
     tagsStore.loadTagGroups()
@@ -161,7 +151,6 @@ function getFileIcon(entry: FileEntry): string {
     return '📁'
   }
 
-  // Determine icon based on file extension
   const ext = entry.name.split('.').pop()?.toLowerCase()
 
   switch (ext) {
@@ -229,7 +218,7 @@ function getFileIcon(entry: FileEntry): string {
   }
 }
 
-function formatBytes(bytes: number): string {
+function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B'
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -237,7 +226,7 @@ function formatBytes(bytes: number): string {
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
 }
 
-function formatDate(timestamp: number): string {
+function formatRelativeDate(timestamp: number): string {
   const date = new Date(timestamp * 1000)
   const now = new Date()
   const diff = now.getTime() - date.getTime()
@@ -293,7 +282,7 @@ function formatDate(timestamp: number): string {
 
 .file-info {
   flex: 1 1 60%;
-  min-width: 100px; /* Reduced from 200px to avoid overflow on small screens */
+  min-width: 100px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -323,8 +312,8 @@ function formatDate(timestamp: number): string {
 .file-tags-container {
   position: relative;
   display: flex;
-  flex-shrink: 1; /* Allow shrinking if viewport is too narrow */
-  min-width: 150px; /* Lower min-width to prevent overflow, JS enforcement keeps it at desired size normally */
+  flex-shrink: 1;
+  min-width: 150px;
 }
 
 .resize-handle {
@@ -353,7 +342,7 @@ function formatDate(timestamp: number): string {
 
 .file-tags {
   flex: 1;
-  min-width: 0; /* Important: prevents flexing beyond parent */
+  min-width: 0;
   position: relative;
   padding-left: 8px;
 }

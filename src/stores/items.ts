@@ -1,19 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
-import type { Tag } from './tags'
-
-export interface Item {
-  id: number
-  path: string
-  is_directory: boolean
-  size: number | null
-  modified_time: number | null
-  created_at: number
-  updated_at: number
-  is_deleted: boolean
-  deleted_at: number | null
-}
+import type { Item, Tag } from '@/types'
 
 export const useItemsStore = defineStore('items', () => {
   const items = ref<Item[]>([])

@@ -1,20 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
-
-export interface Item {
-  id: number
-  path: string
-  is_directory: boolean
-  size: number | null
-  modified_time: number | null
-  created_at: number
-  updated_at: number
-  is_deleted: boolean
-  deleted_at: number | null
-}
-
-export type SearchMode = 'and' | 'or'
+import type { Item, SearchMode } from '@/types'
 
 export const useSearchStore = defineStore('search', () => {
   const results = ref<Item[]>([])
