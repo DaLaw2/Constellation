@@ -12,6 +12,8 @@ This document establishes the collaboration protocols and coding standards for a
 
 ## 2. Core Philosophy
 *   **Domain-Driven Design (DDD)**: Architect software around the business domain. Use clear domain models and ubiquitous language in both code and communication.
+    *   **Strict Alignment**: When introducing or modifying DDD core structures (Aggregates, Entities, Value Objects), **HALT** and align with the user.
+    *   **No Assumptions**: Do NOT make decisions based on "common patterns" or "reasonable guesses".
 
 ## 3. Rust Coding Standards
 *   **Error Handling (Strict)**:
@@ -21,6 +23,11 @@ This document establishes the collaboration protocols and coding standards for a
     *   All public functions must return `Result<T, AppError>`.
 *   **Quality**: Code must be clean, maintainable, memory-safe, and efficient.
 *   **Formatting**: run `cargo fmt` before every commit.
+*   **Anti-Patterns**:
+    *   ❌ **NO** Singletons or Service Locators (Registry pattern). Avoid global mutable state.
+*   **Concurrency**:
+    *   ❌ **NO** Locks (`Mutex`, `RwLock`) generally. Only exception is for low-level resource synchronization where absolutely necessary.
+    *   ✅ **USE** thread-safe concurrent containers (e.g., `DashMap`, `SegQueue`) for shared state.
 
 ## 4. Architecture Specifics (Tauri/Vue)
 *   **Type Synchronization**: Ensure Rust models (`src-tauri/src/application/dto.rs`) and TypeScript interfaces (`src/types/`) stay synchronized. A change in one requires a change in the other.
