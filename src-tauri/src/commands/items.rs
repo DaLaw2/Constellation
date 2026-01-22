@@ -1,41 +1,11 @@
-use crate::db::models::{Item, Tag};
+//! Item Commands
+//!
+//! Thin adapters for item operations that delegate to ItemService.
+
+use crate::application::dto::{CreateItemDto, ItemDto, TagDto, UpdateItemDto};
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
-use rusqlite::{Connection, OptionalExtension};
-use std::path::{Component, PathBuf};
 use tauri::State;
-
-/// Validate path to prevent path traversal attacks using ./ or ../
-/// Allows any valid path, but blocks relative path manipulation
-fn validate_path(path: &str) -> AppResult<String> {
-    let path_buf = PathBuf::from(path);
-
-    // Check for path traversal patterns in components
-    for component in path_buf.components() {
-        match component {
-            Component::ParentDir => {
-                return Err(AppError::InvalidInput(
-                    "Path traversal not allowed: '..' detected".to_string(),
-                ));
-            }
-            Component::CurDir => {
-                return Err(AppError::InvalidInput(
-                    "Path traversal not allowed: '.' detected".to_string(),
-                ));
-            }
-            _ => {}
-        }
-    }
-
-    // Also check raw string for encoded or hidden traversal patterns
-    if path.contains("..") || path.contains("./") || path.contains(".\\") {
-        return Err(AppError::InvalidInput(
-            "Path traversal patterns not allowed".to_string(),
-        ));
-    }
-
-    Ok(path.to_string())
-}
 
 #[tauri::command]
 pub async fn create_item(
@@ -45,99 +15,37 @@ pub async fn create_item(
     modified_time: Option<i64>,
     state: State<'_, AppState>,
 ) -> AppResult<i64> {
-    let path = path.trim().to_string();
-    if path.is_empty() {
-        return Err(AppError::InvalidInput("Path cannot be empty".to_string()));
-    }
+    let dto = CreateItemDto {
+        path,
+        is_directory,
+        size,
+        modified_time,
+    };
 
-    // Validate path to prevent traversal attacks
-    let path = validate_path(&path)?;
-
-    let conn = state.db_pool.get().await?;
-
-    let id = conn
-        .interact(move |conn: &mut Connection| {
-            conn.execute(
-                "INSERT INTO items (path, is_directory, size, modified_time) VALUES (?1, ?2, ?3, ?4)",
-                (&path, &is_directory, &size, &modified_time),
-            )?;
-            Ok::<i64, rusqlite::Error>(conn.last_insert_rowid())
-        })
-        .await??;
-
-    Ok(id)
+    state
+        .item_service
+        .create(dto)
+        .await
+        .map_err(|e| AppError::InvalidInput(e.to_string()))
 }
 
 #[tauri::command]
-pub async fn get_item(id: i64, state: State<'_, AppState>) -> AppResult<Item> {
-    let conn = state.db_pool.get().await?;
-
-    let item = conn
-        .interact(move |conn: &mut Connection| {
-            let item = conn.query_row(
-                "SELECT id, path, is_directory, size, modified_time, created_at, updated_at, is_deleted, deleted_at
-                 FROM items
-                 WHERE id = ?1 AND is_deleted = 0",
-                [id],
-                |row| {
-                    Ok(Item {
-                        id: row.get(0)?,
-                        path: row.get(1)?,
-                        is_directory: row.get(2)?,
-                        size: row.get(3)?,
-                        modified_time: row.get(4)?,
-                        created_at: row.get(5)?,
-                        updated_at: row.get(6)?,
-                        is_deleted: row.get(7)?,
-                        deleted_at: row.get(8)?,
-                    })
-                },
-            )?;
-            Ok::<Item, rusqlite::Error>(item)
-        })
-        .await??;
-
-    Ok(item)
+pub async fn get_item(id: i64, state: State<'_, AppState>) -> AppResult<ItemDto> {
+    state
+        .item_service
+        .get_by_id(id)
+        .await
+        .map_err(|e| AppError::InvalidInput(e.to_string()))?
+        .ok_or_else(|| AppError::NotFound(format!("Item with id {}", id)))
 }
 
 #[tauri::command]
-pub async fn get_item_by_path(path: String, state: State<'_, AppState>) -> AppResult<Option<Item>> {
-    // Validate path to prevent traversal attacks
-    let path = validate_path(&path)?;
-
-    let conn = state.db_pool.get().await?;
-
-    let item = conn
-        .interact(move |conn: &mut Connection| {
-            let result = conn.query_row(
-                "SELECT id, path, is_directory, size, modified_time, created_at, updated_at, is_deleted, deleted_at
-                 FROM items
-                 WHERE path = ?1 AND is_deleted = 0",
-                [&path],
-                |row| {
-                    Ok(Item {
-                        id: row.get(0)?,
-                        path: row.get(1)?,
-                        is_directory: row.get(2)?,
-                        size: row.get(3)?,
-                        modified_time: row.get(4)?,
-                        created_at: row.get(5)?,
-                        updated_at: row.get(6)?,
-                        is_deleted: row.get(7)?,
-                        deleted_at: row.get(8)?,
-                    })
-                },
-            );
-
-            match result {
-                Ok(item) => Ok(Some(item)),
-                Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-                Err(e) => Err(e),
-            }
-        })
-        .await??;
-
-    Ok(item)
+pub async fn get_item_by_path(path: String, state: State<'_, AppState>) -> AppResult<Option<ItemDto>> {
+    state
+        .item_service
+        .get_by_path(&path)
+        .await
+        .map_err(|e| AppError::InvalidInput(e.to_string()))
 }
 
 #[tauri::command]
@@ -148,195 +56,53 @@ pub async fn update_item(
     modified_time: Option<i64>,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    // Validate path if provided (before database operations)
-    let validated_path = match &path {
-        Some(p) => Some(validate_path(p)?),
-        None => None,
+    let dto = UpdateItemDto {
+        path,
+        size,
+        modified_time,
     };
 
-    let conn = state.db_pool.get().await?;
-
-    conn.interact(move |conn: &mut Connection| {
-        // Begin transaction for atomic multi-statement update
-        conn.execute("BEGIN IMMEDIATE", [])?;
-
-        let result = (|| {
-            // Check if item exists
-            let exists: bool =
-                conn.query_row("SELECT COUNT(*) FROM items WHERE id = ?1", [id], |row| {
-                    row.get::<_, i64>(0).map(|count| count > 0)
-                })?;
-
-            if !exists {
-                return Err(rusqlite::Error::QueryReturnedNoRows);
-            }
-
-            if let Some(path) = validated_path {
-                let path = path.trim();
-                if path.is_empty() {
-                    return Err(rusqlite::Error::InvalidQuery);
-                }
-                conn.execute(
-                    "UPDATE items SET path = ?1, updated_at = unixepoch() WHERE id = ?2",
-                    (path, id),
-                )?;
-            }
-
-            if let Some(size) = size {
-                conn.execute(
-                    "UPDATE items SET size = ?1, updated_at = unixepoch() WHERE id = ?2",
-                    (size, id),
-                )?;
-            }
-
-            if let Some(modified_time) = modified_time {
-                conn.execute(
-                    "UPDATE items SET modified_time = ?1, updated_at = unixepoch() WHERE id = ?2",
-                    (modified_time, id),
-                )?;
-            }
-
-            Ok::<(), rusqlite::Error>(())
-        })();
-
-        // Commit on success, rollback on error
-        match result {
-            Ok(_) => {
-                conn.execute("COMMIT", [])?;
-                Ok(())
-            }
-            Err(e) => {
-                conn.execute("ROLLBACK", [])?;
-                Err(e)
-            }
-        }
-    })
-    .await??;
-
-    Ok(())
+    state
+        .item_service
+        .update(id, dto)
+        .await
+        .map_err(|e| AppError::InvalidInput(e.to_string()))
 }
 
 #[tauri::command]
 pub async fn soft_delete_item(id: i64, state: State<'_, AppState>) -> AppResult<()> {
-    let conn = state.db_pool.get().await?;
-
-    conn.interact(move |conn: &mut Connection| {
-        // Begin transaction for atomic soft delete
-        conn.execute("BEGIN IMMEDIATE", [])?;
-
-        let result = (|| {
-            // Check if item exists and is not already deleted
-            let item_deleted: Option<bool> = conn.query_row(
-                "SELECT is_deleted FROM items WHERE id = ?1",
-                [id],
-                |row| row.get(0),
-            ).optional()?;
-
-            match item_deleted {
-                None => return Err(rusqlite::Error::QueryReturnedNoRows),
-                Some(true) => return Err(rusqlite::Error::InvalidQuery), // Already deleted
-                Some(false) => {}
-            }
-
-            // Soft delete: Set is_deleted=1 and deleted_at atomically
-            conn.execute(
-                "UPDATE items SET is_deleted = 1, deleted_at = unixepoch(), updated_at = unixepoch() WHERE id = ?1",
-                [id],
-            )?;
-
-            Ok::<(), rusqlite::Error>(())
-        })();
-
-        // Commit on success, rollback on error
-        match result {
-            Ok(_) => {
-                conn.execute("COMMIT", [])?;
-                Ok(())
-            }
-            Err(e) => {
-                conn.execute("ROLLBACK", [])?;
-                Err(e)
-            }
-        }
-    })
-    .await??;
-
-    Ok(())
+    state
+        .item_service
+        .soft_delete(id)
+        .await
+        .map_err(|e| AppError::InvalidInput(e.to_string()))
 }
 
 #[tauri::command]
 pub async fn restore_item(id: i64, state: State<'_, AppState>) -> AppResult<()> {
-    let conn = state.db_pool.get().await?;
-
-    let restored = conn
-        .interact(move |conn: &mut Connection| {
-            let rows = conn.execute(
-                "UPDATE items SET is_deleted = 0, deleted_at = NULL, updated_at = unixepoch() WHERE id = ?1 AND is_deleted = 1",
-                [id],
-            )?;
-            Ok::<usize, rusqlite::Error>(rows)
-        })
-        .await??;
-
-    if restored == 0 {
-        return Err(AppError::NotFound(format!("Deleted item with id {}", id)));
-    }
-
-    Ok(())
+    state
+        .item_service
+        .restore(id)
+        .await
+        .map_err(|e| AppError::NotFound(e.to_string()))
 }
 
 #[tauri::command]
-pub async fn get_deleted_items(state: State<'_, AppState>) -> AppResult<Vec<Item>> {
-    let conn = state.db_pool.get().await?;
-
-    let items = conn
-        .interact(move |conn: &mut Connection| {
-            let mut stmt = conn.prepare(
-                "SELECT id, path, is_directory, size, modified_time, created_at, updated_at, is_deleted, deleted_at
-                 FROM items
-                 WHERE is_deleted = 1
-                 ORDER BY deleted_at DESC"
-            )?;
-
-            let items = stmt
-                .query_map([], |row| {
-                    Ok(Item {
-                        id: row.get(0)?,
-                        path: row.get(1)?,
-                        is_directory: row.get(2)?,
-                        size: row.get(3)?,
-                        modified_time: row.get(4)?,
-                        created_at: row.get(5)?,
-                        updated_at: row.get(6)?,
-                        is_deleted: row.get(7)?,
-                        deleted_at: row.get(8)?,
-                    })
-                })?
-                .collect::<Result<Vec<Item>, _>>()?;
-
-            Ok::<Vec<Item>, rusqlite::Error>(items)
-        })
-        .await??;
-
-    Ok(items)
+pub async fn get_deleted_items(state: State<'_, AppState>) -> AppResult<Vec<ItemDto>> {
+    state
+        .item_service
+        .get_deleted()
+        .await
+        .map_err(|e| AppError::InvalidInput(e.to_string()))
 }
 
 #[tauri::command]
 pub async fn permanently_delete_item(id: i64, state: State<'_, AppState>) -> AppResult<()> {
-    let conn = state.db_pool.get().await?;
-
-    let deleted = conn
-        .interact(move |conn: &mut Connection| {
-            let rows = conn.execute("DELETE FROM items WHERE id = ?1", [id])?;
-            Ok::<usize, rusqlite::Error>(rows)
-        })
-        .await??;
-
-    if deleted == 0 {
-        return Err(AppError::NotFound(format!("Item with id {}", id)));
-    }
-
-    Ok(())
+    state
+        .item_service
+        .delete(id)
+        .await
+        .map_err(|e| AppError::NotFound(e.to_string()))
 }
 
 #[tauri::command]
@@ -345,18 +111,11 @@ pub async fn add_tag_to_item(
     tag_id: i64,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    let conn = state.db_pool.get().await?;
-
-    conn.interact(move |conn: &mut Connection| {
-        conn.execute(
-            "INSERT OR IGNORE INTO item_tags (item_id, tag_id) VALUES (?1, ?2)",
-            (item_id, tag_id),
-        )?;
-        Ok::<(), rusqlite::Error>(())
-    })
-    .await??;
-
-    Ok(())
+    state
+        .item_service
+        .add_tag(item_id, tag_id)
+        .await
+        .map_err(|e| AppError::InvalidInput(e.to_string()))
 }
 
 #[tauri::command]
@@ -365,105 +124,31 @@ pub async fn remove_tag_from_item(
     tag_id: i64,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    let conn = state.db_pool.get().await?;
-
-    conn.interact(move |conn: &mut Connection| {
-        conn.execute(
-            "DELETE FROM item_tags WHERE item_id = ?1 AND tag_id = ?2",
-            (item_id, tag_id),
-        )?;
-        Ok::<(), rusqlite::Error>(())
-    })
-    .await??;
-
-    Ok(())
+    state
+        .item_service
+        .remove_tag(item_id, tag_id)
+        .await
+        .map_err(|e| AppError::InvalidInput(e.to_string()))
 }
 
 #[tauri::command]
-pub async fn get_tags_for_item(item_id: i64, state: State<'_, AppState>) -> AppResult<Vec<Tag>> {
-    let conn = state.db_pool.get().await?;
-
-    let tags = conn
-        .interact(move |conn: &mut Connection| {
-            let mut stmt = conn.prepare(
-                "SELECT t.id, t.group_id, t.value, t.created_at, t.updated_at
-                 FROM tags t
-                 INNER JOIN item_tags it ON it.tag_id = t.id
-                 WHERE it.item_id = ?1
-                 ORDER BY t.value ASC",
-            )?;
-
-            let tags = stmt
-                .query_map([item_id], |row| {
-                    Ok(Tag {
-                        id: row.get(0)?,
-                        group_id: row.get(1)?,
-                        value: row.get(2)?,
-                        created_at: row.get(3)?,
-                        updated_at: row.get(4)?,
-                    })
-                })?
-                .collect::<Result<Vec<Tag>, _>>()?;
-
-            Ok::<Vec<Tag>, rusqlite::Error>(tags)
-        })
-        .await??;
-
-    Ok(tags)
+pub async fn get_tags_for_item(item_id: i64, state: State<'_, AppState>) -> AppResult<Vec<TagDto>> {
+    state
+        .item_service
+        .get_tags(item_id)
+        .await
+        .map_err(|e| AppError::InvalidInput(e.to_string()))
 }
 
-/// Update all tags for an item atomically (replaces existing tags)
 #[tauri::command]
 pub async fn update_item_tags(
     item_id: i64,
     tag_ids: Vec<i64>,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    let conn = state.db_pool.get().await?;
-
-    conn.interact(move |conn: &mut Connection| {
-        // Begin transaction for atomic tag replacement
-        conn.execute("BEGIN IMMEDIATE", [])?;
-
-        let result = (|| {
-            // Check if item exists and is not deleted
-            let exists: bool = conn.query_row(
-                "SELECT COUNT(*) FROM items WHERE id = ?1 AND is_deleted = 0",
-                [item_id],
-                |row| row.get::<_, i64>(0).map(|count| count > 0),
-            )?;
-
-            if !exists {
-                return Err(rusqlite::Error::QueryReturnedNoRows);
-            }
-
-            // Delete all existing tags for this item
-            conn.execute("DELETE FROM item_tags WHERE item_id = ?1", [item_id])?;
-
-            // Insert new tags
-            for tag_id in tag_ids {
-                conn.execute(
-                    "INSERT INTO item_tags (item_id, tag_id) VALUES (?1, ?2)",
-                    (item_id, tag_id),
-                )?;
-            }
-
-            Ok::<(), rusqlite::Error>(())
-        })();
-
-        // Commit on success, rollback on error
-        match result {
-            Ok(_) => {
-                conn.execute("COMMIT", [])?;
-                Ok(())
-            }
-            Err(e) => {
-                conn.execute("ROLLBACK", [])?;
-                Err(e)
-            }
-        }
-    })
-    .await??;
-
-    Ok(())
+    state
+        .item_service
+        .update_tags(item_id, tag_ids)
+        .await
+        .map_err(|e| AppError::InvalidInput(e.to_string()))
 }

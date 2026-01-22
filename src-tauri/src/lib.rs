@@ -1,8 +1,15 @@
+//! Constellation Application
+//!
+//! A file tagging system built with Tauri and DDD architecture.
+
+mod application;
 mod commands;
-mod db;
+mod domain;
 mod error;
+mod infrastructure;
 mod state;
 
+use infrastructure::persistence::init_database;
 use state::{AppConfig, AppState};
 use tauri::Manager;
 
@@ -22,7 +29,7 @@ pub fn run() {
 
             // Initialize database pool
             let pool = tauri::async_runtime::block_on(async {
-                db::init_database(&db_path)
+                init_database(&db_path)
                     .await
                     .expect("Failed to initialize database")
             });

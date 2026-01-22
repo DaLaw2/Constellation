@@ -26,6 +26,7 @@ tokio = { version = "1", features = ["full"] }
 deadpool-sqlite = "0.8"
 rusqlite = { version = "0.31", features = ["bundled"] }
 thiserror = "1.0"
+async-trait = "0.1"
 opener = "0.7"
 deadpool = "0.10"
 

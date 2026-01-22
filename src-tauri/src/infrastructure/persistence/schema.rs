@@ -1,5 +1,40 @@
-use rusqlite::{Connection, Result};
+//! Database Schema
+//!
+//! Defines the database schema and initialization logic.
 
+use deadpool_sqlite::{Config, Pool, Runtime};
+use rusqlite::{Connection, Result};
+use std::path::Path;
+
+/// Initializes the database and returns a connection pool.
+pub async fn init_database(db_path: &Path) -> std::result::Result<Pool, Box<dyn std::error::Error>> {
+    // Create database file if it doesn't exist
+    if !db_path.exists() {
+        if let Some(parent) = db_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+    }
+
+    let cfg = Config::new(db_path);
+    let pool = cfg
+        .builder(Runtime::Tokio1)
+        .expect("Failed to create pool builder")
+        .build()
+        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+
+    // Initialize schema on first connection
+    let conn = pool.get().await?;
+    conn.interact(|conn: &mut Connection| {
+        initialize_schema(conn)?;
+        migrate_tag_group_order(conn)?;
+        Ok::<(), rusqlite::Error>(())
+    })
+    .await??;
+
+    Ok(pool)
+}
+
+/// Initializes the database schema.
 pub fn initialize_schema(conn: &Connection) -> Result<()> {
     // Tag Groups table
     conn.execute(
@@ -120,10 +155,8 @@ pub fn initialize_schema(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
-/// Migrate existing tag groups to have sequential display_order values
-/// This fixes the issue where all groups have display_order = 0
+/// Migrates existing tag groups to have sequential display_order values.
 pub fn migrate_tag_group_order(conn: &Connection) -> Result<()> {
-    // Check if migration is needed (multiple groups with same display_order)
     let needs_migration: bool = conn.query_row(
         "SELECT COUNT(*) > 1 FROM tag_groups WHERE display_order = 0",
         [],
@@ -131,13 +164,12 @@ pub fn migrate_tag_group_order(conn: &Connection) -> Result<()> {
     )?;
 
     if needs_migration {
-        // Assign sequential order based on current order (by name, then id)
         conn.execute(
-            "UPDATE tag_groups 
+            "UPDATE tag_groups
              SET display_order = (
-                 SELECT COUNT(*) 
-                 FROM tag_groups t2 
-                 WHERE t2.name < tag_groups.name 
+                 SELECT COUNT(*)
+                 FROM tag_groups t2
+                 WHERE t2.name < tag_groups.name
                     OR (t2.name = tag_groups.name AND t2.id < tag_groups.id)
              ),
              updated_at = unixepoch()",

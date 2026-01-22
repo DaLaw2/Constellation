@@ -487,6 +487,7 @@ dependencies = [
 name = "constellation"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "deadpool 0.10.0",
  "deadpool-sqlite",
  "opener",
