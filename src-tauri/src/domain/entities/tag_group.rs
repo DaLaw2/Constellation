@@ -22,7 +22,11 @@ impl TagGroup {
     /// # Errors
     ///
     /// Returns an error if the name is empty.
-    pub fn new(name: String, color: Option<Color>, display_order: i32) -> Result<Self, DomainError> {
+    pub fn new(
+        name: String,
+        color: Option<Color>,
+        display_order: i32,
+    ) -> Result<Self, DomainError> {
         let name = name.trim().to_string();
         if name.is_empty() {
             return Err(DomainError::ValidationError(

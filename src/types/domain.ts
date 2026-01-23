@@ -39,7 +39,8 @@ export interface Tag {
 export interface TagTemplate {
   id: number
   name: string
-  tags: Tag[]
+  tag_ids: number[]
   created_at: number
   updated_at: number
 }
+

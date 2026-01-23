@@ -7,7 +7,9 @@ use rusqlite::{Connection, Result};
 use std::path::Path;
 
 /// Initializes the database and returns a connection pool.
-pub async fn init_database(db_path: &Path) -> std::result::Result<Pool, Box<dyn std::error::Error>> {
+pub async fn init_database(
+    db_path: &Path,
+) -> std::result::Result<Pool, Box<dyn std::error::Error>> {
     // Create database file if it doesn't exist
     if !db_path.exists() {
         if let Some(parent) = db_path.parent() {
@@ -16,6 +18,8 @@ pub async fn init_database(db_path: &Path) -> std::result::Result<Pool, Box<dyn 
     }
 
     let cfg = Config::new(db_path);
+    // SAFETY: Pool builder creation only fails if the configuration is invalid,
+    // which would be a programming error. The Config::new() call above is valid.
     let pool = cfg
         .builder(Runtime::Tokio1)
         .expect("Failed to create pool builder")

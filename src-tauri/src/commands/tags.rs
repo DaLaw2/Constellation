@@ -24,7 +24,10 @@ pub async fn create_tag(
 }
 
 #[tauri::command]
-pub async fn get_tags_by_group(group_id: i64, state: State<'_, AppState>) -> AppResult<Vec<TagDto>> {
+pub async fn get_tags_by_group(
+    group_id: i64,
+    state: State<'_, AppState>,
+) -> AppResult<Vec<TagDto>> {
     state
         .tag_service
         .get_by_group(group_id)

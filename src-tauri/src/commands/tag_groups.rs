@@ -69,7 +69,10 @@ pub async fn reorder_tag_groups(
     orders: Vec<TagGroupOrder>,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    let orders: Vec<(i64, i32)> = orders.into_iter().map(|o| (o.id, o.display_order)).collect();
+    let orders: Vec<(i64, i32)> = orders
+        .into_iter()
+        .map(|o| (o.id, o.display_order))
+        .collect();
 
     state
         .tag_group_service

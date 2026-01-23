@@ -29,7 +29,7 @@
           <div class="template-name">{{ template.name }}</div>
           <div class="template-tags">
             <span
-              v-for="tag in template.tags"
+              v-for="tag in getTemplateTags(template)"
               :key="tag.id"
               class="tag-badge"
               :style="{ backgroundColor: getTagColor(tag) }"
@@ -133,6 +133,13 @@ onMounted(() => {
 
 function getTagsByGroup(groupId: number) {
   return tagsStore.getTagsByGroup(groupId)
+}
+
+function getTemplateTags(template: { tag_ids: number[] }): Tag[] {
+  // Resolve tag_ids to full Tag objects from the tags store
+  return template.tag_ids
+    .map(tagId => tagsStore.tags.find(tag => tag.id === tagId))
+    .filter((tag): tag is Tag => tag !== undefined)
 }
 
 function getTagColor(tag: Tag): string {

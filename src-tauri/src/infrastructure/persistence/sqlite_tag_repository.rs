@@ -24,7 +24,8 @@ impl SqliteTagRepository {
 
     fn map_row_to_tag(row: &rusqlite::Row) -> rusqlite::Result<Tag> {
         let value_str: String = row.get(2)?;
-        let value = TagValue::new(value_str).unwrap_or_else(|_| TagValue::new("invalid").unwrap());
+        // Use safe fallback for corrupted database data
+        let value = TagValue::new(value_str).unwrap_or_else(|_| TagValue::invalid());
 
         Ok(Tag::reconstitute(
             row.get(0)?,
@@ -170,9 +171,9 @@ impl TagRepository for SqliteTagRepository {
     }
 
     async fn update(&self, tag: &Tag) -> Result<(), DomainError> {
-        let id = tag
-            .id()
-            .ok_or_else(|| DomainError::ValidationError("Cannot update tag without ID".to_string()))?;
+        let id = tag.id().ok_or_else(|| {
+            DomainError::ValidationError("Cannot update tag without ID".to_string())
+        })?;
 
         let conn = self.pool.get().await.map_err(map_pool_error)?;
 

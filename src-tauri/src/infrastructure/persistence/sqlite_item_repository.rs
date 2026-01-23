@@ -23,11 +23,8 @@ impl SqliteItemRepository {
 
     fn map_row_to_item(row: &rusqlite::Row) -> rusqlite::Result<Item> {
         let path_str: String = row.get(1)?;
-        // Safe to unwrap here as data from DB should be valid
-        let path = FilePath::new(path_str).unwrap_or_else(|_| {
-            // Fallback for invalid paths in DB (shouldn't happen)
-            FilePath::new("invalid").unwrap()
-        });
+        // Use safe fallback for corrupted database data
+        let path = FilePath::new(path_str).unwrap_or_else(|_| FilePath::invalid());
 
         Ok(Item::reconstitute(
             row.get(0)?,

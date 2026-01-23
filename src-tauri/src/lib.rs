@@ -19,19 +19,25 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             // Initialize database
+            // SAFETY: App data directory is essential for application to function.
+            // If we cannot get or create it, the application cannot proceed.
             let app_data_dir = app
                 .path()
                 .app_data_dir()
-                .expect("Failed to get app data directory");
-            std::fs::create_dir_all(&app_data_dir).expect("Failed to create app data directory");
+                .expect("Failed to get app data directory - this is a critical system error");
+            std::fs::create_dir_all(&app_data_dir).expect(
+                "Failed to create app data directory - insufficient permissions or disk full",
+            );
 
             let db_path = app_data_dir.join("constellation.db");
 
             // Initialize database pool
+            // SAFETY: Database initialization is critical for application functionality.
+            // If database cannot be initialized, the application cannot function.
             let pool = tauri::async_runtime::block_on(async {
                 init_database(&db_path)
                     .await
-                    .expect("Failed to initialize database")
+                    .expect("Failed to initialize database - check disk space and permissions")
             });
 
             // Create app config
@@ -92,5 +98,7 @@ pub fn run() {
             commands::search::search_items,
         ])
         .run(tauri::generate_context!())
+        // SAFETY: This is the main entry point. If Tauri runtime fails to start,
+        // there is no recovery path - the application cannot run.
         .expect("error while running tauri application");
 }

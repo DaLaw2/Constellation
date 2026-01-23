@@ -80,9 +80,7 @@ impl Tag {
     /// Returns an error if validation fails.
     pub fn move_to_group(&mut self, group_id: i64) -> Result<(), DomainError> {
         if group_id <= 0 {
-            return Err(DomainError::ValidationError(
-                "Invalid group ID".to_string(),
-            ));
+            return Err(DomainError::ValidationError("Invalid group ID".to_string()));
         }
         self.group_id = group_id;
         Ok(())

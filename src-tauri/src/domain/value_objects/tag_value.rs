@@ -11,6 +11,10 @@ pub struct TagValue {
 }
 
 impl TagValue {
+    /// Fallback value for invalid tag data from database.
+    /// This should only be used in repository layer when recovering from corrupted data.
+    const INVALID: &'static str = "[INVALID]";
+
     /// Creates a new TagValue after validation.
     ///
     /// # Errors
@@ -29,6 +33,25 @@ impl TagValue {
         Ok(Self {
             value: trimmed.to_string(),
         })
+    }
+
+    /// Creates a TagValue without validation.
+    ///
+    /// # Safety
+    ///
+    /// This bypasses validation and should ONLY be used in the repository layer
+    /// as a fallback when recovering from corrupted database data.
+    /// The caller must ensure the value is non-empty.
+    pub(crate) fn new_unchecked(value: String) -> Self {
+        Self { value }
+    }
+
+    /// Returns the fallback invalid tag value.
+    /// Used by repositories when encountering corrupted data.
+    pub(crate) fn invalid() -> Self {
+        Self {
+            value: Self::INVALID.to_string(),
+        }
     }
 
     /// Returns the tag value as a string slice.

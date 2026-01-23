@@ -49,8 +49,10 @@ impl AppState {
         let item_service = Arc::new(ItemService::new(item_repo.clone(), tag_repo.clone()));
         let tag_service = Arc::new(TagService::new(tag_repo.clone(), tag_group_repo.clone()));
         let tag_group_service = Arc::new(TagGroupService::new(tag_group_repo.clone()));
-        let tag_template_service =
-            Arc::new(TagTemplateService::new(tag_template_repo, item_repo.clone()));
+        let tag_template_service = Arc::new(TagTemplateService::new(
+            tag_template_repo,
+            item_repo.clone(),
+        ));
         let search_service = Arc::new(SearchService::new(search_repo));
 
         Self {

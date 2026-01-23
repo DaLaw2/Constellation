@@ -56,11 +56,7 @@ impl SearchService {
         }
 
         self.search_repo
-            .search_combined(
-                criteria.tag_ids,
-                criteria.mode,
-                criteria.filename_query,
-            )
+            .search_combined(criteria.tag_ids, criteria.mode, criteria.filename_query)
             .await
     }
 }

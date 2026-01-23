@@ -12,6 +12,10 @@ pub struct FilePath {
 }
 
 impl FilePath {
+    /// Fallback value for invalid file path data from database.
+    /// This should only be used in repository layer when recovering from corrupted data.
+    const INVALID: &'static str = "[INVALID_PATH]";
+
     /// Creates a new FilePath after validation.
     ///
     /// # Errors
@@ -34,6 +38,25 @@ impl FilePath {
         Ok(Self {
             value: trimmed.to_string(),
         })
+    }
+
+    /// Creates a FilePath without validation.
+    ///
+    /// # Safety
+    ///
+    /// This bypasses validation and should ONLY be used in the repository layer
+    /// as a fallback when recovering from corrupted database data.
+    /// The caller must ensure the path is non-empty.
+    pub(crate) fn new_unchecked(value: String) -> Self {
+        Self { value }
+    }
+
+    /// Returns the fallback invalid file path value.
+    /// Used by repositories when encountering corrupted data.
+    pub(crate) fn invalid() -> Self {
+        Self {
+            value: Self::INVALID.to_string(),
+        }
     }
 
     /// Validates that the path does not contain traversal patterns.

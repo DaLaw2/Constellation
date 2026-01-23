@@ -16,25 +16,25 @@ This document establishes the collaboration protocols and coding standards for a
     *   **No Assumptions**: Do NOT make decisions based on "common patterns" or "reasonable guesses".
 
 ## 3. Rust Coding Standards
+*   **Quality**: Code must be clean, maintainable, memory-safe, and efficient.
 *   **Error Handling (Strict)**:
     *   ❌ **NO** `unwrap()` or `expect()` in production code, unless preventing the panic is impossible or the error is truly unrecoverable/fatal. If used, it MUST be accompanied by a comment explaining why it is safe.
     *   ❌ **NO** `anyhow` (e.g., `anyhow::Result`) anywhere in the codebase. Do not add it as a dependency.
     *   ✅ **USE** `thiserror` for defining custom, strongly-typed errors.
     *   All public functions must return `Result<T, AppError>`.
-*   **Quality**: Code must be clean, maintainable, memory-safe, and efficient.
-*   **Formatting**: run `cargo fmt` before every commit.
-*   **Anti-Patterns**:
-    *   ❌ **NO** Singletons or Service Locators (Registry pattern). Avoid global mutable state.
 *   **Concurrency**:
     *   ❌ **NO** Locks (`Mutex`, `RwLock`) generally. Only exception is for low-level resource synchronization where absolutely necessary.
     *   ✅ **USE** thread-safe concurrent containers (e.g., `DashMap`, `SegQueue`) for shared state.
+*   **Anti-Patterns**:
+    *   ❌ **NO** Singletons or Service Locators (Registry pattern). Avoid global mutable state.
+*   **Formatting**: run `cargo fmt` before every commit.
 
 ## 4. Architecture Specifics (Tauri/Vue)
 *   **Type Synchronization**: Ensure Rust models (`src-tauri/src/application/dto.rs`) and TypeScript interfaces (`src/types/`) stay synchronized. A change in one requires a change in the other.
 
-## 5. Knowledge Base Management
+## 5. Knowledge Base Maintenance (Agent Obligation)
 
-The project maintains a categorized knowledge base at `docs/knowledge/`.
+All AI agents working on this project **MUST** maintain the knowledge base at `docs/knowledge/`.
 
 ### Structure
 ```
@@ -47,13 +47,14 @@ docs/knowledge/
 └── api/              # API design, query language specs
 ```
 
-### Rules
-*   **Categorize**: Place knowledge in the appropriate subfolder by topic.
+### Mandatory Requirements
+*   **Document Non-Trivial Solutions**: When you solve a non-trivial problem, implement a new pattern, or discover important technical details, you **MUST** document it in the knowledge base **immediately** before completing the task.
+*   **Categorize Correctly**: Place knowledge in the appropriate subfolder by topic. If uncertain, ask the user.
 *   **Single Responsibility**: One topic per file. Keep files focused and scannable.
-*   **Include Code**: Always include working code examples with context.
-*   **Reference Sources**: Add external links (docs, crates, articles) at the end.
-*   **Update on Discovery**: When solving a non-trivial problem or learning a new pattern, add it to the knowledge base immediately.
-*   **No Monolithic Files**: Avoid large "everything" documentation files. Split by topic.
+*   **Include Working Code**: Always include working code examples with full context.
+*   **Reference Sources**: Add external links (official docs, crates.io, articles) at the end of each document.
+*   **No Monolithic Files**: Split large topics into focused, individual files.
+*   **Update Existing Docs**: If you discover better approaches or corrections to existing knowledge base entries, update them.
 
 ---
 *Signed: User, Antigravity, Claude*

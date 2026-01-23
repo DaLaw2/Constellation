@@ -40,7 +40,10 @@ pub async fn get_item(id: i64, state: State<'_, AppState>) -> AppResult<ItemDto>
 }
 
 #[tauri::command]
-pub async fn get_item_by_path(path: String, state: State<'_, AppState>) -> AppResult<Option<ItemDto>> {
+pub async fn get_item_by_path(
+    path: String,
+    state: State<'_, AppState>,
+) -> AppResult<Option<ItemDto>> {
     state
         .item_service
         .get_by_path(&path)
