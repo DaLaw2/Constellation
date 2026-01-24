@@ -136,12 +136,14 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useSearchStore } from '@/stores/search'
 import { useTagsStore } from '@/stores/tags'
 import { useAppStore } from '@/stores/app'
+import { useFileExplorerStore } from '@/stores/fileExplorer'
 import { getFileName, getParentPath } from '@/utils/path'
 import type { Item } from '@/types'
 
 const searchStore = useSearchStore()
 const tagsStore = useTagsStore()
 const appStore = useAppStore()
+const fileExplorerStore = useFileExplorerStore()
 
 const filenameInput = ref('')
 const tagFilterQuery = ref('')
@@ -208,7 +210,7 @@ function clearAll() {
 function openItem(item: Item) {
   // Navigate to the item's directory in file browser
   const dirPath = item.is_directory ? item.path : getParentPath(item.path)
-  appStore.setCurrentPath(dirPath)
+  fileExplorerStore.navigateTo(dirPath)
   appStore.setLeftPanelMode('file-browser')
 }
 </script>

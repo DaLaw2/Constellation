@@ -61,8 +61,7 @@ Establish a common language through discussion. Below is the preliminary proposa
 | **Index** | Tracking a file in the system. |
 | **Apply Tag** | Attaching a tag to an item. |
 | **Remove Tag** | Removing a tag from an item. |
-| **Soft Delete** | Marking an item as deleted without physically removing it. |
-| **Restore** | Restoring a soft-deleted item. |
+| **Delete** | Permanently removing an item from the index. | |
 
 ### 0.2 Business Rules
 
@@ -183,32 +182,29 @@ All questions have been confirmed:
 
 ## Phase 1.x: Complete UI for v1.0 Release
 
-### 1.1 Tag Management Polish (Partial)
+### 1.1 Tag Management Polish
 
-**Current Status**: Backend ✅ | Frontend ⚠️ Partial
+**Status**: ✅ Complete
 
-**Remaining Tasks**:
-
-| Task | File | Description |
-|------|------|-------------|
-| 1.1.1 | `TagPanel.vue` | Display usage count as a badge. |
-| 1.1.2 | `TagPanel.vue` | Hover tooltip: "Used by X files". |
-| 1.1.3 | `TagPanel.vue` | Autocomplete with 300ms debounce. |
-| 1.1.4 | `TagPanel.vue` | Global tag search (cross-group). |
-| 1.1.5 | `TagPanel.vue` | Keyboard arrow navigation for suggestions. |
+| Task | Description | Status |
+|------|-------------|--------|
+| 1.1.1 | Display usage count as a badge | ✅ |
+| 1.1.2 | Hover tooltip: "Used by X files" | ✅ |
+| 1.1.3 | Autocomplete with 300ms debounce | ✅ |
+| 1.1.4 | Global tag search (cross-group) | ✅ |
+| 1.1.5 | Keyboard arrow navigation for suggestions | ✅ |
 
 ### 1.2 Search UI Enhancement
 
-**Current Status**: Basic implementation exists
+**Status**: 🟡 Partial
 
-**Tasks**:
-
-| Task | File | Description |
-|------|------|-------------|
-| 1.2.1 | `FilterPanel.vue` | Improve UI layout and visual hierarchy. |
-| 1.2.2 | `FilterPanel.vue` | Highlight matching text in search results. |
-| 1.2.3 | `FilterPanel.vue` | Recent search history. |
-| 1.2.4 | `FilterPanel.vue` | "Clear all filters" button. |
+| Task | File | Description | Status |
+|------|------|-------------|--------|
+| 1.2.1 | `FilterPanel.vue` | Improve UI layout and visual hierarchy | ✅ |
+| 1.2.2 | `FilterPanel.vue` | Highlight matching text in search results | 🔴 |
+| 1.2.3 | `FilterPanel.vue` | Recent search history (requires detailed mode) | 🔴 |
+| 1.2.4 | `FilterPanel.vue` | "Clear all filters" button | ✅ |
+| 1.2.5 | `FilterPanel.vue` | **BUG**: Click result should navigate to file's folder | ✅ Fixed |
 
 ### 1.3 Picture View (New Page)
 
@@ -235,7 +231,7 @@ All questions have been confirmed:
 
 ### 1.4 v1.0 Release Checklist
 
-- [ ] Phase 1.1 Complete
+- [x] Phase 1.1 Complete
 - [ ] Phase 1.2 Complete
 - [ ] Phase 1.3 Complete
 - [ ] Full Manual Testing
