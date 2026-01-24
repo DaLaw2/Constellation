@@ -30,12 +30,6 @@ pub enum DomainError {
     #[error("Duplicate entry: {0}")]
     DuplicateEntry(String),
 
-    #[error("Item already deleted")]
-    ItemAlreadyDeleted,
-
-    #[error("Item not deleted")]
-    ItemNotDeleted,
-
     #[error("Validation error: {0}")]
     ValidationError(String),
 }

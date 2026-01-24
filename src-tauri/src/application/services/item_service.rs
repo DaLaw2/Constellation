@@ -70,23 +70,7 @@ impl ItemService {
         self.item_repo.update(&item).await
     }
 
-    /// Soft deletes an item.
-    pub async fn soft_delete(&self, id: i64) -> Result<(), DomainError> {
-        self.item_repo.soft_delete(id).await
-    }
-
-    /// Restores a soft-deleted item.
-    pub async fn restore(&self, id: i64) -> Result<(), DomainError> {
-        self.item_repo.restore(id).await
-    }
-
-    /// Gets all deleted items.
-    pub async fn get_deleted(&self) -> Result<Vec<ItemDto>, DomainError> {
-        let items = self.item_repo.find_deleted().await?;
-        Ok(items.into_iter().map(Self::to_dto).collect())
-    }
-
-    /// Permanently deletes an item.
+    /// Deletes an item.
     pub async fn delete(&self, id: i64) -> Result<(), DomainError> {
         self.item_repo.delete(id).await
     }
@@ -121,8 +105,6 @@ impl ItemService {
             modified_time: item.modified_time(),
             created_at: item.created_at().unwrap_or(0),
             updated_at: item.updated_at().unwrap_or(0),
-            is_deleted: item.is_deleted(),
-            deleted_at: item.deleted_at(),
         }
     }
 }

@@ -34,8 +34,6 @@ impl SqliteItemRepository {
             row.get(4)?,
             row.get(5)?,
             row.get(6)?,
-            row.get(7)?,
-            row.get(8)?,
         ))
     }
 }
@@ -72,8 +70,8 @@ impl ItemRepository for SqliteItemRepository {
         conn.interact(move |conn: &mut Connection| {
             let result = conn
                 .query_row(
-                    "SELECT id, path, is_directory, size, modified_time, created_at, updated_at, is_deleted, deleted_at
-                     FROM items WHERE id = ?1 AND is_deleted = 0",
+                    "SELECT id, path, is_directory, size, modified_time, created_at, updated_at
+                     FROM items WHERE id = ?1",
                     [id],
                     Self::map_row_to_item,
                 )
@@ -92,8 +90,8 @@ impl ItemRepository for SqliteItemRepository {
         conn.interact(move |conn: &mut Connection| {
             let result = conn
                 .query_row(
-                    "SELECT id, path, is_directory, size, modified_time, created_at, updated_at, is_deleted, deleted_at
-                     FROM items WHERE path = ?1 AND is_deleted = 0",
+                    "SELECT id, path, is_directory, size, modified_time, created_at, updated_at
+                     FROM items WHERE path = ?1",
                     [&path],
                     Self::map_row_to_item,
                 )
@@ -148,97 +146,6 @@ impl ItemRepository for SqliteItemRepository {
                     Err(e)
                 }
             }
-        })
-        .await
-        .map_err(map_interact_error)?
-        .map_err(map_db_error)
-    }
-
-    async fn soft_delete(&self, id: i64) -> Result<(), DomainError> {
-        let conn = self.pool.get().await.map_err(map_pool_error)?;
-
-        conn.interact(move |conn: &mut Connection| {
-            conn.execute("BEGIN IMMEDIATE", [])?;
-
-            let result = (|| {
-                let item_deleted: Option<bool> = conn
-                    .query_row("SELECT is_deleted FROM items WHERE id = ?1", [id], |row| {
-                        row.get(0)
-                    })
-                    .optional()?;
-
-                match item_deleted {
-                    None => return Err(rusqlite::Error::QueryReturnedNoRows),
-                    Some(true) => return Err(rusqlite::Error::InvalidQuery),
-                    Some(false) => {}
-                }
-
-                conn.execute(
-                    "UPDATE items SET is_deleted = 1, deleted_at = unixepoch(), updated_at = unixepoch() WHERE id = ?1",
-                    [id],
-                )?;
-
-                Ok::<(), rusqlite::Error>(())
-            })();
-
-            match result {
-                Ok(_) => {
-                    conn.execute("COMMIT", [])?;
-                    Ok(())
-                }
-                Err(e) => {
-                    conn.execute("ROLLBACK", [])?;
-                    Err(e)
-                }
-            }
-        })
-        .await
-        .map_err(map_interact_error)?
-        .map_err(|e| {
-            if matches!(e, rusqlite::Error::InvalidQuery) {
-                DomainError::ItemAlreadyDeleted
-            } else {
-                map_db_error(e)
-            }
-        })
-    }
-
-    async fn restore(&self, id: i64) -> Result<(), DomainError> {
-        let conn = self.pool.get().await.map_err(map_pool_error)?;
-
-        let restored = conn
-            .interact(move |conn: &mut Connection| {
-                let rows = conn.execute(
-                    "UPDATE items SET is_deleted = 0, deleted_at = NULL, updated_at = unixepoch() WHERE id = ?1 AND is_deleted = 1",
-                    [id],
-                )?;
-                Ok::<usize, rusqlite::Error>(rows)
-            })
-            .await
-            .map_err(map_interact_error)?
-            .map_err(map_db_error)?;
-
-        if restored == 0 {
-            return Err(DomainError::ItemNotFound(id.to_string()));
-        }
-
-        Ok(())
-    }
-
-    async fn find_deleted(&self) -> Result<Vec<Item>, DomainError> {
-        let conn = self.pool.get().await.map_err(map_pool_error)?;
-
-        conn.interact(move |conn: &mut Connection| {
-            let mut stmt = conn.prepare(
-                "SELECT id, path, is_directory, size, modified_time, created_at, updated_at, is_deleted, deleted_at
-                 FROM items WHERE is_deleted = 1 ORDER BY deleted_at DESC",
-            )?;
-
-            let items = stmt
-                .query_map([], Self::map_row_to_item)?
-                .collect::<Result<Vec<Item>, _>>()?;
-
-            Ok::<Vec<Item>, rusqlite::Error>(items)
         })
         .await
         .map_err(map_interact_error)?
@@ -317,7 +224,7 @@ impl ItemRepository for SqliteItemRepository {
 
             let result = (|| {
                 let exists: bool = conn.query_row(
-                    "SELECT COUNT(*) FROM items WHERE id = ?1 AND is_deleted = 0",
+                    "SELECT COUNT(*) FROM items WHERE id = ?1",
                     [item_id],
                     |row| row.get::<_, i64>(0).map(|count| count > 0),
                 )?;

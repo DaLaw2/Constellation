@@ -67,25 +67,26 @@ Establish a common language through discussion. Below is the preliminary proposa
 ### 0.2 Business Rules
 
 #### Item Rules
-- [ ] Item `path` must be unique.
-- [ ] Item can be a file or a directory.
-- [ ] Already soft-deleted Items cannot be soft-deleted again.
-- [ ] Item can have zero or multiple Tags.
+- [x] Item `path` must be unique.
+- [x] Item can be a file or a directory.
+- [x] Item can have zero or multiple Tags.
+- [x] When a file is moved/renamed in the filesystem, its Item becomes orphaned (future: tracking mechanism will auto-update).
 
 #### Tag Rules
-- [ ] Tag must belong to one Tag Group.
-- [ ] Tag values within the same Tag Group must be unique (case-insensitive).
-- [ ] Tag value cannot be empty or whitespace only.
-- [ ] When a Tag is deleted, its association with all Items must be cleared.
+- [x] Tag must belong to one Tag Group.
+- [x] Tag values within the same Tag Group must be unique (case-insensitive).
+- [x] Different Tag Groups can have Tags with the same name.
+- [x] Tag value cannot be empty or whitespace only.
+- [x] When a Tag is deleted, its association with all Items must be cleared (CASCADE).
 
 #### Tag Group Rules
-- [ ] Tag Group name must be unique.
-- [ ] Deleting a Tag Group cascades to delete all its Tags.
-- [ ] Tag Group has a `display_order` for UI sorting.
+- [x] Tag Group name must be unique.
+- [x] Deleting a Tag Group cascades to delete all its Tags.
+- [x] Tag Group has a `display_order` for UI sorting.
 
 #### Tag Template Rules
-- [ ] Template can include Tags from different Groups.
-- [ ] Applying a Template adds all its Tags to the Item.
+- [x] Template can include Tags from different Groups.
+- [x] Applying a Template adds all its Tags to the Item.
 
 ### 0.3 Aggregate Boundaries
 
@@ -158,26 +159,25 @@ pub struct ItemSoftDeleted { pub item_id: i64 }
 - Statistics on tag usage.
 - Future implementation of Undo/Redo features.
 
-### 0.5 Discussion Questions
+### 0.5 Discussion Questions (Resolved)
 
-Please confirm the following:
+All questions have been confirmed:
 
-1. **Item & Tag Relationship**
-   - Current: Many-to-Many via `item_tags` junction table.
-   - Question: Do we need to record "who" tagged it and "when"?
+1. **Item & Tag Relationship** ✅
+   - Decision: Many-to-Many via `item_tags` junction table.
+   - No need to record "who" or "when" (single user, UI-based tagging).
 
-2. **Tag Uniqueness Scope**
-   - Current: Unique within the same Group.
-   - Question: Do we allow Tags with the same name in different Groups?
+2. **Tag Uniqueness Scope** ✅
+   - Decision: Unique within the same Group.
+   - Different Groups CAN have Tags with the same name (e.g., "Japan" in "Location" and "Cuisine").
 
-3. **Soft Delete Strategy**
-   - Current: Item supports soft delete.
-   - Question: Do Tag/TagGroup also need soft delete?
+3. **Soft Delete Strategy** ✅
+   - Decision: No soft delete. Items are permanently deleted.
+   - Removed: `is_deleted`, `deleted_at` fields from Item entity.
 
-4. **File Move/Rename Handling**
-   - Question: How to handle files being moved in the file system?
-   - Option A: Re-associate via path.
-   - Option B: Track via file hash (Future).
+4. **File Move/Rename Handling** ✅
+   - Decision: Currently, moved/renamed files become orphaned (Item path invalid).
+   - Future: Tracking mechanism (file hash) will auto-update paths.
 
 ---
 
@@ -300,7 +300,7 @@ tag IN ("work", "project") AND NOT tag = "archived"
 
 | Phase | Priority | Status | Description |
 |-------|----------|--------|-------------|
-| 0 | P0 | 🟡 In Progress | DDD Domain Modeling |
+| 0 | P0 | 🟢 Complete | DDD Domain Modeling |
 | 1.1 | P1 | 🟡 Partial | Tag Management Polish |
 | 1.2 | P1 | 🟡 Partial | Search UI Enhancement |
 | 1.3 | P1 | 🔴 Not Started | Picture View |
@@ -314,12 +314,12 @@ tag IN ("work", "project") AND NOT tag = "archived"
 
 ## Next Steps
 
-1. **Confirm Domain Model (Phase 0)**
-   - Is the Ubiquitous Language accurate?
-   - Are Business Rules complete?
-   - Are Aggregate Boundaries reasonable?
+1. ~~**Confirm Domain Model (Phase 0)**~~ ✅ Complete
 
-2. **Start Phase 1.1 → 1.2 → 1.3 upon confirmation**
+2. **Start Phase 1.1 → 1.2 → 1.3**
+   - Phase 1.1: Tag Management Polish
+   - Phase 1.2: Search UI Enhancement
+   - Phase 1.3: Picture View
 
 3. **v1.0 Release after Phase 1 completion**
 

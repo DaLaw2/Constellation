@@ -21,15 +21,6 @@ pub trait ItemRepository: Send + Sync {
     /// Updates an existing item.
     async fn update(&self, item: &Item) -> Result<(), DomainError>;
 
-    /// Soft deletes an item.
-    async fn soft_delete(&self, id: i64) -> Result<(), DomainError>;
-
-    /// Restores a soft-deleted item.
-    async fn restore(&self, id: i64) -> Result<(), DomainError>;
-
-    /// Gets all soft-deleted items.
-    async fn find_deleted(&self) -> Result<Vec<Item>, DomainError>;
-
     /// Permanently deletes an item.
     async fn delete(&self, id: i64) -> Result<(), DomainError>;
 

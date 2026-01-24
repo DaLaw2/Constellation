@@ -12,8 +12,6 @@ export interface Item {
   modified_time: number | null
   created_at: number
   updated_at: number
-  is_deleted: boolean
-  deleted_at: number | null
 }
 
 /** Tag group for organizing tags */

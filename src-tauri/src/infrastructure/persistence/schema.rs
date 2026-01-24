@@ -68,6 +68,7 @@ pub fn initialize_schema(conn: &Connection) -> Result<()> {
     )?;
 
     // Items table (files and folders)
+    // Note: is_deleted and deleted_at columns are deprecated but kept for backward compatibility
     conn.execute(
         "CREATE TABLE IF NOT EXISTS items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

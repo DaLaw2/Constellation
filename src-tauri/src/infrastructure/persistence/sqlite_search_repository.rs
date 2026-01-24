@@ -27,8 +27,6 @@ impl SqliteSearchRepository {
             modified_time: row.get(4)?,
             created_at: row.get(5)?,
             updated_at: row.get(6)?,
-            is_deleted: row.get(7)?,
-            deleted_at: row.get(8)?,
         })
     }
 
@@ -43,10 +41,10 @@ impl SqliteSearchRepository {
 
             let sql = format!(
                 "SELECT i.id, i.path, i.is_directory, i.size, i.modified_time,
-                        i.created_at, i.updated_at, i.is_deleted, i.deleted_at
+                        i.created_at, i.updated_at
                  FROM items i
                  INNER JOIN item_tags it ON i.id = it.item_id
-                 WHERE it.tag_id IN ({}) AND i.is_deleted = 0
+                 WHERE it.tag_id IN ({})
                  GROUP BY i.id
                  HAVING COUNT(DISTINCT it.tag_id) = ?
                  ORDER BY i.path ASC",
@@ -85,10 +83,10 @@ impl SqliteSearchRepository {
 
             let sql = format!(
                 "SELECT DISTINCT i.id, i.path, i.is_directory, i.size, i.modified_time,
-                        i.created_at, i.updated_at, i.is_deleted, i.deleted_at
+                        i.created_at, i.updated_at
                  FROM items i
                  INNER JOIN item_tags it ON i.id = it.item_id
-                 WHERE it.tag_id IN ({}) AND i.is_deleted = 0
+                 WHERE it.tag_id IN ({})
                  ORDER BY i.path ASC",
                 placeholders_str
             );
@@ -122,9 +120,9 @@ impl SqliteSearchRepository {
         conn.interact(move |conn: &mut Connection| {
             let mut stmt = conn.prepare(
                 "SELECT id, path, is_directory, size, modified_time,
-                        created_at, updated_at, is_deleted, deleted_at
+                        created_at, updated_at
                  FROM items
-                 WHERE path LIKE ?1 AND is_deleted = 0
+                 WHERE path LIKE ?1
                  ORDER BY path ASC",
             )?;
 
@@ -165,10 +163,10 @@ impl SqliteSearchRepository {
                 match mode {
                     SearchMode::And => format!(
                         "SELECT i.id, i.path, i.is_directory, i.size, i.modified_time,
-                                i.created_at, i.updated_at, i.is_deleted, i.deleted_at
+                                i.created_at, i.updated_at
                          FROM items i
                          INNER JOIN item_tags it ON i.id = it.item_id
-                         WHERE it.tag_id IN ({}) AND i.is_deleted = 0 AND i.path LIKE ?
+                         WHERE it.tag_id IN ({}) AND i.path LIKE ?
                          GROUP BY i.id
                          HAVING COUNT(DISTINCT it.tag_id) = ?
                          ORDER BY i.path ASC",
@@ -176,10 +174,10 @@ impl SqliteSearchRepository {
                     ),
                     SearchMode::Or => format!(
                         "SELECT DISTINCT i.id, i.path, i.is_directory, i.size, i.modified_time,
-                                i.created_at, i.updated_at, i.is_deleted, i.deleted_at
+                                i.created_at, i.updated_at
                          FROM items i
                          INNER JOIN item_tags it ON i.id = it.item_id
-                         WHERE it.tag_id IN ({}) AND i.is_deleted = 0 AND i.path LIKE ?
+                         WHERE it.tag_id IN ({}) AND i.path LIKE ?
                          ORDER BY i.path ASC",
                         placeholders_str
                     ),
@@ -191,10 +189,10 @@ impl SqliteSearchRepository {
                 match mode {
                     SearchMode::And => format!(
                         "SELECT i.id, i.path, i.is_directory, i.size, i.modified_time,
-                                i.created_at, i.updated_at, i.is_deleted, i.deleted_at
+                                i.created_at, i.updated_at
                          FROM items i
                          INNER JOIN item_tags it ON i.id = it.item_id
-                         WHERE it.tag_id IN ({}) AND i.is_deleted = 0
+                         WHERE it.tag_id IN ({})
                          GROUP BY i.id
                          HAVING COUNT(DISTINCT it.tag_id) = ?
                          ORDER BY i.path ASC",
@@ -202,19 +200,19 @@ impl SqliteSearchRepository {
                     ),
                     SearchMode::Or => format!(
                         "SELECT DISTINCT i.id, i.path, i.is_directory, i.size, i.modified_time,
-                                i.created_at, i.updated_at, i.is_deleted, i.deleted_at
+                                i.created_at, i.updated_at
                          FROM items i
                          INNER JOIN item_tags it ON i.id = it.item_id
-                         WHERE it.tag_id IN ({}) AND i.is_deleted = 0
+                         WHERE it.tag_id IN ({})
                          ORDER BY i.path ASC",
                         placeholders_str
                     ),
                 }
             } else {
                 "SELECT id, path, is_directory, size, modified_time,
-                        created_at, updated_at, is_deleted, deleted_at
+                        created_at, updated_at
                  FROM items
-                 WHERE path LIKE ? AND is_deleted = 0
+                 WHERE path LIKE ?
                  ORDER BY path ASC"
                     .to_string()
             };

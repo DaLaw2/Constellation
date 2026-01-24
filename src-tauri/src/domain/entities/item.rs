@@ -2,7 +2,6 @@
 //!
 //! Represents a file or directory that can be tagged.
 
-use crate::domain::errors::DomainError;
 use crate::domain::value_objects::FilePath;
 
 /// Represents a file or directory item in the system.
@@ -15,8 +14,6 @@ pub struct Item {
     modified_time: Option<i64>,
     created_at: Option<i64>,
     updated_at: Option<i64>,
-    is_deleted: bool,
-    deleted_at: Option<i64>,
 }
 
 impl Item {
@@ -35,8 +32,6 @@ impl Item {
             modified_time,
             created_at: None,
             updated_at: None,
-            is_deleted: false,
-            deleted_at: None,
         }
     }
 
@@ -49,8 +44,6 @@ impl Item {
         modified_time: Option<i64>,
         created_at: i64,
         updated_at: i64,
-        is_deleted: bool,
-        deleted_at: Option<i64>,
     ) -> Self {
         Self {
             id: Some(id),
@@ -60,8 +53,6 @@ impl Item {
             modified_time,
             created_at: Some(created_at),
             updated_at: Some(updated_at),
-            is_deleted,
-            deleted_at,
         }
     }
 
@@ -95,14 +86,6 @@ impl Item {
         self.updated_at
     }
 
-    pub fn is_deleted(&self) -> bool {
-        self.is_deleted
-    }
-
-    pub fn deleted_at(&self) -> Option<i64> {
-        self.deleted_at
-    }
-
     // Domain behavior
 
     /// Updates the item's path.
@@ -118,33 +101,6 @@ impl Item {
     /// Updates the item's modified time.
     pub fn update_modified_time(&mut self, modified_time: Option<i64>) {
         self.modified_time = modified_time;
-    }
-
-    /// Soft deletes the item.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the item is already deleted.
-    pub fn soft_delete(&mut self) -> Result<(), DomainError> {
-        if self.is_deleted {
-            return Err(DomainError::ItemAlreadyDeleted);
-        }
-        self.is_deleted = true;
-        Ok(())
-    }
-
-    /// Restores a soft-deleted item.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the item is not deleted.
-    pub fn restore(&mut self) -> Result<(), DomainError> {
-        if !self.is_deleted {
-            return Err(DomainError::ItemNotDeleted);
-        }
-        self.is_deleted = false;
-        self.deleted_at = None;
-        Ok(())
     }
 
     /// Sets the ID after persistence (used by repository).

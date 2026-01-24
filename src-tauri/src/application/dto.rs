@@ -15,8 +15,6 @@ pub struct ItemDto {
     pub modified_time: Option<i64>,
     pub created_at: i64,
     pub updated_at: i64,
-    pub is_deleted: bool,
-    pub deleted_at: Option<i64>,
 }
 
 /// DTO for creating a new item.

@@ -48,7 +48,12 @@
       "Bash(npx vue-tsc:*)",
       "Bash(git checkout:*)",
       "Bash(git merge:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(cargo check:*)",
+      "Bash(git log:*)",
+      "WebFetch(domain:v2.tauri.app)",
+      "Bash(git config:*)",
+      "Bash(git rebase -r 892e484 --exec \"git commit --amend --author=''DaLaw2 <dalaw22222@gmail.com>'' --no-edit\")"
     ]
   }
 }

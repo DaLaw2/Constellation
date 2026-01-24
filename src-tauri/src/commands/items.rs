@@ -73,34 +73,7 @@ pub async fn update_item(
 }
 
 #[tauri::command]
-pub async fn soft_delete_item(id: i64, state: State<'_, AppState>) -> AppResult<()> {
-    state
-        .item_service
-        .soft_delete(id)
-        .await
-        .map_err(|e| AppError::InvalidInput(e.to_string()))
-}
-
-#[tauri::command]
-pub async fn restore_item(id: i64, state: State<'_, AppState>) -> AppResult<()> {
-    state
-        .item_service
-        .restore(id)
-        .await
-        .map_err(|e| AppError::NotFound(e.to_string()))
-}
-
-#[tauri::command]
-pub async fn get_deleted_items(state: State<'_, AppState>) -> AppResult<Vec<ItemDto>> {
-    state
-        .item_service
-        .get_deleted()
-        .await
-        .map_err(|e| AppError::InvalidInput(e.to_string()))
-}
-
-#[tauri::command]
-pub async fn permanently_delete_item(id: i64, state: State<'_, AppState>) -> AppResult<()> {
+pub async fn delete_item(id: i64, state: State<'_, AppState>) -> AppResult<()> {
     state
         .item_service
         .delete(id)
