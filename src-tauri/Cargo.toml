@@ -31,7 +31,7 @@ opener = "0.7"
 deadpool = "0.10"
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3", features = ["fileapi", "winbase", "winnt"] }
+winapi = { version = "0.3", features = ["fileapi", "winbase", "winnt", "shellapi", "winuser"] }
 
 [dev-dependencies]
 tempfile = "3.24.0"

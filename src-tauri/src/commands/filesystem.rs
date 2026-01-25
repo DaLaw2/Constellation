@@ -374,12 +374,57 @@ pub async fn open_file_external(path: String) -> AppResult<()> {
         )));
     }
 
-    // Use the opener crate to open with default application
-    if let Err(e) = opener::open(&path_buf) {
-        return Err(AppError::InvalidInput(format!(
-            "Failed to open file: {}",
-            e
-        )));
+    use std::ffi::OsStr;
+    use std::mem;
+    use std::os::windows::ffi::OsStrExt;
+    use std::ptr;
+    use winapi::um::shellapi::{ShellExecuteExW, SHELLEXECUTEINFOW};
+    use winapi::um::winuser::SW_SHOWNORMAL;
+
+    // Convert path to wide string
+    let wide_path: Vec<u16> = OsStr::new(&path_buf)
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+
+    let wide_open: Vec<u16> = OsStr::new("open")
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect();
+
+    // Initialize SHELLEXECUTEINFO structure
+    let mut sei: SHELLEXECUTEINFOW = unsafe { mem::zeroed() };
+    sei.cbSize = mem::size_of::<SHELLEXECUTEINFOW>() as u32;
+    // Suppress UI for the first "open" attempt to avoid double error dialogs
+    const SEE_MASK_FLAG_NO_UI: u32 = 0x00000400;
+    sei.fMask = SEE_MASK_FLAG_NO_UI;
+    sei.hwnd = ptr::null_mut();
+    sei.lpVerb = wide_open.as_ptr();
+    sei.lpFile = wide_path.as_ptr();
+    sei.lpParameters = ptr::null();
+    sei.lpDirectory = ptr::null();
+    sei.nShow = SW_SHOWNORMAL;
+
+    // Try to execute with "open" verb first
+    let result = unsafe { ShellExecuteExW(&mut sei) };
+
+    if result == 0 {
+        // Failed with "open", try "openas" to show Open With dialog
+        eprintln!("No file association, showing Open With dialog");
+
+        let wide_openas: Vec<u16> = OsStr::new("openas")
+            .encode_wide()
+            .chain(std::iter::once(0))
+            .collect();
+
+        // Enable UI for the fallback attempt so the "Open With" dialog (or error) can be shown
+        sei.fMask = 0;
+        sei.lpVerb = wide_openas.as_ptr();
+        let result_openas = unsafe { ShellExecuteExW(&mut sei) };
+
+        if result_openas == 0 {
+            eprintln!("Failed to show Open With dialog");
+        }
     }
 
     Ok(())

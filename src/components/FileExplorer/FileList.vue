@@ -49,9 +49,9 @@
       </div>
     </div>
 
-    <!-- Virtual scrolling file list -->
+    <!-- Detail view: Virtual scrolling file list -->
     <RecycleScroller
-      v-else
+      v-else-if="displayMode === 'detail'"
       class="file-scroller"
       :items="filteredFiles"
       :item-size="LAYOUT.FILE_ITEM_HEIGHT"
@@ -70,6 +70,14 @@
       />
     </RecycleScroller>
 
+    <!-- Grid view: Large icons mode -->
+    <GridView
+      v-else
+      :files="filteredFiles"
+      @open="handleFileDoubleClick"
+      @contextmenu="(event, file) => handleFileContextMenu(file, event)"
+    />
+
     <!-- Error state -->
     <div v-if="error" class="error-toast">
       {{ error }}
@@ -86,6 +94,7 @@ import { useFileContextMenu, useResizable, useLocalStorage } from '@/composables
 import { fuzzyMatch } from '@/utils'
 import { LAYOUT, STORAGE_KEYS } from '@/constants'
 import FileItem from './FileItem.vue'
+import GridView from './GridView.vue'
 import type { FileEntry } from '@/types'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 
@@ -97,6 +106,7 @@ const currentPath = computed(() => fileExplorerStore.currentPath)
 const files = computed(() => fileExplorerStore.currentFiles)
 const loading = computed(() => fileExplorerStore.loading)
 const error = computed(() => fileExplorerStore.error)
+const displayMode = computed(() => appStore.displayMode)
 
 const filteredFiles = computed(() => {
   const query = appStore.searchQuery.trim()
