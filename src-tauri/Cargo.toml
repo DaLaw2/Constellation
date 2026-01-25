@@ -1,6 +1,6 @@
 [package]
 name = "constellation"
-version = "0.1.0"
+version = "1.0.0"
 description = "A Tauri App"
 authors = ["DaLaw2"]
 edition = "2021"

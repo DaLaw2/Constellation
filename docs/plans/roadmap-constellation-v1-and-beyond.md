@@ -196,33 +196,33 @@ All questions have been confirmed:
 
 ### 1.2 Search UI Enhancement
 
-**Status**: 🟡 Partial
+**Status**: ✅ Complete
 
 | Task | File | Description | Status |
 |------|------|-------------|--------|
 | 1.2.1 | `FilterPanel.vue` | Improve UI layout and visual hierarchy | ✅ |
-| 1.2.2 | `FilterPanel.vue` | Highlight matching text in search results | 🔴 |
-| 1.2.3 | `FilterPanel.vue` | Recent search history (requires detailed mode) | 🔴 |
+| 1.2.2 | `FilterPanel.vue` | Highlight matching text in search results | ✅ |
+| 1.2.3 | `FilterPanel.vue` | Recent search history (requires detailed mode) | ✅ |
 | 1.2.4 | `FilterPanel.vue` | "Clear all filters" button | ✅ |
 | 1.2.5 | `FilterPanel.vue` | **BUG**: Click result should navigate to file's folder | ✅ Fixed |
 
 ### 1.3 Picture View (New Page)
 
-**Status**: Not started
+**Status**: ✅ Complete
 
 **Goal**: Browse image files in a grid/gallery mode.
 
 **Tasks**:
 
-| Task | File | Description |
-|------|------|-------------|
-| 1.3.1 | `components/PictureView/PictureGrid.vue` | Create image grid component. |
-| 1.3.2 | `components/PictureView/PictureCard.vue` | Single image card component. |
-| 1.3.3 | `stores/pictureView.ts` | Picture View state management. |
-| 1.3.4 | `LeftPanel.vue` | Add Picture View Tab. |
-| 1.3.5 | `PictureGrid.vue` | Virtual scrolling support. |
-| 1.3.6 | `PictureCard.vue` | Lazy loading for images. |
-| 1.3.7 | `PictureCard.vue` | Click to show large image (Lightbox). |
+| Task | File | Description | Status |
+|------|------|-------------|--------|
+| 1.3.1 | `components/PictureView/PictureGrid.vue` | Create image grid component. | ✅ |
+| 1.3.2 | `components/PictureView/PictureCard.vue` | Single image card component. | ✅ |
+| 1.3.3 | `stores/pictureView.ts` | Picture View state management. | ✅ |
+| 1.3.4 | `LeftPanel.vue` | Add Picture View Tab. | ✅ |
+| 1.3.5 | `PictureGrid.vue` | Virtual scrolling support. | ✅ |
+| 1.3.6 | `PictureCard.vue` | Lazy loading for images. | ✅ |
+| 1.3.7 | `PictureCard.vue` | Click to show large image (Lightbox). | ✅ |
 
 **Technical Notes**:
 - Use `vue-virtual-scroller` for large numbers of images.
@@ -232,14 +232,14 @@ All questions have been confirmed:
 ### 1.4 v1.0 Release Checklist
 
 - [x] Phase 1.1 Complete
-- [ ] Phase 1.2 Complete
-- [ ] Phase 1.3 Complete
-- [ ] Full Manual Testing
-- [ ] Fix all P0/P1 bugs
-- [ ] Update README.md
-- [ ] Create Release Notes
-- [ ] `cargo build --release`
-- [ ] Create GitHub Release
+- [x] Phase 1.2 Complete
+- [x] Phase 1.3 Complete
+- [x] Full Manual Testing
+- [x] Fix all P0/P1 bugs
+- [x] Update README.md
+- [X] Create Release Notes
+- [X] `cargo build --release`
+- [X] Create GitHub Release
 
 ---
 
@@ -298,8 +298,8 @@ tag IN ("work", "project") AND NOT tag = "archived"
 |-------|----------|--------|-------------|
 | 0 | P0 | 🟢 Complete | DDD Domain Modeling |
 | 1.1 | P1 | 🟡 Partial | Tag Management Polish |
-| 1.2 | P1 | 🟡 Partial | Search UI Enhancement |
-| 1.3 | P1 | 🔴 Not Started | Picture View |
+| 1.2 | P1 | � Complete | Search UI Enhancement |
+| 1.3 | P1 | 🟢 Complete | Picture View |
 | 1.4 | P1 | 🔴 Blocked | v1.0 Release |
 | 2.1 | P2 | 🔴 Future | JQL-like Query |
 | 2.2 | P2 | 🔴 Future | Thumbnails |
@@ -314,8 +314,8 @@ tag IN ("work", "project") AND NOT tag = "archived"
 
 2. **Start Phase 1.1 → 1.2 → 1.3**
    - Phase 1.1: Tag Management Polish
-   - Phase 1.2: Search UI Enhancement
-   - Phase 1.3: Picture View
+   - ~~Phase 1.2: Search UI Enhancement~~
+   - ~~Phase 1.3: Picture View~~
 
 3. **v1.0 Release after Phase 1 completion**
 
