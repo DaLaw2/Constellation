@@ -28,3 +28,6 @@ src-tauri/target/
 
 # Tauri
 src-tauri/gen/schemas
+
+# Claude
+.claude/
