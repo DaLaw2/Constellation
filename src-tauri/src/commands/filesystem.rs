@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
-#[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 
 /// Validate path to prevent path traversal attacks using ./ or ../
@@ -70,67 +69,56 @@ pub struct FileMetadata {
 /// Get all available drives on Windows
 #[tauri::command]
 pub async fn get_drives() -> AppResult<Vec<DriveInfo>> {
-    #[cfg(target_os = "windows")]
-    {
-        use std::ffi::OsStr;
-        use std::os::windows::ffi::OsStrExt;
+    use std::ffi::OsStr;
+    use std::os::windows::ffi::OsStrExt;
 
-        let mut drives = Vec::new();
+    let mut drives = Vec::new();
 
-        // Get logical drives bitmask
-        let drives_mask = unsafe { winapi::um::fileapi::GetLogicalDrives() };
+    // Get logical drives bitmask
+    let drives_mask = unsafe { winapi::um::fileapi::GetLogicalDrives() };
 
-        for i in 0..26 {
-            if (drives_mask & (1 << i)) != 0 {
-                let letter = (b'A' + i) as char;
-                let drive_path = format!("{}:\\", letter);
+    for i in 0..26 {
+        if (drives_mask & (1 << i)) != 0 {
+            let letter = (b'A' + i) as char;
+            let drive_path = format!("{}:\\", letter);
 
-                // Get drive type
-                let wide_path: Vec<u16> = OsStr::new(&drive_path)
-                    .encode_wide()
-                    .chain(std::iter::once(0))
-                    .collect();
+            // Get drive type
+            let wide_path: Vec<u16> = OsStr::new(&drive_path)
+                .encode_wide()
+                .chain(std::iter::once(0))
+                .collect();
 
-                let drive_type = unsafe { winapi::um::fileapi::GetDriveTypeW(wide_path.as_ptr()) };
+            let drive_type = unsafe { winapi::um::fileapi::GetDriveTypeW(wide_path.as_ptr()) };
 
-                let drive_type_str = match drive_type {
-                    winapi::um::winbase::DRIVE_FIXED => "fixed",
-                    winapi::um::winbase::DRIVE_REMOVABLE => "removable",
-                    winapi::um::winbase::DRIVE_REMOTE => "network",
-                    winapi::um::winbase::DRIVE_CDROM => "cdrom",
-                    winapi::um::winbase::DRIVE_RAMDISK => "ramdisk",
-                    _ => "unknown",
-                };
+            let drive_type_str = match drive_type {
+                winapi::um::winbase::DRIVE_FIXED => "fixed",
+                winapi::um::winbase::DRIVE_REMOVABLE => "removable",
+                winapi::um::winbase::DRIVE_REMOTE => "network",
+                winapi::um::winbase::DRIVE_CDROM => "cdrom",
+                winapi::um::winbase::DRIVE_RAMDISK => "ramdisk",
+                _ => "unknown",
+            };
 
-                // Only include fixed and removable drives
-                if drive_type_str == "fixed" || drive_type_str == "removable" {
-                    // Try to get drive label and space info
-                    let label = get_drive_label(&drive_path);
-                    let (total_space, available_space) = get_drive_space(&drive_path);
+            // Only include fixed and removable drives
+            if drive_type_str == "fixed" || drive_type_str == "removable" {
+                // Try to get drive label and space info
+                let label = get_drive_label(&drive_path);
+                let (total_space, available_space) = get_drive_space(&drive_path);
 
-                    drives.push(DriveInfo {
-                        letter: letter.to_string(),
-                        label,
-                        drive_type: drive_type_str.to_string(),
-                        total_space,
-                        available_space,
-                    });
-                }
+                drives.push(DriveInfo {
+                    letter: letter.to_string(),
+                    label,
+                    drive_type: drive_type_str.to_string(),
+                    total_space,
+                    available_space,
+                });
             }
         }
-
-        Ok(drives)
     }
 
-    #[cfg(not(target_os = "windows"))]
-    {
-        Err(AppError::InvalidInput(
-            "This application only supports Windows".to_string(),
-        ))
-    }
+    Ok(drives)
 }
 
-#[cfg(target_os = "windows")]
 fn get_drive_label(drive_path: &str) -> Option<String> {
     use std::ffi::OsStr;
     use std::os::windows::ffi::OsStrExt;
@@ -165,7 +153,6 @@ fn get_drive_label(drive_path: &str) -> Option<String> {
     None
 }
 
-#[cfg(target_os = "windows")]
 fn get_drive_space(drive_path: &str) -> (Option<u64>, Option<u64>) {
     use std::ffi::OsStr;
     use std::os::windows::ffi::OsStrExt;
@@ -283,7 +270,6 @@ pub async fn read_directory(path: String) -> AppResult<Vec<FileEntry>> {
     Ok(entries)
 }
 
-#[cfg(target_os = "windows")]
 fn is_hidden_file(path: &Path) -> bool {
     use std::ffi::OsStr;
     use std::os::windows::ffi::OsStrExt;
@@ -302,14 +288,6 @@ fn is_hidden_file(path: &Path) -> bool {
     }
 
     (attributes & FILE_ATTRIBUTE_HIDDEN) != 0
-}
-
-#[cfg(not(target_os = "windows"))]
-fn is_hidden_file(path: &Path) -> bool {
-    path.file_name()
-        .and_then(|name| name.to_str())
-        .map(|name| name.starts_with('.'))
-        .unwrap_or(false)
 }
 
 /// Get detailed file metadata
@@ -443,33 +421,23 @@ pub async fn reveal_in_explorer(path: String) -> AppResult<()> {
         )));
     }
 
-    #[cfg(target_os = "windows")]
+    // Canonicalize path to get absolute path and prevent command injection
+    let canonical_path = path_buf
+        .canonicalize()
+        .map_err(|e| AppError::InvalidInput(format!("Invalid path: {}", e)))?;
+
+    // Use separate arguments to prevent command injection
+    // The /select, argument must include the comma with the path
+    let select_arg = format!("/select,{}", canonical_path.display());
+
+    match std::process::Command::new("explorer.exe")
+        .raw_arg(&select_arg)
+        .spawn()
     {
-        // Canonicalize path to get absolute path and prevent command injection
-        let canonical_path = path_buf
-            .canonicalize()
-            .map_err(|e| AppError::InvalidInput(format!("Invalid path: {}", e)))?;
-
-        // Use separate arguments to prevent command injection
-        // The /select, argument must include the comma with the path
-        let select_arg = format!("/select,{}", canonical_path.display());
-
-        match std::process::Command::new("explorer.exe")
-            .raw_arg(&select_arg)
-            .spawn()
-        {
-            Ok(_) => Ok(()),
-            Err(e) => Err(AppError::InvalidInput(format!(
-                "Failed to open Explorer: {}",
-                e
-            ))),
-        }
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    {
-        Err(AppError::InvalidInput(
-            "This feature is only supported on Windows".to_string(),
-        ))
+        Ok(_) => Ok(()),
+        Err(e) => Err(AppError::InvalidInput(format!(
+            "Failed to open Explorer: {}",
+            e
+        ))),
     }
 }
