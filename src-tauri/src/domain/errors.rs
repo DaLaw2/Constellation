@@ -32,4 +32,7 @@ pub enum DomainError {
 
     #[error("Validation error: {0}")]
     ValidationError(String),
+
+    #[error("Database error: {0}")]
+    DatabaseError(String),
 }

@@ -9,8 +9,8 @@ use crate::domain::repositories::{
     ItemRepository, TagGroupRepository, TagRepository, TagTemplateRepository,
 };
 use crate::infrastructure::persistence::{
-    SqliteItemRepository, SqliteSearchRepository, SqliteTagGroupRepository, SqliteTagRepository,
-    SqliteTagTemplateRepository,
+    SqliteItemRepository, SqliteSearchHistoryRepository, SqliteSearchRepository,
+    SqliteTagGroupRepository, SqliteTagRepository, SqliteTagTemplateRepository,
 };
 use deadpool_sqlite::Pool;
 use std::sync::Arc;
@@ -44,6 +44,7 @@ impl AppState {
         let tag_template_repo: Arc<dyn TagTemplateRepository> =
             Arc::new(SqliteTagTemplateRepository::new(pool.clone()));
         let search_repo = Arc::new(SqliteSearchRepository::new(pool.clone()));
+        let search_history_repo = Arc::new(SqliteSearchHistoryRepository::new(pool.clone()));
 
         // Create application services
         let item_service = Arc::new(ItemService::new(item_repo.clone(), tag_repo.clone()));
@@ -53,7 +54,7 @@ impl AppState {
             tag_template_repo,
             item_repo.clone(),
         ));
-        let search_service = Arc::new(SearchService::new(search_repo));
+        let search_service = Arc::new(SearchService::new(search_repo, search_history_repo));
 
         Self {
             config,

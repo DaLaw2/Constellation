@@ -22,6 +22,9 @@ pub enum AppError {
 
     #[error("Duplicate entry: {0}")]
     Duplicate(String),
+
+    #[error("Domain error: {0}")]
+    Domain(String),
 }
 
 impl serde::Serialize for AppError {

@@ -93,6 +93,9 @@ pub fn run() {
             commands::search::search_items_by_tags_or,
             commands::search::search_items_by_filename,
             commands::search::search_items,
+            commands::search::get_recent_search_history,
+            commands::search::delete_search_history,
+            commands::search::clear_search_history,
         ])
         .run(tauri::generate_context!())
         // SAFETY: This is the main entry point. If Tauri runtime fails to start,

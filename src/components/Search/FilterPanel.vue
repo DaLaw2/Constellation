@@ -10,13 +10,52 @@
     <!-- Filename Search -->
     <div class="filter-section">
       <label class="section-label">Filename</label>
-      <input
-        type="text"
-        v-model="filenameInput"
-        placeholder="Search by filename..."
-        class="search-input"
-        @keyup.enter="executeSearch"
-      />
+      <div class="search-input-wrapper">
+        <input
+          type="text"
+          v-model="filenameInput"
+          placeholder="Search by filename..."
+          class="search-input"
+          @focus="showHistory = true"
+          @blur="handleBlur"
+          @keyup.enter="executeSearch"
+        />
+        <!-- History Dropdown -->
+        <div v-if="showHistory && appStore.searchHistory.length > 0" class="history-dropdown">
+          <div class="history-header">
+            <span>Recent Searches</span>
+            <button class="clear-history-btn" @click.stop="clearHistory">Clear All</button>
+          </div>
+          <div class="history-list">
+            <div
+              v-for="item in appStore.searchHistory"
+              :key="item.id"
+              class="history-item"
+              @mousedown.prevent="applyHistory(item)"
+            >
+              <div class="history-content">
+                <div class="history-main">
+                  <span v-if="item.criteria.filename_query" class="history-query">"{{ item.criteria.filename_query }}"</span>
+                  <span v-if="item.criteria.tag_ids.length > 0" class="history-tags">
+                   + {{ item.criteria.tag_ids.length }} tags
+                  </span>
+                  <span v-if="!item.criteria.filename_query && item.criteria.tag_ids.length === 0" class="history-empty">
+                    (Empty Search)
+                  </span>
+                </div>
+                <div class="history-meta">
+                  {{ formatRelativeDate(item.last_used_at) }}
+                </div>
+              </div>
+              <button 
+                class="delete-history-btn" 
+                @mousedown.prevent.stop="deleteHistory(item.id)"
+                title="Remove from history"
+              >×</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Search Mode Toggle -->
@@ -138,7 +177,8 @@ import { useTagsStore } from '@/stores/tags'
 import { useAppStore } from '@/stores/app'
 import { useFileExplorerStore } from '@/stores/fileExplorer'
 import { getFileName, getParentPath } from '@/utils/path'
-import type { Item } from '@/types'
+import { formatRelativeDate } from '@/utils/format'
+import type { Item, SearchHistory } from '@/types'
 
 const searchStore = useSearchStore()
 const tagsStore = useTagsStore()
@@ -149,6 +189,7 @@ const filenameInput = ref('')
 const tagFilterQuery = ref('')
 const hasSearched = ref(false)
 const tagsLoading = ref(false)
+const showHistory = ref(false)
 
 const tagGroups = computed(() => tagsStore.tagGroups)
 
@@ -171,6 +212,7 @@ onMounted(async () => {
   await tagsStore.loadTagGroups()
   await tagsStore.loadTags()
   tagsLoading.value = false
+  await appStore.loadSearchHistory()
 })
 
 // Sync filename input with store
@@ -205,6 +247,45 @@ function clearAll() {
   tagFilterQuery.value = ''
   searchStore.clearSearch()
   hasSearched.value = false
+}
+
+function handleBlur() {
+  // Delay hiding to allow click events on dropdown items
+  setTimeout(() => {
+    showHistory.value = false
+  }, 200)
+}
+
+function applyHistory(item: SearchHistory) {
+  // Apply criteria
+  if (item.criteria.filename_query) {
+    filenameInput.value = item.criteria.filename_query
+  } else {
+    filenameInput.value = ''
+  }
+
+  // Set mode
+  searchStore.setMode(item.criteria.mode)
+  
+  // Set tags - clear first, then add each tag
+  searchStore.clearSelectedTags()
+  item.criteria.tag_ids.forEach(tagId => {
+    searchStore.selectTag(tagId)
+  })
+  
+  // Close dropdown
+  showHistory.value = false
+  
+  // Execute search immediately
+  executeSearch()
+}
+
+async function deleteHistory(id: number) {
+  await appStore.deleteSearchHistory(id)
+}
+
+async function clearHistory() {
+  await appStore.clearSearchHistory()
 }
 
 function openItem(item: Item) {
@@ -265,9 +346,129 @@ function openItem(item: Item) {
   background: var(--background);
 }
 
+.search-input-wrapper {
+  position: relative;
+}
+
 .search-input:focus {
   outline: none;
   border-color: var(--primary-color);
+}
+
+.history-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  margin-top: 4px;
+  max-height: 300px;
+  display: flex;
+  flex-direction: column;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  background: var(--background);
+}
+
+.clear-history-btn {
+  background: none;
+  border: none;
+  font-size: 11px;
+  color: var(--primary-color);
+  cursor: pointer;
+  padding: 0;
+}
+
+.clear-history-btn:hover {
+  text-decoration: underline;
+}
+
+.history-list {
+  overflow-y: auto;
+  max-height: 250px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.history-item:last-child {
+  border-bottom: none;
+}
+
+.history-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.history-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.history-query {
+  font-weight: 500;
+}
+
+.history-tags {
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+}
+
+.history-empty {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.history-meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.delete-history-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0 4px;
+  margin-left: 8px;
+  line-height: 1;
+  opacity: 0.5;
+}
+
+.delete-history-btn:hover {
+  opacity: 1;
+  color: #ef4444;
 }
 
 .mode-toggle {

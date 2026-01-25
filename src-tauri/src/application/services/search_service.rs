@@ -2,19 +2,28 @@
 //!
 //! Orchestrates search operations across items.
 
-use crate::application::dto::{ItemDto, SearchCriteriaDto};
+use crate::application::dto::{ItemDto, SearchCriteriaDto, SearchHistoryDto};
+use crate::domain::entities::SearchCriteria;
 use crate::domain::errors::DomainError;
-use crate::infrastructure::persistence::SqliteSearchRepository;
+use crate::domain::repositories::SearchHistoryRepository;
+use crate::infrastructure::persistence::{SqliteSearchHistoryRepository, SqliteSearchRepository};
 use std::sync::Arc;
 
 /// Service for search operations.
 pub struct SearchService {
     search_repo: Arc<SqliteSearchRepository>,
+    history_repo: Arc<SqliteSearchHistoryRepository>,
 }
 
 impl SearchService {
-    pub fn new(search_repo: Arc<SqliteSearchRepository>) -> Self {
-        Self { search_repo }
+    pub fn new(
+        search_repo: Arc<SqliteSearchRepository>,
+        history_repo: Arc<SqliteSearchHistoryRepository>,
+    ) -> Self {
+        Self {
+            search_repo,
+            history_repo,
+        }
     }
 
     /// Searches items by tags with AND logic.
@@ -55,8 +64,60 @@ impl SearchService {
             return Ok(Vec::new());
         }
 
-        self.search_repo
-            .search_combined(criteria.tag_ids, criteria.mode, criteria.filename_query)
-            .await
+        // Result of the search
+        let results = self
+            .search_repo
+            .search_combined(
+                criteria.tag_ids.clone(),
+                criteria.mode,
+                criteria.filename_query.clone(),
+            )
+            .await?;
+
+        // Save to history (fire and forget approx, but we await it here for simplicity)
+        // Only save if it's a valid search (which we checked above)
+        let history_criteria =
+            SearchCriteria::new(criteria.filename_query, criteria.tag_ids, criteria.mode);
+
+        if let Err(e) = self.history_repo.save(history_criteria).await {
+            // Log error but don't fail the search?
+            // For now, let's treat it as non-fatal but maybe log to stderr
+            eprintln!("Failed to save search history: {}", e);
+        }
+
+        Ok(results)
+    }
+
+    /// Retrieves recent search history.
+    pub async fn get_recent_history(
+        &self,
+        limit: usize,
+    ) -> Result<Vec<SearchHistoryDto>, DomainError> {
+        let histories = self.history_repo.get_recent(limit).await?;
+
+        let dtos = histories
+            .into_iter()
+            .map(|h| SearchHistoryDto {
+                id: h.id,
+                criteria: SearchCriteriaDto {
+                    tag_ids: h.criteria.tag_ids,
+                    mode: h.criteria.mode,
+                    filename_query: h.criteria.text_query,
+                },
+                last_used_at: h.last_used_at,
+            })
+            .collect();
+
+        Ok(dtos)
+    }
+
+    /// Deletes a specific history entry.
+    pub async fn delete_history(&self, id: i64) -> Result<(), DomainError> {
+        self.history_repo.delete(id).await
+    }
+
+    /// Clears all search history.
+    pub async fn clear_history(&self) -> Result<(), DomainError> {
+        self.history_repo.clear_all().await
     }
 }

@@ -120,6 +120,30 @@ pub fn initialize_schema(conn: &Connection) -> Result<()> {
         [],
     )?;
 
+    // Search History table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS search_histories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            text_query TEXT,
+            search_mode TEXT NOT NULL,
+            last_used_at INTEGER NOT NULL,
+            created_at INTEGER NOT NULL DEFAULT (unixepoch())
+        )",
+        [],
+    )?;
+
+    // Search History Tags junction table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS search_history_tags (
+            search_history_id INTEGER NOT NULL,
+            tag_id INTEGER NOT NULL,
+            PRIMARY KEY (search_history_id, tag_id),
+            FOREIGN KEY (search_history_id) REFERENCES search_histories(id) ON DELETE CASCADE,
+            FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+        )",
+        [],
+    )?;
+
     // Create indexes for performance
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_items_path ON items(path)",
@@ -149,13 +173,10 @@ pub fn initialize_schema(conn: &Connection) -> Result<()> {
         "CREATE INDEX IF NOT EXISTS idx_item_tags_tag_id ON item_tags(tag_id)",
         [],
     )?;
-
-    // Enable WAL mode for better concurrency
-    let _mode: String = conn.query_row("PRAGMA journal_mode=WAL", [], |row| row.get(0))?;
-    conn.execute("PRAGMA synchronous=NORMAL", [])?;
-    conn.execute("PRAGMA cache_size=-32000", [])?; // 32MB cache
-    conn.execute("PRAGMA foreign_keys=ON", [])?;
-    conn.execute("PRAGMA temp_store=MEMORY", [])?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_search_histories_last_used ON search_histories(last_used_at DESC)",
+        [],
+    )?;
 
     Ok(())
 }

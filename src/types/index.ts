@@ -3,7 +3,7 @@
  */
 
 // Domain types
-export type { Item, Tag, TagGroup, TagTemplate } from './domain'
+export type { Item, Tag, TagGroup, TagTemplate, SearchHistory, SearchCriteria } from './domain'
 
 // File system types
 export type { DriveInfo, FileEntry, FileMetadata } from './filesystem'

@@ -9,7 +9,18 @@
       {{ getFileIcon(entry) }}
     </div>
     <div class="file-info">
-      <div class="file-name">{{ entry.name }}</div>
+      <div class="file-name" :title="entry.name">
+        <template v-if="nameSegments.length">
+          <span 
+            v-for="(seg, idx) in nameSegments" 
+            :key="idx" 
+            :class="{ 'search-highlight': seg.highlight }"
+          >{{ seg.text }}</span>
+        </template>
+        <template v-else>
+          {{ entry.name }}
+        </template>
+      </div>
       <div class="file-meta">
         <span v-if="!entry.is_directory && entry.size !== null" class="file-size">
           {{ formatFileSize(entry.size) }}
@@ -41,6 +52,7 @@
 import { computed, ref, watch, onMounted } from 'vue'
 import { useTagsStore } from '@/stores/tags'
 import { useItemsStore } from '@/stores/items'
+import { getHighlightRanges } from '@/utils'
 import TagCell from '../TagManagement/TagCell.vue'
 import type { FileEntry, Tag } from '@/types'
 
@@ -48,6 +60,7 @@ interface Props {
   entry: FileEntry
   selected?: boolean
   tagAreaWidth: number
+  highlightQuery?: string
 }
 
 const props = defineProps<Props>()
@@ -64,6 +77,11 @@ const itemsStore = useItemsStore()
 const isSelected = computed(() => props.selected)
 const tagGroups = computed(() => tagsStore.tagGroups)
 const allTags = computed(() => tagsStore.tags)
+
+const nameSegments = computed(() => {
+  if (!props.highlightQuery) return []
+  return getHighlightRanges(props.entry.name, props.highlightQuery)
+})
 
 // Track tags for this specific file item
 const itemTags = ref<Tag[]>([])
@@ -345,5 +363,11 @@ function formatRelativeDate(timestamp: number): string {
   min-width: 0;
   position: relative;
   padding-left: 8px;
+}
+
+.search-highlight {
+  background-color: rgba(255, 193, 7, 0.3);
+  border-radius: 2px;
+  font-weight: 500;
 }
 </style>

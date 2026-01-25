@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { ViewMode, DisplayMode } from '@/types'
+import { invoke } from '@tauri-apps/api/core'
+import type { ViewMode, DisplayMode, SearchHistory } from '@/types'
 
 export const useAppStore = defineStore('app', () => {
   // Left panel mode
@@ -17,6 +18,9 @@ export const useAppStore = defineStore('app', () => {
 
   // Sidebar expansion state
   const sidebarExpanded = ref<boolean>(false)
+
+  // Search History
+  const searchHistory = ref<SearchHistory[]>([])
 
   // Actions
   function setLeftPanelMode(mode: ViewMode) {
@@ -47,6 +51,33 @@ export const useAppStore = defineStore('app', () => {
     sidebarExpanded.value = !sidebarExpanded.value
   }
 
+  async function loadSearchHistory() {
+    try {
+      // Limit to 10 recent searches
+      searchHistory.value = await invoke<SearchHistory[]>('get_recent_search_history', { limit: 10 })
+    } catch (e) {
+      console.error('Failed to load search history:', e)
+    }
+  }
+
+  async function deleteSearchHistory(id: number) {
+    try {
+      await invoke('delete_search_history', { id })
+      await loadSearchHistory()
+    } catch (e) {
+      console.error('Failed to delete search history:', e)
+    }
+  }
+
+  async function clearSearchHistory() {
+    try {
+      await invoke('clear_search_history')
+      await loadSearchHistory()
+    } catch (e) {
+      console.error('Failed to clear search history:', e)
+    }
+  }
+
   return {
     leftPanelMode,
     displayMode,
@@ -59,5 +90,9 @@ export const useAppStore = defineStore('app', () => {
     setSearchQuery,
     setSidebarExpanded,
     toggleSidebarExpanded,
+    searchHistory,
+    loadSearchHistory,
+    deleteSearchHistory,
+    clearSearchHistory,
   }
 })

@@ -42,3 +42,17 @@ export interface TagTemplate {
   updated_at: number
 }
 
+
+/** Search criteria */
+export interface SearchCriteria {
+  tag_ids: number[]
+  mode: 'and' | 'or'
+  filename_query: string | null
+}
+
+/** Search history entry */
+export interface SearchHistory {
+  id: number
+  criteria: SearchCriteria
+  last_used_at: number
+}

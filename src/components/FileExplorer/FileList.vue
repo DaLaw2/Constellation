@@ -62,6 +62,7 @@
         :entry="item"
         :selected="selectedPath === item.path"
         :tag-area-width="tagAreaWidth"
+        :highlight-query="appStore.searchQuery"
         @click="handleFileClick"
         @double-click="handleFileDoubleClick"
         @context-menu="handleFileContextMenu"

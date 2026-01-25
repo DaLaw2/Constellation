@@ -107,7 +107,7 @@ pub struct UpdateTagTemplateDto {
 }
 
 /// Search mode for tag-based queries.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum SearchMode {
     And,
@@ -115,9 +115,17 @@ pub enum SearchMode {
 }
 
 /// DTO for search criteria.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchCriteriaDto {
     pub tag_ids: Vec<i64>,
     pub mode: SearchMode,
     pub filename_query: Option<String>,
+}
+
+/// DTO for Search History data transfer.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchHistoryDto {
+    pub id: i64,
+    pub criteria: SearchCriteriaDto, // Reuse SearchCriteriaDto or define similar output structure
+    pub last_used_at: i64,
 }

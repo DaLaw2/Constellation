@@ -2,7 +2,7 @@
 //!
 //! Thin adapters for search operations that delegate to SearchService.
 
-use crate::application::dto::{ItemDto, SearchCriteriaDto, SearchMode};
+use crate::application::dto::{ItemDto, SearchCriteriaDto, SearchHistoryDto, SearchMode};
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
 use tauri::State;
@@ -61,4 +61,34 @@ pub async fn search_items(
         .search(criteria)
         .await
         .map_err(|e| AppError::InvalidInput(e.to_string()))
+}
+
+#[tauri::command]
+pub async fn get_recent_search_history(
+    limit: usize,
+    state: State<'_, AppState>,
+) -> AppResult<Vec<SearchHistoryDto>> {
+    state
+        .search_service
+        .get_recent_history(limit)
+        .await
+        .map_err(|e| AppError::Domain(e.to_string()))
+}
+
+#[tauri::command]
+pub async fn delete_search_history(id: i64, state: State<'_, AppState>) -> AppResult<()> {
+    state
+        .search_service
+        .delete_history(id)
+        .await
+        .map_err(|e| AppError::Domain(e.to_string()))
+}
+
+#[tauri::command]
+pub async fn clear_search_history(state: State<'_, AppState>) -> AppResult<()> {
+    state
+        .search_service
+        .clear_history()
+        .await
+        .map_err(|e| AppError::Domain(e.to_string()))
 }
