@@ -28,6 +28,14 @@
         />
       </div>
 
+      <button
+        v-if="leftPanelMode === 'search'"
+        class="btn-advanced-filter"
+        @click="toggleAdvancedFilter"
+      >
+        Advanced Filter
+      </button>
+
       <div class="view-mode-toggle">
         <button
           :class="['btn-icon', { active: displayMode === 'detail' }]"
@@ -71,6 +79,10 @@ function setMode(mode: DisplayMode) {
 function handleSearch() {
   // Search functionality will be implemented in Phase 1.6
   console.log('Search query:', searchQuery.value)
+}
+
+function toggleAdvancedFilter() {
+  appStore.toggleAdvancedFilterExpanded()
 }
 </script>
 
@@ -151,6 +163,24 @@ function handleSearch() {
 .search-input:focus {
   outline: none;
   border-color: var(--primary-color);
+}
+
+.btn-advanced-filter {
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--surface);
+  color: var(--text-primary);
+  transition: all 0.15s;
+}
+
+.btn-advanced-filter:hover {
+  background: var(--background);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
 }
 
 .view-mode-toggle {

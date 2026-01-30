@@ -37,7 +37,8 @@
       </div>
 
       <div v-else-if="currentMode === 'tag-management'" class="tag-management-panel">
-        <TagPanel />
+        <TagManagementView v-if="sidebarExpanded" />
+        <TagPanel v-else />
       </div>
 
       <div v-else class="search-panel">
@@ -52,6 +53,7 @@ import { computed } from 'vue'
 import { useAppStore } from '@/stores/app'
 import type { ViewMode } from '@/types'
 import TagPanel from '../TagManagement/TagPanel.vue'
+import TagManagementView from '../TagManagement/TagManagementView.vue'
 import { DirectoryTree } from '../directory-tree'
 import FilterPanel from '../Search/FilterPanel.vue'
 

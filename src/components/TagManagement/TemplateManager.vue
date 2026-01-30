@@ -20,30 +20,41 @@
     </div>
 
     <div v-else class="template-list">
-      <div
-        v-for="template in templates"
-        :key="template.id"
-        class="template-item"
-      >
-        <div class="template-info">
-          <div class="template-name">{{ template.name }}</div>
-          <div class="template-tags">
-            <span
-              v-for="tag in getTemplateTags(template)"
-              :key="tag.id"
-              class="tag-badge"
-              :style="{ backgroundColor: getTagColor(tag) }"
-            >
-              {{ tag.value }}
-            </span>
-          </div>
-        </div>
-        <div class="template-actions">
-          <button class="btn-icon" title="Delete" @click="handleDelete(template.id)">
-            🗑️
-          </button>
-        </div>
-      </div>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-name">Template Name</th>
+            <th class="col-tags">Tags</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="template in templates"
+            :key="template.id"
+            class="template-row"
+          >
+            <td class="col-name">{{ template.name }}</td>
+            <td class="col-tags">
+              <div class="template-tags">
+                <span
+                  v-for="tag in getTemplateTags(template)"
+                  :key="tag.id"
+                  class="tag-badge"
+                  :style="{ backgroundColor: getTagColor(tag) }"
+                >
+                  {{ tag.value }}
+                </span>
+              </div>
+            </td>
+            <td class="col-actions">
+              <button class="action-btn danger" @click="handleDelete(template.id)">
+                Delete
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- Create Template Dialog -->
@@ -235,34 +246,54 @@ async function handleDelete(id: number) {
 }
 
 .template-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.template-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  background: var(--background);
-}
-
-.template-item:hover {
-  background: var(--surface);
-}
-
-.template-info {
+  overflow-y: auto;
   flex: 1;
-  min-width: 0;
 }
 
-.template-name {
+.template-list table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.template-list thead {
+  position: sticky;
+  top: 0;
+  background: var(--background);
+  z-index: 1;
+}
+
+.template-list th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 0.75rem 0.5rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.template-list td {
+  padding: 1rem 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.template-row:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.col-name {
+  width: 30%;
   font-size: 14px;
   font-weight: 500;
-  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.col-tags {
+  width: 50%;
+}
+
+.col-actions {
+  width: 20%;
+  text-align: right;
 }
 
 .template-tags {
@@ -280,23 +311,27 @@ async function handleDelete(id: number) {
   color: white;
 }
 
-.template-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.btn-icon {
-  padding: 4px 8px;
-  border: none;
+.action-btn {
   background: none;
+  border: none;
+  font-size: 13px;
+  color: var(--primary-color);
   cursor: pointer;
+  padding: 6px 10px;
   border-radius: 4px;
-  opacity: 0.6;
+  transition: all 0.15s;
 }
 
-.btn-icon:hover {
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.05);
+.action-btn:hover {
+  background: rgba(25, 118, 210, 0.1);
+}
+
+.action-btn.danger {
+  color: #dc3545;
+}
+
+.action-btn.danger:hover {
+  background: rgba(220, 53, 69, 0.1);
 }
 
 /* Dialog styles */

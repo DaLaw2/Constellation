@@ -19,6 +19,9 @@ export const useAppStore = defineStore('app', () => {
   // Sidebar expansion state
   const sidebarExpanded = ref<boolean>(false)
 
+  // Advanced filter panel expansion state
+  const advancedFilterExpanded = ref<boolean>(false)
+
   // Search History
   const searchHistory = ref<SearchHistory[]>([])
 
@@ -49,6 +52,14 @@ export const useAppStore = defineStore('app', () => {
 
   function toggleSidebarExpanded() {
     sidebarExpanded.value = !sidebarExpanded.value
+  }
+
+  function setAdvancedFilterExpanded(expanded: boolean) {
+    advancedFilterExpanded.value = expanded
+  }
+
+  function toggleAdvancedFilterExpanded() {
+    advancedFilterExpanded.value = !advancedFilterExpanded.value
   }
 
   async function loadSearchHistory() {
@@ -84,12 +95,15 @@ export const useAppStore = defineStore('app', () => {
     currentPath,
     searchQuery,
     sidebarExpanded,
+    advancedFilterExpanded,
     setLeftPanelMode,
     setDisplayMode,
     setCurrentPath,
     setSearchQuery,
     setSidebarExpanded,
     toggleSidebarExpanded,
+    setAdvancedFilterExpanded,
+    toggleAdvancedFilterExpanded,
     searchHistory,
     loadSearchHistory,
     deleteSearchHistory,

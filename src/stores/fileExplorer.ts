@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useAppStore } from './app'
 import type { DriveInfo, FileEntry, FileMetadata } from '@/types'

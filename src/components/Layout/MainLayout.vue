@@ -5,6 +5,10 @@
     :style="{ '--sidebar-width': sidebarWidth + 'px' }"
   >
     <TopBar />
+    <AdvancedFilterPanel
+      :is-expanded="advancedFilterExpanded"
+      @close="appStore.setAdvancedFilterExpanded(false)"
+    />
     <div class="content-area">
       <LeftPanel />
       <div class="resizer" @mousedown="startResize"></div>
@@ -23,11 +27,13 @@ import { useResizablePanel } from '@/composables'
 import TopBar from './TopBar.vue'
 import LeftPanel from './LeftPanel.vue'
 import FileList from '../FileExplorer/FileList.vue'
+import AdvancedFilterPanel from '../Search/AdvancedFilterPanel.vue'
 
 const appStore = useAppStore()
 const fileExplorerStore = useFileExplorerStore()
 
 const sidebarExpanded = computed(() => appStore.sidebarExpanded)
+const advancedFilterExpanded = computed(() => appStore.advancedFilterExpanded)
 
 // Use resizable panel composable for sidebar width
 const { width: sidebarWidth, startResize } = useResizablePanel({
