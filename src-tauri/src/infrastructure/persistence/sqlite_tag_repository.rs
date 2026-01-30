@@ -322,6 +322,49 @@ impl TagRepository for SqliteTagRepository {
         .map_err(map_interact_error)?
         .map_err(map_db_error)
     }
+
+    async fn merge(&self, source_tag_id: i64, target_tag_id: i64) -> Result<(), DomainError> {
+        let conn = self.pool.get().await.map_err(map_pool_error)?;
+
+        conn.interact(move |conn: &mut Connection| {
+            conn.execute("BEGIN IMMEDIATE", [])?;
+
+            let result = (|| {
+                // Update item_tags: replace source_tag_id with target_tag_id
+                // Use OR IGNORE to handle cases where an item already has both tags
+                conn.execute(
+                    "INSERT OR IGNORE INTO item_tags (item_id, tag_id)
+                     SELECT item_id, ?1 FROM item_tags WHERE tag_id = ?2",
+                    [target_tag_id, source_tag_id],
+                )?;
+
+                // Delete old references to source tag
+                conn.execute(
+                    "DELETE FROM item_tags WHERE tag_id = ?1",
+                    [source_tag_id],
+                )?;
+
+                // Delete the source tag
+                conn.execute("DELETE FROM tags WHERE id = ?1", [source_tag_id])?;
+
+                Ok::<(), rusqlite::Error>(())
+            })();
+
+            match result {
+                Ok(_) => {
+                    conn.execute("COMMIT", [])?;
+                    Ok(())
+                }
+                Err(e) => {
+                    conn.execute("ROLLBACK", [])?;
+                    Err(e)
+                }
+            }
+        })
+        .await
+        .map_err(map_interact_error)?
+        .map_err(map_db_error)
+    }
 }
 
 fn map_pool_error(e: deadpool_sqlite::PoolError) -> DomainError {

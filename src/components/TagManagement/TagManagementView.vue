@@ -888,20 +888,21 @@ tbody tr.selected {
 }
 
 .col-checkbox {
-  width: 40px;
+  width: 50px;
 }
 
 .col-name {
-  width: 30%;
+  flex: 1;
+  min-width: 150px;
 }
 
 .col-usage {
-  width: 80px;
+  width: 100px;
   text-align: center;
 }
 
 .col-actions {
-  width: 200px;
+  width: 250px;
   text-align: center;
 }
 

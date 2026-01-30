@@ -89,3 +89,16 @@ pub async fn search_tags(
         .await
         .map_err(|e| AppError::InvalidInput(e.to_string()))
 }
+
+#[tauri::command]
+pub async fn merge_tags(
+    source_tag_id: i64,
+    target_tag_id: i64,
+    state: State<'_, AppState>,
+) -> AppResult<()> {
+    state
+        .tag_service
+        .merge(source_tag_id, target_tag_id)
+        .await
+        .map_err(|e| AppError::InvalidInput(e.to_string()))
+}

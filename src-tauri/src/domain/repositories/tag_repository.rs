@@ -44,4 +44,8 @@ pub trait TagRepository: Send + Sync {
 
     /// Gets tags for a specific item.
     async fn find_by_item(&self, item_id: i64) -> Result<Vec<Tag>, DomainError>;
+
+    /// Merges source tag into target tag.
+    /// Updates all item_tags references from source to target, then deletes source.
+    async fn merge(&self, source_tag_id: i64, target_tag_id: i64) -> Result<(), DomainError>;
 }

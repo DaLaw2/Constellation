@@ -90,6 +90,29 @@ impl TagService {
         self.tag_repo.get_usage_counts().await
     }
 
+    /// Merges source tag into target tag.
+    /// All items with source tag will be updated to use target tag instead.
+    /// The source tag will be deleted.
+    pub async fn merge(&self, source_tag_id: i64, target_tag_id: i64) -> Result<(), DomainError> {
+        // Verify both tags exist
+        if self.tag_repo.find_by_id(source_tag_id).await?.is_none() {
+            return Err(DomainError::TagNotFound(source_tag_id.to_string()));
+        }
+        if self.tag_repo.find_by_id(target_tag_id).await?.is_none() {
+            return Err(DomainError::TagNotFound(target_tag_id.to_string()));
+        }
+
+        // Cannot merge a tag into itself
+        if source_tag_id == target_tag_id {
+            return Err(DomainError::ValidationError(
+                "Cannot merge a tag into itself".to_string(),
+            ));
+        }
+
+        // Merge tags (update item_tags table and delete source tag)
+        self.tag_repo.merge(source_tag_id, target_tag_id).await
+    }
+
     fn to_dto(tag: Tag) -> TagDto {
         TagDto {
             id: tag.id().unwrap_or(0),
