@@ -18,13 +18,6 @@
 
     <!-- Tag Management Tab -->
     <div v-show="activeTab === 'tags'" class="tab-content">
-      <div class="tag-management-header">
-        <h2>Tag Management</h2>
-        <button class="btn-primary" @click="showCreateGroup = true">
-          + New Group
-        </button>
-      </div>
-
       <div v-if="loading" class="loading-state">Loading...</div>
       <div v-else-if="error" class="error-state">Error: {{ error }}</div>
       <div v-else class="dual-panel-layout">
@@ -67,6 +60,9 @@
                 @click="showBatchActions = !showBatchActions"
               >
                 Batch Actions ({{ selectedTags.length }})
+              </button>
+              <button class="btn-secondary" @click="showCreateGroup = true">
+                + New Group
               </button>
               <button class="btn-primary" @click="handleAddTag" :disabled="!selectedGroupId">
                 + Add Tag
@@ -208,13 +204,63 @@
       confirm-text="Delete"
       @confirm="executeConfirm"
     />
+
+    <!-- Merge Dialog -->
+    <BaseDialog v-model="showMergeDialogModal" title="Merge Tag" width="500px">
+      <div class="merge-dialog-content">
+        <p class="merge-description">
+          Merge tag "<strong>{{ mergingTag?.value }}</strong>" into another tag.
+          All items with this tag will be updated to use the target tag instead.
+        </p>
+
+        <div class="form-group">
+          <label>Select target tag:</label>
+          <div class="tag-select-list">
+            <label
+              v-for="tag in availableMergeTags"
+              :key="tag.id"
+              class="tag-select-item"
+              :class="{ selected: mergeTargetTagId === tag.id }"
+            >
+              <input
+                type="radio"
+                :value="tag.id"
+                v-model="mergeTargetTagId"
+                name="merge-target"
+              />
+              <span
+                class="tag-color-dot"
+                :style="{ backgroundColor: getTagColorById(tag.id) }"
+              ></span>
+              <span class="tag-name">{{ tag.value }}</span>
+              <span class="tag-usage-count">({{ getTagUsage(tag.id) }} items)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="merge-warning">
+          ⚠️ This action cannot be undone. The original tag will be deleted after merging.
+        </div>
+      </div>
+
+      <template #footer>
+        <button class="btn-secondary" @click="closeMergeDialog">Cancel</button>
+        <button
+          class="btn-primary"
+          :disabled="!mergeTargetTagId"
+          @click="executeMerge"
+        >
+          Merge
+        </button>
+      </template>
+    </BaseDialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useTagsStore } from '@/stores/tags'
-import { ConfirmDialog, ContextMenu } from '@/components/base'
+import { ConfirmDialog, ContextMenu, BaseDialog } from '@/components/base'
 import TemplateManager from './TemplateManager.vue'
 import {
   CreateGroupDialog,
@@ -260,6 +306,11 @@ const allSelected = computed(() => {
   )
 })
 
+const availableMergeTags = computed(() => {
+  if (!mergingTag.value) return []
+  return tags.value.filter((tag) => tag.id !== mergingTag.value!.id)
+})
+
 // Context Menu
 const contextMenu = ref({
   show: false,
@@ -280,6 +331,11 @@ const confirmTitle = ref('')
 const confirmMessage = ref('')
 const confirmDescription = ref('')
 const pendingConfirmAction = ref<(() => Promise<void>) | null>(null)
+
+// Merge Dialog
+const showMergeDialogModal = ref(false)
+const mergingTag = ref<Tag | null>(null)
+const mergeTargetTagId = ref<number | null>(null)
 
 onMounted(async () => {
   await tagsStore.loadTagGroups()
@@ -451,8 +507,34 @@ function showTagUsage(tag: Tag) {
 }
 
 function showMergeDialog(tag: Tag) {
-  // TODO: Implement merge dialog
-  console.log('Merge tag:', tag)
+  mergingTag.value = tag
+  mergeTargetTagId.value = null
+  showMergeDialogModal.value = true
+}
+
+function closeMergeDialog() {
+  showMergeDialogModal.value = false
+  mergingTag.value = null
+  mergeTargetTagId.value = null
+}
+
+async function executeMerge() {
+  if (!mergingTag.value || !mergeTargetTagId.value) return
+
+  try {
+    await tagsStore.mergeTags(mergingTag.value.id, mergeTargetTagId.value)
+    closeMergeDialog()
+    await tagsStore.loadUsageCounts()
+  } catch (e) {
+    console.error('Failed to merge tags:', e)
+  }
+}
+
+function getTagColorById(tagId: number): string {
+  const tag = tags.value.find((t) => t.id === tagId)
+  if (!tag) return '#9e9e9e'
+  const group = tagGroups.value.find((g) => g.id === tag.group_id)
+  return group?.color || '#9e9e9e'
 }
 
 // Batch Actions
@@ -499,33 +581,48 @@ async function executeConfirm() {
 /* Tab Navigation */
 .tab-navigation {
   display: flex;
-  gap: 0;
-  border-bottom: 2px solid var(--border-color);
-  background: var(--surface);
-  padding: 0 1rem;
+  gap: 0.5rem;
+  background: var(--background);
+  padding: 1rem 1.5rem 0 1.5rem;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .tab-btn {
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1.5rem;
   border: none;
   background: transparent;
   font-size: 14px;
   font-weight: 500;
   color: var(--text-secondary);
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  transition: all 0.2s;
+  border-radius: 8px 8px 0 0;
+  position: relative;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  border-bottom: none;
 }
 
-.tab-btn:hover {
+.tab-btn:hover:not(.active) {
   color: var(--text-primary);
-  background: rgba(0, 0, 0, 0.02);
+  background: rgba(0, 0, 0, 0.03);
 }
 
 .tab-btn.active {
   color: var(--primary-color);
-  border-bottom-color: var(--primary-color);
+  background: var(--surface);
+  border-color: var(--border-color);
+  border-bottom-color: var(--surface);
+  font-weight: 600;
+}
+
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--surface);
 }
 
 /* Tab Content */
@@ -534,23 +631,6 @@ async function executeConfirm() {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-}
-
-/* Header */
-.tag-management-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.5rem 2rem;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--surface);
-}
-
-.tag-management-header h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 /* Dual Panel Layout */
@@ -868,5 +948,90 @@ tbody tr.selected {
 
 .btn-secondary:hover {
   background: var(--background);
+}
+
+/* Merge Dialog */
+.merge-dialog-content {
+  padding: 0.5rem 0;
+}
+
+.merge-description {
+  margin: 0 0 1.5rem 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.tag-select-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.5rem;
+}
+
+.tag-select-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  margin-bottom: 0.25rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.tag-select-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.tag-select-item.selected {
+  background: rgba(25, 118, 210, 0.1);
+  border: 1px solid var(--primary-color);
+}
+
+.tag-select-item input[type="radio"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.tag-color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tag-name {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.tag-usage-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.merge-warning {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #856404;
 }
 </style>

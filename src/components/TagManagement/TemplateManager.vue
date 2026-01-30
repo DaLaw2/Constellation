@@ -48,6 +48,9 @@
               </div>
             </td>
             <td class="col-actions">
+              <button class="action-btn" @click="handleEdit(template)">
+                Edit
+              </button>
               <button class="action-btn danger" @click="handleDelete(template.id)">
                 Delete
               </button>
@@ -56,6 +59,18 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Delete Confirmation Dialog -->
+    <ConfirmDialog
+      v-model="showDeleteDialog"
+      title="Delete Template"
+      :message="`Are you sure you want to delete &quot;${deletingTemplateName}&quot;?`"
+      description="This action cannot be undone."
+      type="danger"
+      confirm-text="Delete"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
 
     <!-- Create Template Dialog -->
     <div v-if="showCreateDialog" class="dialog-overlay" @click.self="closeDialog">
@@ -68,7 +83,9 @@
             v-model="newTemplateName"
             type="text"
             placeholder="e.g., Work Documents"
+            @input="nameError = ''"
           />
+          <div v-if="nameError" class="error-message">{{ nameError }}</div>
         </div>
 
         <div class="form-group">
@@ -104,10 +121,68 @@
           <button class="btn" @click="closeDialog">Cancel</button>
           <button
             class="btn btn-primary"
-            :disabled="!newTemplateName.trim() || selectedTagIds.length === 0"
+            :disabled="!newTemplateName.trim() || selectedTagIds.length === 0 || !!nameError"
             @click="createTemplate"
           >
             Create
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Template Dialog -->
+    <div v-if="showEditDialog" class="dialog-overlay" @click.self="closeEditDialog">
+      <div class="dialog">
+        <h3>Edit Template</h3>
+
+        <div class="form-group">
+          <label>Template Name:</label>
+          <input
+            v-model="editingTemplateName"
+            type="text"
+            placeholder="e.g., Work Documents"
+            @input="nameError = ''"
+          />
+          <div v-if="nameError" class="error-message">{{ nameError }}</div>
+        </div>
+
+        <div class="form-group">
+          <label>Select Tags:</label>
+          <div class="tag-selection">
+            <div v-for="group in tagGroups" :key="group.id" class="tag-group">
+              <div class="group-label">
+                <span
+                  class="group-color"
+                  :style="{ backgroundColor: group.color || '#9e9e9e' }"
+                ></span>
+                {{ group.name }}
+              </div>
+              <div class="group-tags">
+                <label
+                  v-for="tag in getTagsByGroup(group.id)"
+                  :key="tag.id"
+                  class="tag-checkbox"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="editingTemplateTagIds.includes(tag.id)"
+                    @change="toggleEditTag(tag.id)"
+                  />
+                  {{ tag.value }}
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dialog-actions">
+          <button class="btn" @click="closeEditDialog">Cancel</button>
+          <button
+            class="btn btn-primary"
+            :disabled="!editingTemplateName.trim() || editingTemplateTagIds.length === 0 || !!nameError"
+            @click="saveEditedTemplate"
+          >
+            Save
           </button>
         </div>
       </div>
@@ -119,6 +194,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useTagTemplatesStore } from '@/stores/tagTemplates'
 import { useTagsStore } from '@/stores/tags'
+import { ConfirmDialog } from '@/components/base'
 import type { Tag } from '@/types'
 
 const templatesStore = useTagTemplatesStore()
@@ -131,6 +207,16 @@ const tagGroups = computed(() => tagsStore.tagGroups)
 const showCreateDialog = ref(false)
 const newTemplateName = ref('')
 const selectedTagIds = ref<number[]>([])
+
+const showDeleteDialog = ref(false)
+const deletingTemplateId = ref<number | null>(null)
+const deletingTemplateName = ref('')
+
+const showEditDialog = ref(false)
+const editingTemplateId = ref<number | null>(null)
+const editingTemplateName = ref('')
+const editingTemplateTagIds = ref<number[]>([])
+const nameError = ref('')
 
 onMounted(() => {
   templatesStore.loadTemplates()
@@ -167,14 +253,39 @@ function toggleTag(tagId: number) {
   }
 }
 
+function validateTemplateName(name: string, excludeId: number | null = null): boolean {
+  const trimmedName = name.trim()
+  if (!trimmedName) {
+    nameError.value = 'Template name cannot be empty'
+    return false
+  }
+
+  const duplicate = templates.value.find(
+    t => t.name.toLowerCase() === trimmedName.toLowerCase() && t.id !== excludeId
+  )
+
+  if (duplicate) {
+    nameError.value = 'A template with this name already exists'
+    return false
+  }
+
+  nameError.value = ''
+  return true
+}
+
 function closeDialog() {
   showCreateDialog.value = false
   newTemplateName.value = ''
   selectedTagIds.value = []
+  nameError.value = ''
 }
 
 async function createTemplate() {
   if (!newTemplateName.value.trim() || selectedTagIds.value.length === 0) return
+
+  if (!validateTemplateName(newTemplateName.value)) {
+    return
+  }
 
   try {
     await templatesStore.createTemplate(newTemplateName.value.trim(), selectedTagIds.value)
@@ -184,14 +295,76 @@ async function createTemplate() {
   }
 }
 
-async function handleDelete(id: number) {
-  if (confirm('Delete this template?')) {
+function handleEdit(template: { id: number; name: string; tag_ids: number[] }) {
+  editingTemplateId.value = template.id
+  editingTemplateName.value = template.name
+  editingTemplateTagIds.value = [...template.tag_ids]
+  showEditDialog.value = true
+  nameError.value = ''
+}
+
+function closeEditDialog() {
+  showEditDialog.value = false
+  editingTemplateId.value = null
+  editingTemplateName.value = ''
+  editingTemplateTagIds.value = []
+  nameError.value = ''
+}
+
+function toggleEditTag(tagId: number) {
+  const index = editingTemplateTagIds.value.indexOf(tagId)
+  if (index === -1) {
+    editingTemplateTagIds.value.push(tagId)
+  } else {
+    editingTemplateTagIds.value.splice(index, 1)
+  }
+}
+
+async function saveEditedTemplate() {
+  if (!editingTemplateName.value.trim() || editingTemplateTagIds.value.length === 0) return
+
+  if (!validateTemplateName(editingTemplateName.value, editingTemplateId.value)) {
+    return
+  }
+
+  try {
+    await templatesStore.updateTemplate(
+      editingTemplateId.value!,
+      editingTemplateName.value.trim(),
+      editingTemplateTagIds.value
+    )
+    closeEditDialog()
+  } catch (e) {
+    console.error('Failed to update template:', e)
+  }
+}
+
+function handleDelete(id: number) {
+  const template = templates.value.find(t => t.id === id)
+  if (template) {
+    showDeleteDialog.value = true
+    deletingTemplateId.value = id
+    deletingTemplateName.value = template.name
+  }
+}
+
+async function confirmDelete() {
+  if (deletingTemplateId.value !== null) {
     try {
-      await templatesStore.deleteTemplate(id)
+      await templatesStore.deleteTemplate(deletingTemplateId.value)
+      showDeleteDialog.value = false
+      deletingTemplateId.value = null
+      deletingTemplateName.value = ''
     } catch (e) {
       console.error('Failed to delete template:', e)
     }
   }
+}
+
+function cancelDelete() {
+  showDeleteDialog.value = false
+  deletingTemplateId.value = null
+  deletingTemplateName.value = ''
 }
 </script>
 
@@ -381,6 +554,12 @@ async function handleDelete(id: number) {
   border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 14px;
+}
+
+.error-message {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #dc3545;
 }
 
 .tag-selection {
