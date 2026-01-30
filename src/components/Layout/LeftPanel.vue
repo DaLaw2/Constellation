@@ -52,7 +52,7 @@ import { computed } from 'vue'
 import { useAppStore } from '@/stores/app'
 import type { ViewMode } from '@/types'
 import TagPanel from '../TagManagement/TagPanel.vue'
-import DirectoryTree from '../FileExplorer/DirectoryTree.vue'
+import { DirectoryTree } from '../directory-tree'
 import FilterPanel from '../Search/FilterPanel.vue'
 
 const appStore = useAppStore()
