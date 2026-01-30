@@ -20,7 +20,7 @@
     <div v-show="activeTab === 'tags'" class="tab-content">
       <div v-if="loading" class="loading-state">Loading...</div>
       <div v-else-if="error" class="error-state">Error: {{ error }}</div>
-      <div v-else class="dual-panel-layout">
+      <div v-else class="dual-panel-layout" :style="{ '--groups-panel-width': groupsPanelWidth + 'px' }">
         <!-- Left Panel: Tag Groups -->
         <div class="groups-panel">
           <div class="panel-header">
@@ -48,6 +48,9 @@
             </div>
           </div>
         </div>
+
+        <!-- Resizer -->
+        <div class="panel-resizer" @mousedown="startResize"></div>
 
         <!-- Right Panel: Tag Details Table -->
         <div class="tags-panel">
@@ -258,7 +261,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useTagsStore } from '@/stores/tags'
 import { ConfirmDialog, ContextMenu, BaseDialog } from '@/components/base'
 import TemplateManager from './TemplateManager.vue'
@@ -337,6 +340,10 @@ const showMergeDialogModal = ref(false)
 const mergingTag = ref<Tag | null>(null)
 const mergeTargetTagId = ref<number | null>(null)
 
+// Resizable panel
+const groupsPanelWidth = ref(280)
+const isResizing = ref(false)
+
 onMounted(async () => {
   await tagsStore.loadTagGroups()
   await tagsStore.loadTags()
@@ -346,6 +353,10 @@ onMounted(async () => {
   if (tagGroups.value.length > 0) {
     selectedGroupId.value = tagGroups.value[0].id
   }
+
+  // Add resize listeners
+  document.addEventListener('mousemove', handleResize)
+  document.addEventListener('mouseup', stopResize)
 })
 
 function selectGroup(groupId: number) {
@@ -568,6 +579,33 @@ async function executeConfirm() {
     }
   }
 }
+
+// Resize functions
+function startResize(event: MouseEvent) {
+  isResizing.value = true
+  event.preventDefault()
+}
+
+function handleResize(event: MouseEvent) {
+  if (!isResizing.value) return
+
+  const newWidth = event.clientX
+  const minWidth = 200
+  const maxWidth = 600
+
+  if (newWidth >= minWidth && newWidth <= maxWidth) {
+    groupsPanelWidth.value = newWidth
+  }
+}
+
+function stopResize() {
+  isResizing.value = false
+}
+
+onUnmounted(() => {
+  document.removeEventListener('mousemove', handleResize)
+  document.removeEventListener('mouseup', stopResize)
+})
 </script>
 
 <style scoped>
@@ -638,14 +676,33 @@ async function executeConfirm() {
   flex: 1;
   display: flex;
   overflow: hidden;
+  --groups-panel-width: 280px;
 }
 
 .groups-panel {
-  width: 280px;
+  width: var(--groups-panel-width);
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   background: var(--surface);
+  flex-shrink: 0;
+}
+
+.panel-resizer {
+  width: 4px;
+  background: transparent;
+  cursor: col-resize;
+  transition: background 0.2s;
+  z-index: 10;
+  margin-left: -2px;
+  margin-right: -2px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.panel-resizer:hover,
+.panel-resizer:active {
+  background: var(--primary-color);
 }
 
 .tags-panel {
@@ -845,6 +902,13 @@ tbody tr.selected {
 
 .col-actions {
   width: 200px;
+}
+
+th.col-actions {
+  text-align: left;
+}
+
+td.col-actions {
   text-align: right;
 }
 
@@ -1005,6 +1069,7 @@ tbody tr.selected {
 .tag-select-item input[type="radio"] {
   margin: 0;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .tag-color-dot {
@@ -1012,12 +1077,14 @@ tbody tr.selected {
   height: 12px;
   border-radius: 50%;
   flex-shrink: 0;
+  margin-left: 0.25rem;
 }
 
 .tag-name {
   flex: 1;
   font-size: 14px;
   color: var(--text-primary);
+  margin-left: 0.25rem;
 }
 
 .tag-usage-count {
