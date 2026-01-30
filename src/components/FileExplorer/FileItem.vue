@@ -6,7 +6,7 @@
     @contextmenu.prevent="handleContextMenu"
   >
     <div class="file-icon">
-      {{ getFileIcon(entry) }}
+      {{ entry.is_directory ? '📁' : getFileIcon(entry.name) }}
     </div>
     <div class="file-info">
       <div class="file-name" :title="entry.name">
