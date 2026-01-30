@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import MainLayout from './components/Layout/MainLayout.vue'
+import MediaLightbox from './components/media/MediaLightbox.vue'
 import { onMounted, onUnmounted } from 'vue'
 
 function handleGlobalContextMenu(e: MouseEvent) {
@@ -19,4 +20,5 @@ onUnmounted(() => {
 
 <template>
   <MainLayout />
+  <MediaLightbox />
 </template>

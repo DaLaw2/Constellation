@@ -24,7 +24,6 @@
     </div>
 
     <PictureGrid />
-    <Lightbox />
   </div>
 </template>
 
@@ -32,7 +31,6 @@
 import { computed } from 'vue'
 import { usePictureViewStore } from '@/stores/pictureView'
 import PictureGrid from '@/components/PictureView/PictureGrid.vue'
-import Lightbox from '@/components/PictureView/Lightbox.vue'
 
 const pictureViewStore = usePictureViewStore()
 

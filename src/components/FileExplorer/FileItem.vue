@@ -23,7 +23,7 @@
       </div>
       <div class="file-meta">
         <span v-if="!entry.is_directory && entry.size !== null" class="file-size">
-          {{ formatFileSize(entry.size) }}
+          {{ formatBytes(entry.size) }}
         </span>
         <span v-if="entry.modified_time" class="file-date">
           {{ formatRelativeDate(entry.modified_time) }}
@@ -52,7 +52,7 @@
 import { computed, ref, watch, onMounted } from 'vue'
 import { useTagsStore } from '@/stores/tags'
 import { useItemsStore } from '@/stores/items'
-import { getHighlightRanges } from '@/utils'
+import { getHighlightRanges, formatBytes, formatRelativeDate, getFileIcon } from '@/utils'
 import TagCell from '../TagManagement/TagCell.vue'
 import type { FileEntry, Tag } from '@/types'
 
@@ -162,103 +162,6 @@ function handleDoubleClick() {
 
 function handleContextMenu(event: MouseEvent) {
   emit('contextMenu', props.entry, event)
-}
-
-function getFileIcon(entry: FileEntry): string {
-  if (entry.is_directory) {
-    return '📁'
-  }
-
-  const ext = entry.name.split('.').pop()?.toLowerCase()
-
-  switch (ext) {
-    case 'txt':
-    case 'md':
-    case 'doc':
-    case 'docx':
-      return '📄'
-    case 'pdf':
-      return '📕'
-    case 'jpg':
-    case 'jpeg':
-    case 'png':
-    case 'gif':
-    case 'bmp':
-    case 'svg':
-    case 'webp':
-      return '🖼️'
-    case 'mp3':
-    case 'wav':
-    case 'flac':
-    case 'ogg':
-      return '🎵'
-    case 'mp4':
-    case 'avi':
-    case 'mkv':
-    case 'mov':
-    case 'wmv':
-      return '🎬'
-    case 'zip':
-    case 'rar':
-    case '7z':
-    case 'tar':
-    case 'gz':
-      return '📦'
-    case 'js':
-    case 'ts':
-    case 'jsx':
-    case 'tsx':
-    case 'py':
-    case 'java':
-    case 'cpp':
-    case 'c':
-    case 'cs':
-    case 'go':
-    case 'rs':
-    case 'php':
-      return '💻'
-    case 'html':
-    case 'css':
-    case 'scss':
-    case 'sass':
-      return '🌐'
-    case 'json':
-    case 'xml':
-    case 'yaml':
-    case 'yml':
-      return '📋'
-    case 'exe':
-    case 'msi':
-    case 'app':
-      return '⚙️'
-    default:
-      return '📄'
-  }
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
-}
-
-function formatRelativeDate(timestamp: number): string {
-  const date = new Date(timestamp * 1000)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-
-  if (days === 0) {
-    return 'Today ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-  } else if (days === 1) {
-    return 'Yesterday'
-  } else if (days < 7) {
-    return `${days} days ago`
-  } else {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  }
 }
 </script>
 

@@ -22,9 +22,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { usePictureViewStore } from '@/stores/pictureView'
+import { useLightboxStore } from '@/stores/lightbox'
 import PictureCard from './PictureCard.vue'
 
 const pictureViewStore = usePictureViewStore()
+const lightboxStore = useLightboxStore()
 
 const currentImages = computed(() => pictureViewStore.currentImages)
 const hasImages = computed(() => pictureViewStore.hasImages)
@@ -43,7 +45,7 @@ function getCardSize(): number {
 }
 
 function handleCardClick(index: number) {
-  pictureViewStore.openLightbox(index)
+  lightboxStore.open(currentImages.value, index)
 }
 </script>
 

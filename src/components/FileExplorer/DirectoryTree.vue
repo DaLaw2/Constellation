@@ -51,6 +51,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useFileExplorerStore } from '@/stores/fileExplorer'
+import { formatBytes } from '@/utils'
 import DirectoryNode from './DirectoryNode.vue'
 import type { DriveInfo, FileEntry } from '@/types'
 
@@ -113,14 +114,6 @@ function handleNodeSelect(path: string) {
 
 function isSelected(path: string): boolean {
   return fileExplorerStore.currentPath === path
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
 }
 </script>
 

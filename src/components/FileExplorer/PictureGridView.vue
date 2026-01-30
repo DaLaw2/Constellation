@@ -17,30 +17,27 @@
       />
     </div>
 
-    <ImageLightbox />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useFileExplorerStore } from '@/stores/fileExplorer'
-import type { FileEntry } from '@/types'
+import { useLightboxStore } from '@/stores/lightbox'
+import { isImageFile } from '@/utils'
 import ImageCard from './ImageCard.vue'
-import ImageLightbox from './ImageLightbox.vue'
 
 const fileExplorerStore = useFileExplorerStore()
-
-const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg']
+const lightboxStore = useLightboxStore()
 
 const imageFiles = computed(() => {
-  return fileExplorerStore.currentFiles.filter((file: FileEntry) => 
-    !file.is_directory && 
-    imageExtensions.some(ext => file.name.toLowerCase().endsWith(ext))
+  return fileExplorerStore.currentFiles.filter(file =>
+    !file.is_directory && isImageFile(file.name)
   )
 })
 
 function openLightbox(index: number) {
-  fileExplorerStore.openLightbox(index)
+  lightboxStore.open(imageFiles.value, index)
 }
 </script>
 
