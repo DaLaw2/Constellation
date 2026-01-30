@@ -1,8 +1,8 @@
 <template>
-  <Teleport to="body">
+  <Teleport to="body" :disabled="!isMounted">
     <Transition name="dialog-fade">
       <div
-        v-if="modelValue"
+        v-if="modelValue && isMounted"
         class="dialog-overlay"
         @click.self="handleOverlayClick"
       >
@@ -67,7 +67,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
+
+const isMounted = ref(false)
+
+onMounted(() => {
+  isMounted.value = true
+})
 
 export interface BaseDialogProps {
   modelValue: boolean

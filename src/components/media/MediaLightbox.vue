@@ -1,8 +1,8 @@
 <template>
-  <Teleport to="body">
+  <Teleport to="body" :disabled="!isMounted">
     <Transition name="lightbox-fade">
       <div
-        v-if="lightboxStore.isOpen"
+        v-if="lightboxStore.isOpen && isMounted"
         class="media-lightbox"
         @click="handleBackdropClick"
       >
@@ -156,6 +156,7 @@ const lightboxStore = useLightboxStore()
 const itemsStore = useItemsStore()
 const tagsStore = useTagsStore()
 
+const isMounted = ref(false)
 const itemTags = ref<Tag[]>([])
 const isLoading = ref(false)
 const hasError = ref(false)
@@ -225,6 +226,7 @@ function handleKeydown(event: KeyboardEvent) {
 }
 
 onMounted(() => {
+  isMounted.value = true
   document.addEventListener('keydown', handleKeydown)
 })
 

@@ -1,8 +1,8 @@
 <template>
-  <Teleport to="body">
+  <Teleport to="body" :disabled="!isMounted">
     <Transition name="context-menu-fade">
       <div
-        v-if="visible"
+        v-if="visible && isMounted"
         ref="menuRef"
         class="context-menu"
         :style="menuStyle"
@@ -34,6 +34,8 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+
+const isMounted = ref(false)
 
 export interface ContextMenuItem {
   label?: string
@@ -141,6 +143,7 @@ watch(
 )
 
 onMounted(() => {
+  isMounted.value = true
   if (props.visible) {
     document.addEventListener('click', handleClickOutside)
     document.addEventListener('keydown', handleEscape)
