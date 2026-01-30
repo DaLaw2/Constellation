@@ -892,7 +892,7 @@ tbody tr.selected {
 }
 
 .col-name {
-  flex: 1;
+  width: 30%;
 }
 
 .col-usage {
@@ -902,14 +902,7 @@ tbody tr.selected {
 
 .col-actions {
   width: 200px;
-}
-
-th.col-actions {
-  text-align: left;
-}
-
-td.col-actions {
-  text-align: right;
+  text-align: center;
 }
 
 .tag-value {
@@ -1085,11 +1078,13 @@ td.col-actions {
   font-size: 14px;
   color: var(--text-primary);
   margin-left: 0.25rem;
+  margin-right: 0.5rem;
 }
 
 .tag-usage-count {
   font-size: 12px;
   color: var(--text-secondary);
+  flex-shrink: 0;
 }
 
 .merge-warning {
