@@ -13,10 +13,25 @@ The current focus is on extending functionality with advanced search, system int
 
 **Goal**: Redesign the interface to support advanced filtering and query construction, replacing the insufficient left panel sidebar.
 
-**Requirements**:
-- **Dedicated Search Interface**: A more capable interface (e.g., top bar with expanded mode, or a dedicated search view).
-- **Interactive Query Builder**: Visual tools to build JQL queries without typing code.
-- **Advanced Filter Modal**: UI for selecting specific attributes (size, date, tags) to generate queries.
+**Design Overview**:
+- **Primary Search Bar**: Top-positioned, spanning main content area with JQL/Simple mode toggle
+- **Filter Panel**: Expandable drawer with horizontal sections for Tag Groups, File Types, and Attributes
+- **Filter Chips**: Visual representation of active filters with real-time sync to JQL
+- **Search Results**: Enhanced display with sorting, highlighting, and result count
+
+**Detailed Specification**: See [UI Design v2.0](./ui-design-v2.md#1-searchfilter-ui-design)
+
+### 1.5. Tag Management UI Redesign
+
+**Goal**: Create an independent, dedicated interface for tag organization and maintenance.
+
+**Design Overview**:
+- **Dual-Panel Layout**: Left panel for Tag Groups, right panel for Tag details (table view)
+- **Batch Operations**: Multi-select, bulk move, merge, and delete capabilities
+- **Drag & Drop**: Intuitive reordering and group management
+- **Template Management**: Separate tab for creating and managing tag combinations
+
+**Detailed Specification**: See [UI Design v2.0](./ui-design-v2.md#2-tag-management-ui-design)
 
 ### 2. Settings Page Design
 
