@@ -2,7 +2,7 @@
   <div class="template-manager">
     <div class="manager-header">
       <h3>Tag Templates</h3>
-      <button class="btn btn-primary btn-sm" @click="showCreateDialog = true">
+      <button class="btn btn-primary btn-sm" @click="openCreateDialog">
         + New Template
       </button>
     </div>
@@ -24,6 +24,7 @@
         v-for="template in templates"
         :key="template.id"
         class="template-item"
+        @contextmenu.prevent="openContextMenu($event, template)"
       >
         <div class="template-info">
           <div class="template-name">{{ template.name }}</div>
@@ -38,13 +39,18 @@
             </span>
           </div>
         </div>
-        <div class="template-actions">
-          <button class="btn-icon" title="Delete" @click="handleDelete(template.id)">
-            🗑️
-          </button>
-        </div>
       </div>
     </div>
+
+    <!-- Context menu -->
+    <ContextMenu
+      :visible="contextMenu.visible"
+      :x="contextMenu.x"
+      :y="contextMenu.y"
+      :items="contextMenuItems"
+      @update:visible="contextMenu.visible = $event"
+      @select="contextMenu.visible = false"
+    />
 
     <ConfirmDialog
       v-model="showDeleteConfirm"
@@ -55,15 +61,15 @@
       @confirm="confirmDelete"
     />
 
-    <!-- Create Template Dialog -->
-    <div v-if="showCreateDialog" class="dialog-overlay" @click.self="closeDialog">
+    <!-- Create / Edit Template Dialog -->
+    <div v-if="showDialog" class="dialog-overlay" @click.self="closeDialog">
       <div class="dialog">
-        <h3>Create Template</h3>
+        <h3>{{ editingTemplate ? 'Edit Template' : 'Create Template' }}</h3>
 
         <div class="form-group">
           <label>Template Name:</label>
           <input
-            v-model="newTemplateName"
+            v-model="dialogName"
             type="text"
             placeholder="e.g., Work Documents"
           />
@@ -88,8 +94,8 @@
                 >
                   <input
                     type="checkbox"
-                    :checked="selectedTagIds.includes(tag.id)"
-                    @change="toggleTag(tag.id)"
+                    :checked="dialogTagIds.includes(tag.id)"
+                    @change="toggleDialogTag(tag.id)"
                   />
                   {{ tag.value }}
                 </label>
@@ -102,10 +108,10 @@
           <button class="btn" @click="closeDialog">Cancel</button>
           <button
             class="btn btn-primary"
-            :disabled="!newTemplateName.trim() || selectedTagIds.length === 0"
-            @click="createTemplate"
+            :disabled="!dialogName.trim() || dialogTagIds.length === 0"
+            @click="saveTemplate"
           >
-            Create
+            {{ editingTemplate ? 'Save' : 'Create' }}
           </button>
         </div>
       </div>
@@ -117,8 +123,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { useTagTemplatesStore } from '@/stores/tagTemplates'
 import { useTagsStore } from '@/stores/tags'
-import { ConfirmDialog } from '@/components/base'
-import type { Tag } from '@/types'
+import { ConfirmDialog, ContextMenu } from '@/components/base'
+import type { ContextMenuItem } from '@/components/base'
+import type { Tag, TagTemplate } from '@/types'
 
 const templatesStore = useTagTemplatesStore()
 const tagsStore = useTagsStore()
@@ -127,13 +134,33 @@ const templates = computed(() => templatesStore.templates)
 const loading = computed(() => templatesStore.loading)
 const tagGroups = computed(() => tagsStore.tagGroups)
 
-const showCreateDialog = ref(false)
-const newTemplateName = ref('')
-const selectedTagIds = ref<number[]>([])
+// Dialog state (shared for create and edit)
+const showDialog = ref(false)
+const editingTemplate = ref<TagTemplate | null>(null)
+const dialogName = ref('')
+const dialogTagIds = ref<number[]>([])
 
 // Delete confirmation
 const showDeleteConfirm = ref(false)
 const pendingDeleteId = ref<number | null>(null)
+
+// Context menu
+const contextMenu = ref({
+  visible: false,
+  x: 0,
+  y: 0,
+  target: null as TagTemplate | null,
+})
+
+const contextMenuItems = computed((): ContextMenuItem[] => [
+  { label: 'Edit', icon: '✏️', action: () => {
+    if (contextMenu.value.target) openEditDialog(contextMenu.value.target)
+  }},
+  { divider: true },
+  { label: 'Delete', icon: '🗑️', danger: true, action: () => {
+    if (contextMenu.value.target) handleDelete(contextMenu.value.target.id)
+  }},
+])
 
 onMounted(() => {
   templatesStore.loadTemplates()
@@ -150,7 +177,6 @@ function getTagsByGroup(groupId: number) {
 }
 
 function getTemplateTags(template: { tag_ids: number[] }): Tag[] {
-  // Resolve tag_ids to full Tag objects from the tags store
   return template.tag_ids
     .map(tagId => tagsStore.tags.find(tag => tag.id === tagId))
     .filter((tag): tag is Tag => tag !== undefined)
@@ -161,32 +187,67 @@ function getTagColor(tag: Tag): string {
   return group?.color || '#9e9e9e'
 }
 
-function toggleTag(tagId: number) {
-  const index = selectedTagIds.value.indexOf(tagId)
-  if (index === -1) {
-    selectedTagIds.value.push(tagId)
-  } else {
-    selectedTagIds.value.splice(index, 1)
-  }
+// Dialog helpers
+function openCreateDialog() {
+  editingTemplate.value = null
+  dialogName.value = ''
+  dialogTagIds.value = []
+  showDialog.value = true
+}
+
+function openEditDialog(template: TagTemplate) {
+  editingTemplate.value = template
+  dialogName.value = template.name
+  dialogTagIds.value = [...template.tag_ids]
+  showDialog.value = true
 }
 
 function closeDialog() {
-  showCreateDialog.value = false
-  newTemplateName.value = ''
-  selectedTagIds.value = []
+  showDialog.value = false
+  editingTemplate.value = null
+  dialogName.value = ''
+  dialogTagIds.value = []
 }
 
-async function createTemplate() {
-  if (!newTemplateName.value.trim() || selectedTagIds.value.length === 0) return
-
-  try {
-    await templatesStore.createTemplate(newTemplateName.value.trim(), selectedTagIds.value)
-    closeDialog()
-  } catch (e) {
-    console.error('Failed to create template:', e)
+function toggleDialogTag(tagId: number) {
+  const index = dialogTagIds.value.indexOf(tagId)
+  if (index === -1) {
+    dialogTagIds.value.push(tagId)
+  } else {
+    dialogTagIds.value.splice(index, 1)
   }
 }
 
+async function saveTemplate() {
+  if (!dialogName.value.trim() || dialogTagIds.value.length === 0) return
+
+  try {
+    if (editingTemplate.value) {
+      await templatesStore.updateTemplate(
+        editingTemplate.value.id,
+        dialogName.value.trim(),
+        dialogTagIds.value
+      )
+    } else {
+      await templatesStore.createTemplate(dialogName.value.trim(), dialogTagIds.value)
+    }
+    closeDialog()
+  } catch (e) {
+    console.error('Failed to save template:', e)
+  }
+}
+
+// Context menu
+function openContextMenu(event: MouseEvent, template: TagTemplate) {
+  contextMenu.value = {
+    visible: true,
+    x: event.clientX,
+    y: event.clientY,
+    target: template,
+  }
+}
+
+// Delete
 function handleDelete(id: number) {
   pendingDeleteId.value = id
   showDeleteConfirm.value = true
@@ -264,11 +325,11 @@ async function confirmDelete() {
 .template-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 12px;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background: var(--background);
+  cursor: default;
 }
 
 .template-item:hover {
@@ -299,25 +360,6 @@ async function confirmDelete() {
   border-radius: 12px;
   font-size: 11px;
   color: white;
-}
-
-.template-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.btn-icon {
-  padding: 4px 8px;
-  border: none;
-  background: none;
-  cursor: pointer;
-  border-radius: 4px;
-  opacity: 0.6;
-}
-
-.btn-icon:hover {
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.05);
 }
 
 /* Dialog styles */

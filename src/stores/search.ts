@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
-import type { Item, SearchMode } from '@/types'
+import type { Item, SearchMode, SearchInputMode } from '@/types'
 
 export const useSearchStore = defineStore('search', () => {
   const results = ref<Item[]>([])
@@ -10,6 +10,11 @@ export const useSearchStore = defineStore('search', () => {
   const mode = ref<SearchMode>('and')
   const selectedTagIds = ref<number[]>([])
   const filenameQuery = ref('')
+
+  // CQL mode state
+  const searchInputMode = ref<SearchInputMode>('simple')
+  const cqlQuery = ref('')
+  const cqlError = ref<string | null>(null)
 
   const hasSearchCriteria = computed(() => {
     return selectedTagIds.value.length > 0 || filenameQuery.value.trim().length > 0
@@ -103,11 +108,47 @@ export const useSearchStore = defineStore('search', () => {
     filenameQuery.value = query
   }
 
+  function setSearchInputMode(newMode: SearchInputMode) {
+    searchInputMode.value = newMode
+    // Clear results and errors when switching modes
+    results.value = []
+    error.value = null
+    cqlError.value = null
+  }
+
+  function setCqlQuery(query: string) {
+    cqlQuery.value = query
+  }
+
+  async function executeCqlSearch() {
+    const query = cqlQuery.value.trim()
+    if (!query) {
+      results.value = []
+      return
+    }
+
+    loading.value = true
+    cqlError.value = null
+    error.value = null
+
+    try {
+      results.value = await invoke<Item[]>('search_cql', { query })
+    } catch (e) {
+      const errMsg = typeof e === 'string' ? e : String(e)
+      cqlError.value = errMsg
+      results.value = []
+    } finally {
+      loading.value = false
+    }
+  }
+
   function clearSearch() {
     results.value = []
     selectedTagIds.value = []
     filenameQuery.value = ''
+    cqlQuery.value = ''
     error.value = null
+    cqlError.value = null
   }
 
   return {
@@ -129,6 +170,12 @@ export const useSearchStore = defineStore('search', () => {
     deselectTag,
     clearSelectedTags,
     setFilenameQuery,
+    searchInputMode,
+    cqlQuery,
+    cqlError,
+    setSearchInputMode,
+    setCqlQuery,
+    executeCqlSearch,
     clearSearch,
   }
 })

@@ -1,0 +1,31 @@
+// CQL Grammar for Constellation
+// Operator precedence: NOT > AND > OR (encoded by recursive structure)
+
+WHITESPACE = _{ " " | "\t" }
+
+query = { SOI ~ expression ~ EOI }
+
+expression = { and_expr ~ (or_op ~ and_expr)* }
+and_expr = { unary_expr ~ (and_op ~ unary_expr)* }
+unary_expr = { not_op ~ unary_expr | primary }
+primary = { "(" ~ expression ~ ")" | in_expr | comparison }
+
+in_expr = { field ~ in_op ~ "(" ~ value_list ~ ")" }
+comparison = { field ~ comparator ~ value }
+value_list = { value ~ ("," ~ value)* }
+
+field = @{ ^"tag" | ^"name" | ^"size" | ^"modified" | ^"type" }
+comparator = { ">=" | "<=" | "!=" | "=" | "~" | ">" | "<" }
+
+and_op = _{ ^"AND" }
+or_op  = _{ ^"OR" }
+not_op = _{ ^"NOT" }
+in_op  = _{ ^"IN" }
+
+value = { size_literal | quoted_string | number }
+size_literal = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? ~ size_unit }
+size_unit = @{ ^"gb" | ^"mb" | ^"kb" | ^"b" }
+quoted_string = ${ "\"" ~ inner_string ~ "\"" }
+inner_string = @{ (escape_char | (!"\"" ~ !"\\" ~ ANY))* }
+escape_char = @{ "\\" ~ ("\"" | "\\" | "n" | "t") }
+number = @{ "-"? ~ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }

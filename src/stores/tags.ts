@@ -10,29 +10,37 @@ export const useTagsStore = defineStore('tags', () => {
   const error = ref<string | null>(null)
   const usageCounts = ref<Record<number, number>>({})
 
-  async function loadTagGroups() {
-    loading.value = true
-    error.value = null
+  async function loadTagGroups(silent = false) {
+    if (!silent) {
+      loading.value = true
+      error.value = null
+    }
     try {
       tagGroups.value = await invoke<TagGroup[]>('get_tag_groups')
     } catch (e) {
       error.value = e as string
       console.error('Failed to load tag groups:', e)
     } finally {
-      loading.value = false
+      if (!silent) {
+        loading.value = false
+      }
     }
   }
 
-  async function loadTags() {
-    loading.value = true
-    error.value = null
+  async function loadTags(silent = false) {
+    if (!silent) {
+      loading.value = true
+      error.value = null
+    }
     try {
       tags.value = await invoke<Tag[]>('get_all_tags')
     } catch (e) {
       error.value = e as string
       console.error('Failed to load tags:', e)
     } finally {
-      loading.value = false
+      if (!silent) {
+        loading.value = false
+      }
     }
   }
 
@@ -60,7 +68,7 @@ export const useTagsStore = defineStore('tags', () => {
         color,
         displayOrder,
       })
-      await loadTagGroups()
+      await loadTagGroups(true)
       return id
     } catch (e) {
       error.value = e as string
@@ -75,7 +83,8 @@ export const useTagsStore = defineStore('tags', () => {
         groupId,
         value,
       })
-      await loadTags()
+      await loadTags(true)
+      await loadUsageCounts()
       return id
     } catch (e) {
       error.value = e as string
@@ -91,7 +100,7 @@ export const useTagsStore = defineStore('tags', () => {
         name: name || null,
         color: color || null,
       })
-      await loadTagGroups()
+      await loadTagGroups(true)
     } catch (e) {
       error.value = e as string
       console.error('Failed to update tag group:', e)
@@ -106,7 +115,8 @@ export const useTagsStore = defineStore('tags', () => {
         value: value || null,
         groupId: groupId || null,
       })
-      await loadTags()
+      await loadTags(true)
+      await loadUsageCounts()
     } catch (e) {
       error.value = e as string
       console.error('Failed to update tag:', e)
@@ -117,7 +127,7 @@ export const useTagsStore = defineStore('tags', () => {
   async function mergeTags(sourceId: number, targetId: number) {
     try {
       await invoke('merge_tags', { sourceId, targetId })
-      await loadTags()
+      await loadTags(true)
       await loadUsageCounts()
     } catch (e) {
       error.value = e as string
@@ -138,7 +148,7 @@ export const useTagsStore = defineStore('tags', () => {
       }))
 
       await invoke('reorder_tag_groups', { orders })
-      await loadTagGroups()
+      await loadTagGroups(true)
     } catch (e) {
       error.value = e as string
       console.error('Failed to reorder tag groups:', e)
@@ -149,9 +159,9 @@ export const useTagsStore = defineStore('tags', () => {
   async function deleteTagGroup(id: number) {
     try {
       await invoke('delete_tag_group', { id })
-      await loadTagGroups()
-      // Also reload tags as cascade delete might happen or tags become orphaned
-      await loadTags()
+      await loadTagGroups(true)
+      await loadTags(true)
+      await loadUsageCounts()
     } catch (e) {
       error.value = e as string
       console.error('Failed to delete tag group:', e)
@@ -162,7 +172,7 @@ export const useTagsStore = defineStore('tags', () => {
   async function deleteTag(id: number) {
     try {
       await invoke('delete_tag', { id })
-      await loadTags()
+      await loadTags(true)
       await loadUsageCounts()
     } catch (e) {
       error.value = e as string

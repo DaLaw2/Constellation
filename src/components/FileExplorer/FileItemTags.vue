@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useTagsStore } from '@/stores/tags'
 import { useItemsStore } from '@/stores/items'
 import TagCell from '../TagManagement/TagCell.vue'
@@ -29,8 +29,8 @@ const itemsStore = useItemsStore()
 const itemTags = ref<Tag[]>([])
 const itemId = ref<number | null>(null)
 
-const tagGroups = tagsStore.tagGroups
-const allTags = tagsStore.tags
+const tagGroups = computed(() => tagsStore.tagGroups)
+const allTags = computed(() => tagsStore.tags)
 
 // Load tags when entry changes
 watch(
@@ -71,6 +71,7 @@ async function handleTagsUpdate(tagIds: number[]) {
     await itemsStore.updateItemTags(itemId.value, tagIds)
     const tags = await itemsStore.getTagsForItem(itemId.value)
     itemTags.value = tags
+    await tagsStore.loadUsageCounts()
   } catch (e) {
     console.error('Failed to update tags:', e)
   }
@@ -84,11 +85,21 @@ async function handleCreateTag(groupId: number, value: string) {
       await itemsStore.updateItemTags(itemId.value, [...currentIds, newTagId])
       const tags = await itemsStore.getTagsForItem(itemId.value)
       itemTags.value = tags
+      await tagsStore.loadUsageCounts()
     }
   } catch (e) {
     console.error('Failed to create tag:', e)
   }
 }
+
+// Sync itemTags when store tags change (tag deleted/renamed/group deleted)
+watch(() => tagsStore.tags, (storeTags) => {
+  if (itemTags.value.length === 0) return
+  const tagMap = new Map(storeTags.map(t => [t.id, t]))
+  itemTags.value = itemTags.value
+    .filter(t => tagMap.has(t.id))
+    .map(t => tagMap.get(t.id)!)
+})
 
 // Load tag groups and tags on mount
 onMounted(() => {

@@ -467,6 +467,8 @@ async function executeConfirm() {
 .panel-left {
   flex-shrink: 0;
   border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 

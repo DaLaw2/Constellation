@@ -4,6 +4,7 @@
       v-model="localGroups"
       item-key="id"
       handle=".drag-handle"
+      @start="dragging = true"
       @end="handleReorder"
       :animation="200"
       ghost-class="ghost"
@@ -11,38 +12,41 @@
       drag-class="dragging"
     >
       <template #item="{ element: group }">
-        <div
-          class="group-item"
-          :class="{ selected: selectedGroupId === group.id }"
-          @click="emit('selectGroup', group.id)"
-          @contextmenu.prevent="handleContextMenu($event, group)"
-        >
-          <span class="drag-handle" title="Drag to reorder" @click.stop>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <circle cx="9" cy="12" r="1" />
-              <circle cx="9" cy="5" r="1" />
-              <circle cx="9" cy="19" r="1" />
-              <circle cx="15" cy="12" r="1" />
-              <circle cx="15" cy="5" r="1" />
-              <circle cx="15" cy="19" r="1" />
-            </svg>
-          </span>
-          <span
-            class="group-color-badge"
-            :style="{ backgroundColor: group.color || '#9e9e9e' }"
-          ></span>
-          <span class="group-name">{{ group.name }}</span>
-          <span class="group-tag-count">({{ getTagCount(group.id) }})</span>
+        <div class="group-item" :class="{ selected: selectedGroupId === group.id }">
+          <div
+            class="group-item-header"
+            @click="emit('selectGroup', group.id)"
+            @contextmenu.prevent="handleContextMenu($event, group)"
+          >
+            <div class="group-info">
+              <span class="drag-handle" title="Drag to reorder" @click.stop>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="9" cy="12" r="1" />
+                  <circle cx="9" cy="5" r="1" />
+                  <circle cx="9" cy="19" r="1" />
+                  <circle cx="15" cy="12" r="1" />
+                  <circle cx="15" cy="5" r="1" />
+                  <circle cx="15" cy="19" r="1" />
+                </svg>
+              </span>
+              <span
+                class="group-color-badge"
+                :style="{ backgroundColor: group.color || '#9e9e9e' }"
+              ></span>
+              <span class="group-name">{{ group.name }}</span>
+            </div>
+            <span class="group-tag-count">({{ getTagCount(group.id) }})</span>
+          </div>
         </div>
       </template>
     </draggable>
@@ -85,6 +89,7 @@ const emit = defineEmits<{
 }>()
 
 const localGroups = ref([...props.groups])
+const dragging = ref(false)
 
 watch(() => props.groups, (newGroups) => {
   localGroups.value = [...newGroups]
@@ -112,6 +117,7 @@ function getTagCount(groupId: number): number {
 }
 
 function handleReorder() {
+  dragging.value = false
   const orderedIds = localGroups.value.map(g => g.id)
   emit('reorder', orderedIds)
 }
@@ -128,31 +134,43 @@ function handleContextMenu(event: MouseEvent, group: TagGroup) {
 
 <style scoped>
 .group-list-panel {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 8px;
+  padding: 12px;
 }
 
 .group-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
   margin-bottom: 4px;
   border-radius: 6px;
-  cursor: pointer;
-  transition: var(--transition-fast);
-  user-select: none;
-}
-
-.group-item:hover {
-  background: rgba(0, 0, 0, 0.04);
+  overflow: hidden;
 }
 
 .group-item.selected {
   background: rgba(25, 118, 210, 0.08);
   border-left: 3px solid var(--primary-color);
-  padding-left: 9px;
+}
+
+.group-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  user-select: none;
+}
+
+.group-item-header:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.group-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
 }
 
 .drag-handle {
@@ -160,15 +178,10 @@ function handleContextMenu(event: MouseEvent, group: TagGroup) {
   color: var(--text-secondary);
   display: flex;
   align-items: center;
-  opacity: 0.5;
 }
 
 .drag-handle:active {
   cursor: grabbing;
-}
-
-.group-item:hover .drag-handle {
-  opacity: 1;
 }
 
 .group-color-badge {
@@ -201,6 +214,7 @@ function handleContextMenu(event: MouseEvent, group: TagGroup) {
   color: var(--text-secondary);
 }
 
+/* Draggable styles */
 .ghost {
   opacity: 0.4;
 }

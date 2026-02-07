@@ -112,6 +112,8 @@ function handleSearch() {
   border-radius: 4px;
   color: var(--text-secondary);
   flex-shrink: 0;
+  margin-left: -8px;
+  margin-right: -8px;
 }
 
 .settings-btn:hover {

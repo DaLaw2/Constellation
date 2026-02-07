@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { useTagsStore } from '@/stores/tags'
 import type { Item, Tag } from '@/types'
 
 export const useItemsStore = defineStore('items', () => {
@@ -57,6 +58,7 @@ export const useItemsStore = defineStore('items', () => {
         itemId,
         tagId,
       })
+      await useTagsStore().loadUsageCounts()
     } catch (e) {
       error.value = e as string
       console.error('Failed to add tag to item:', e)
@@ -70,6 +72,7 @@ export const useItemsStore = defineStore('items', () => {
         itemId,
         tagId,
       })
+      await useTagsStore().loadUsageCounts()
     } catch (e) {
       error.value = e as string
       console.error('Failed to remove tag from item:', e)
@@ -91,6 +94,7 @@ export const useItemsStore = defineStore('items', () => {
   async function updateItemTags(itemId: number, tagIds: number[]) {
     try {
       await invoke('update_item_tags', { itemId, tagIds })
+      await useTagsStore().loadUsageCounts()
     } catch (e) {
       error.value = e as string
       console.error('Failed to update item tags:', e)

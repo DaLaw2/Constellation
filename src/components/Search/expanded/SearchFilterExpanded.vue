@@ -2,77 +2,147 @@
   <div class="search-filter-expanded">
     <!-- Search Bar -->
     <div class="search-bar">
-      <div class="search-input-wrapper">
-        <input
-          ref="searchInput"
-          type="text"
-          v-model="filenameInput"
-          placeholder="Search by filename..."
-          class="search-input"
-          @focus="showHistory = true"
-          @blur="handleBlur"
-          @keyup.enter="executeSearch"
-        />
-        <!-- History Dropdown -->
-        <div v-if="showHistory && appStore.searchHistory.length > 0" class="history-dropdown">
-          <div class="history-header">
-            <span>Recent Searches</span>
-            <button class="clear-history-btn" @click.stop="clearHistory">Clear All</button>
-          </div>
-          <div class="history-list">
-            <div
-              v-for="item in appStore.searchHistory"
-              :key="item.id"
-              class="history-item"
-              @mousedown.prevent="applyHistory(item)"
-            >
-              <div class="history-content">
-                <span v-if="item.criteria.filename_query" class="history-query">"{{ item.criteria.filename_query }}"</span>
-                <span v-if="item.criteria.tag_ids.length > 0" class="history-tags">
-                  + {{ item.criteria.tag_ids.length }} tags
-                </span>
-                <span v-if="!item.criteria.filename_query && item.criteria.tag_ids.length === 0" class="history-empty">
-                  (Empty Search)
-                </span>
+      <!-- Input Mode Toggle -->
+      <div class="input-mode-toggle">
+        <button
+          :class="['input-mode-btn', { active: searchStore.searchInputMode === 'simple' }]"
+          @click="searchStore.setSearchInputMode('simple')"
+        >Simple</button>
+        <button
+          :class="['input-mode-btn', { active: searchStore.searchInputMode === 'cql' }]"
+          @click="searchStore.setSearchInputMode('cql')"
+        >CQL</button>
+      </div>
+
+      <!-- Simple Mode: Filename Input -->
+      <template v-if="searchStore.searchInputMode === 'simple'">
+        <div class="search-input-wrapper">
+          <input
+            ref="searchInput"
+            type="text"
+            v-model="filenameInput"
+            placeholder="Search by filename..."
+            class="search-input"
+            @focus="showHistory = true"
+            @blur="handleBlur"
+            @keyup.enter="executeSearch"
+          />
+          <!-- History Dropdown -->
+          <div v-if="showHistory && appStore.searchHistory.length > 0" class="history-dropdown">
+            <div class="history-header">
+              <span>Recent Searches</span>
+              <button class="clear-history-btn" @click.stop="clearHistory">Clear All</button>
+            </div>
+            <div class="history-list">
+              <div
+                v-for="item in appStore.searchHistory"
+                :key="item.id"
+                class="history-item"
+                @mousedown.prevent="applyHistory(item)"
+              >
+                <div class="history-content">
+                  <span v-if="item.criteria.filename_query" class="history-query">"{{ item.criteria.filename_query }}"</span>
+                  <span v-if="item.criteria.tag_ids.length > 0" class="history-tags">
+                    + {{ item.criteria.tag_ids.length }} tags
+                  </span>
+                  <span v-if="!item.criteria.filename_query && item.criteria.tag_ids.length === 0" class="history-empty">
+                    (Empty Search)
+                  </span>
+                </div>
+                <button
+                  class="delete-history-btn"
+                  @mousedown.prevent.stop="deleteHistory(item.id)"
+                  title="Remove"
+                >&times;</button>
               </div>
-              <button
-                class="delete-history-btn"
-                @mousedown.prevent.stop="deleteHistory(item.id)"
-                title="Remove"
-              >×</button>
             </div>
           </div>
         </div>
-      </div>
 
-      <div class="mode-toggle">
-        <button
-          :class="['mode-btn', { active: searchStore.mode === 'and' }]"
-          @click="searchStore.setMode('and')"
-        >AND</button>
-        <button
-          :class="['mode-btn', { active: searchStore.mode === 'or' }]"
-          @click="searchStore.setMode('or')"
-        >OR</button>
-      </div>
+        <div class="mode-toggle">
+          <button
+            :class="['mode-btn', { active: searchStore.mode === 'and' }]"
+            @click="searchStore.setMode('and')"
+          >AND</button>
+          <button
+            :class="['mode-btn', { active: searchStore.mode === 'or' }]"
+            @click="searchStore.setMode('or')"
+          >OR</button>
+        </div>
+      </template>
+
+      <!-- CQL Mode: Query Input -->
+      <template v-else>
+        <div class="search-input-wrapper">
+          <input
+            type="text"
+            v-model="cqlInput"
+            placeholder='tag = "vacation" AND size > 10MB'
+            class="search-input cql-input"
+            @keyup.enter="executeSearch"
+          />
+        </div>
+
+        <div class="cql-help-wrapper">
+          <button
+            class="cql-help-btn"
+            @click="showCqlHelp = !showCqlHelp"
+            title="CQL Syntax Help"
+          >?</button>
+          <div v-if="showCqlHelp" class="cql-help-dropdown">
+            <div class="cql-help-content">
+              <h4>CQL Syntax</h4>
+              <div class="cql-help-section">
+                <span class="cql-help-label">Fields:</span>
+                <code>tag</code> <code>name</code> <code>size</code> <code>modified</code> <code>type</code>
+              </div>
+              <div class="cql-help-section">
+                <span class="cql-help-label">Operators:</span>
+                <code>=</code> <code>!=</code> <code>~</code> <code>&gt;</code> <code>&lt;</code> <code>&gt;=</code> <code>&lt;=</code> <code>IN</code>
+              </div>
+              <div class="cql-help-section">
+                <span class="cql-help-label">Logic:</span>
+                <code>AND</code> <code>OR</code> <code>NOT</code> <code>( )</code>
+              </div>
+              <div class="cql-help-section">
+                <span class="cql-help-label">Types:</span>
+                <code>image</code> <code>video</code> <code>document</code> <code>audio</code> <code>archive</code> <code>directory</code>
+              </div>
+              <div class="cql-help-examples">
+                <span class="cql-help-label">Examples:</span>
+                <div class="cql-example" @click="applyCqlExample('tag = &quot;vacation&quot; AND tag = &quot;2024&quot;')">tag = "vacation" AND tag = "2024"</div>
+                <div class="cql-example" @click="applyCqlExample('name ~ &quot;*.jpg&quot; OR name ~ &quot;*.png&quot;')">name ~ "*.jpg" OR name ~ "*.png"</div>
+                <div class="cql-example" @click="applyCqlExample('size > 10MB AND modified > &quot;2024-01-01&quot;')">size > 10MB AND modified > "2024-01-01"</div>
+                <div class="cql-example" @click="applyCqlExample('type = &quot;image&quot; AND size > 5MB')">type = "image" AND size > 5MB</div>
+                <div class="cql-example" @click="applyCqlExample('tag IN (&quot;work&quot;, &quot;project&quot;) AND NOT tag = &quot;archived&quot;')">tag IN ("work", "project") AND NOT tag = "archived"</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
 
       <button
         class="btn btn-secondary"
         @click="clearAll"
-        :disabled="!hasAnyCriteria && !hasClientFilter"
+        :disabled="!canClear"
       >Clear</button>
 
       <button
         class="btn btn-primary"
         @click="executeSearch"
-        :disabled="!hasAnyCriteria || searchStore.loading"
+        :disabled="!canSearch || searchStore.loading"
       >
         {{ searchStore.loading ? 'Searching...' : 'Search' }}
       </button>
     </div>
 
-    <!-- Filter Area -->
-    <div class="filter-area">
+    <!-- CQL Error -->
+    <div v-if="searchStore.searchInputMode === 'cql' && searchStore.cqlError" class="cql-error">
+      {{ searchStore.cqlError }}
+    </div>
+
+    <!-- Filter Area (Simple mode only) -->
+    <div v-if="searchStore.searchInputMode === 'simple'" class="filter-area">
       <div class="filter-column filter-tags">
         <TagGroupFilter
           :tag-groups="tagGroups"
@@ -98,7 +168,7 @@
       :loading="searchStore.loading"
       :error="searchStore.error"
       :has-searched="hasSearched"
-      :client-filter="clientFilterFn"
+      :client-filter="searchStore.searchInputMode === 'simple' ? clientFilterFn : null"
     />
   </div>
 </template>
@@ -118,7 +188,9 @@ const tagsStore = useTagsStore()
 const appStore = useAppStore()
 
 const filenameInput = ref('')
+const cqlInput = ref('')
 const showHistory = ref(false)
+const showCqlHelp = ref(false)
 const hasSearched = ref(false)
 const clientFilterFn = ref<((items: Item[]) => Item[]) | null>(null)
 
@@ -126,11 +198,19 @@ const tagGroups = computed(() => tagsStore.tagGroups)
 const tags = computed(() => tagsStore.tags)
 const usageCounts = computed(() => tagsStore.usageCounts)
 
-const hasAnyCriteria = computed(() => {
+const canSearch = computed(() => {
+  if (searchStore.searchInputMode === 'cql') {
+    return cqlInput.value.trim().length > 0
+  }
   return searchStore.selectedTagIds.length > 0 || filenameInput.value.trim().length > 0
 })
 
-const hasClientFilter = computed(() => clientFilterFn.value !== null)
+const canClear = computed(() => {
+  if (searchStore.searchInputMode === 'cql') {
+    return cqlInput.value.length > 0 || searchStore.results.length > 0
+  }
+  return searchStore.selectedTagIds.length > 0 || filenameInput.value.length > 0 || clientFilterFn.value !== null
+})
 
 onMounted(async () => {
   await tagsStore.loadTagGroups()
@@ -142,20 +222,33 @@ onMounted(async () => {
   if (searchStore.filenameQuery) {
     filenameInput.value = searchStore.filenameQuery
   }
+  if (searchStore.cqlQuery) {
+    cqlInput.value = searchStore.cqlQuery
+  }
 })
 
 watch(filenameInput, (value) => {
   searchStore.setFilenameQuery(value)
 })
 
+watch(cqlInput, (value) => {
+  searchStore.setCqlQuery(value)
+})
+
 async function executeSearch() {
-  if (!hasAnyCriteria.value) return
+  if (!canSearch.value) return
   hasSearched.value = true
-  await searchStore.executeSearch()
+
+  if (searchStore.searchInputMode === 'cql') {
+    await searchStore.executeCqlSearch()
+  } else {
+    await searchStore.executeSearch()
+  }
 }
 
 function clearAll() {
   filenameInput.value = ''
+  cqlInput.value = ''
   searchStore.clearSearch()
   clientFilterFn.value = null
   hasSearched.value = false
@@ -182,6 +275,11 @@ function applyHistory(item: SearchHistory) {
 
   showHistory.value = false
   executeSearch()
+}
+
+function applyCqlExample(query: string) {
+  cqlInput.value = query
+  showCqlHelp.value = false
 }
 
 async function deleteHistory(id: number) {
@@ -212,6 +310,35 @@ async function clearHistory() {
   flex-shrink: 0;
 }
 
+/* Input Mode Toggle (Simple/CQL) */
+.input-mode-toggle {
+  display: flex;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.input-mode-btn {
+  padding: 8px 12px;
+  border: none;
+  background: var(--surface);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  color: var(--text-secondary);
+}
+
+.input-mode-btn:first-child {
+  border-right: 1px solid var(--border-color);
+}
+
+.input-mode-btn.active {
+  background: var(--primary-color);
+  color: white;
+}
+
 .search-input-wrapper {
   flex: 1;
   position: relative;
@@ -231,7 +358,11 @@ async function clearHistory() {
   border-color: var(--primary-color);
 }
 
-/* Mode Toggle */
+.cql-input {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+/* Mode Toggle (AND/OR) */
 .mode-toggle {
   display: flex;
   border: 1px solid var(--border-color);
@@ -258,6 +389,117 @@ async function clearHistory() {
 .mode-btn.active {
   background: var(--primary-color);
   color: white;
+}
+
+/* CQL Help */
+.cql-help-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.cql-help-btn {
+  width: 28px;
+  height: 34px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--surface);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-fast);
+}
+
+.cql-help-btn:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.cql-help-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  width: 380px;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  z-index: 200;
+  padding: 14px 16px;
+}
+
+.cql-help-content h4 {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.cql-help-section {
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--text-primary);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.cql-help-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 11px;
+  min-width: 70px;
+}
+
+.cql-help-section code {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.cql-help-examples {
+  margin-top: 10px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 8px;
+}
+
+.cql-help-examples .cql-help-label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.cql-example {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: 3px;
+  margin-bottom: 2px;
+  transition: var(--transition-fast);
+}
+
+.cql-example:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--primary-color);
+}
+
+/* CQL Error */
+.cql-error {
+  padding: 8px 20px;
+  background: #fef2f2;
+  border-bottom: 1px solid #fecaca;
+  font-size: 12px;
+  color: #dc2626;
+  font-family: 'Consolas', 'Monaco', monospace;
+  flex-shrink: 0;
 }
 
 /* Buttons */

@@ -2,6 +2,7 @@
 //!
 //! SQLite implementations of repository interfaces.
 
+mod cql_executor;
 mod schema;
 mod sqlite_item_repository;
 mod sqlite_search_history_repository;

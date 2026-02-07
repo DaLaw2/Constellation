@@ -64,6 +64,18 @@ pub async fn search_items(
 }
 
 #[tauri::command]
+pub async fn search_cql(
+    query: String,
+    state: State<'_, AppState>,
+) -> AppResult<Vec<ItemDto>> {
+    state
+        .search_service
+        .search_cql(&query)
+        .await
+        .map_err(|e| AppError::InvalidInput(e.to_string()))
+}
+
+#[tauri::command]
 pub async fn get_recent_search_history(
     limit: usize,
     state: State<'_, AppState>,

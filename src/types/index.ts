@@ -9,4 +9,4 @@ export type { Item, Tag, TagGroup, TagTemplate, SearchHistory, SearchCriteria } 
 export type { DriveInfo, FileEntry, FileMetadata } from './filesystem'
 
 // UI types
-export type { ViewMode, DisplayMode, SearchMode } from './ui'
+export type { ViewMode, DisplayMode, SearchMode, SearchInputMode } from './ui'

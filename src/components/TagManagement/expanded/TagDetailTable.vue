@@ -48,12 +48,11 @@
               </th>
               <th class="col-name">Tag Name</th>
               <th class="col-usage">Usage</th>
-              <th class="col-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr v-if="filteredTags.length === 0">
-              <td colspan="4" class="no-tags">
+              <td colspan="3" class="no-tags">
                 No tags in this group. Click "+ Add Tag" to create one.
               </td>
             </tr>
@@ -61,6 +60,7 @@
               v-for="tag in filteredTags"
               :key="tag.id"
               :class="{ 'row-selected': selectedTagIds.has(tag.id) }"
+              @contextmenu.prevent="openContextMenu($event, tag)"
             >
               <td class="col-checkbox">
                 <input
@@ -80,29 +80,20 @@
                   {{ usageCounts[tag.id] || 0 }}
                 </span>
               </td>
-              <td class="col-actions">
-                <button
-                  class="btn-actions"
-                  @click.stop="openActionMenu($event, tag)"
-                  title="Actions"
-                >
-                  ⋮
-                </button>
-              </td>
             </tr>
           </tbody>
         </table>
       </div>
     </template>
 
-    <!-- Action context menu -->
+    <!-- Context menu -->
     <ContextMenu
-      :visible="actionMenu.visible"
-      :x="actionMenu.x"
-      :y="actionMenu.y"
-      :items="actionMenuItems"
-      @update:visible="actionMenu.visible = $event"
-      @select="actionMenu.visible = false"
+      :visible="contextMenu.visible"
+      :x="contextMenu.x"
+      :y="contextMenu.y"
+      :items="contextMenuItems"
+      @update:visible="contextMenu.visible = $event"
+      @select="contextMenu.visible = false"
     />
   </div>
 </template>
@@ -134,7 +125,7 @@ const emit = defineEmits<{
 
 const selectedTagIds = ref<Set<number>>(new Set())
 
-const actionMenu = ref({
+const contextMenu = ref({
   visible: false,
   x: 0,
   y: 0,
@@ -160,19 +151,19 @@ const isPartiallySelected = computed(() => {
   return count > 0 && count < filteredTags.value.length
 })
 
-const actionMenuItems = computed((): ContextMenuItem[] => [
+const contextMenuItems = computed((): ContextMenuItem[] => [
   { label: 'Edit', icon: '✏️', action: () => {
-    if (actionMenu.value.target) emit('editTag', actionMenu.value.target)
+    if (contextMenu.value.target) emit('editTag', contextMenu.value.target)
   }},
   { label: 'Move to Group', icon: '📂', action: () => {
-    if (actionMenu.value.target) emit('moveTag', actionMenu.value.target)
+    if (contextMenu.value.target) emit('moveTag', contextMenu.value.target)
   }},
   { label: 'Merge with...', icon: '🔗', action: () => {
-    if (actionMenu.value.target) emit('mergeTag', actionMenu.value.target)
+    if (contextMenu.value.target) emit('mergeTag', contextMenu.value.target)
   }},
   { divider: true },
   { label: 'Delete', icon: '🗑️', danger: true, action: () => {
-    if (actionMenu.value.target) emit('deleteTag', actionMenu.value.target)
+    if (contextMenu.value.target) emit('deleteTag', contextMenu.value.target)
   }},
 ])
 
@@ -198,8 +189,8 @@ function clearSelection() {
   selectedTagIds.value = new Set()
 }
 
-function openActionMenu(event: MouseEvent, tag: Tag) {
-  actionMenu.value = {
+function openContextMenu(event: MouseEvent, tag: Tag) {
+  contextMenu.value = {
     visible: true,
     x: event.clientX,
     y: event.clientY,
@@ -312,7 +303,11 @@ function openActionMenu(event: MouseEvent, tag: Tag) {
   border-bottom: 1px solid var(--border-color);
 }
 
-.tag-table tr:hover td {
+.tag-table tbody tr {
+  cursor: default;
+}
+
+.tag-table tbody tr:hover td {
   background: rgba(0, 0, 0, 0.02);
 }
 
@@ -359,28 +354,6 @@ function openActionMenu(event: MouseEvent, tag: Tag) {
 .usage-zero {
   background: var(--border-color);
   color: var(--text-secondary);
-}
-
-.col-actions {
-  width: 60px;
-  text-align: center;
-}
-
-.btn-actions {
-  padding: 4px 8px;
-  background: transparent;
-  border: none;
-  border-radius: 4px;
-  font-size: 18px;
-  cursor: pointer;
-  color: var(--text-secondary);
-  transition: var(--transition-fast);
-  line-height: 1;
-}
-
-.btn-actions:hover {
-  background: var(--secondary-color);
-  color: var(--text-primary);
 }
 
 .no-tags {

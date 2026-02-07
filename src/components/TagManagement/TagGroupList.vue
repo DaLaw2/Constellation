@@ -121,7 +121,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import draggable from 'vuedraggable'
 import { ContextMenu } from '@/components/base'
 import type { ContextMenuItem } from '@/components/base'
@@ -147,6 +147,10 @@ const emit = defineEmits<{
 
 const localGroups = ref([...props.groups])
 const expandedGroups = ref<Set<number>>(new Set())
+
+watch(() => props.groups, (newGroups) => {
+  localGroups.value = [...newGroups]
+}, { deep: true })
 
 const contextMenu = ref<{
   visible: boolean

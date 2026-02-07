@@ -4,6 +4,8 @@
 
 use crate::application::dto::{ItemDto, SearchMode};
 use crate::domain::errors::DomainError;
+use crate::domain::search::parse_cql;
+use super::cql_executor::expr_to_sql;
 use deadpool_sqlite::Pool;
 use rusqlite::Connection;
 use std::sync::Arc;
@@ -237,6 +239,39 @@ impl SqliteSearchRepository {
 
             let params_refs: Vec<&dyn rusqlite::ToSql> =
                 params.iter().map(|p| p.as_ref()).collect();
+
+            let items = stmt
+                .query_map(params_refs.as_slice(), Self::map_row_to_item_dto)?
+                .collect::<Result<Vec<ItemDto>, _>>()?;
+
+            Ok::<Vec<ItemDto>, rusqlite::Error>(items)
+        })
+        .await
+        .map_err(map_interact_error)?
+        .map_err(map_db_error)
+    }
+
+    /// Searches items using a CQL query string.
+    pub async fn search_cql(&self, query: &str) -> Result<Vec<ItemDto>, DomainError> {
+        let expr = parse_cql(query).map_err(|e| DomainError::ValidationError(e.to_string()))?;
+        let fragment = expr_to_sql(&expr);
+
+        let conn = self.pool.get().await.map_err(map_pool_error)?;
+
+        conn.interact(move |conn: &mut Connection| {
+            let sql = format!(
+                "SELECT DISTINCT i.id, i.path, i.is_directory, i.size, i.modified_time, \
+                        i.created_at, i.updated_at \
+                 FROM items i \
+                 WHERE i.is_deleted = 0 AND ({}) \
+                 ORDER BY i.path ASC",
+                fragment.sql
+            );
+
+            let mut stmt = conn.prepare(&sql)?;
+
+            let params_refs: Vec<&dyn rusqlite::ToSql> =
+                fragment.params.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
 
             let items = stmt
                 .query_map(params_refs.as_slice(), Self::map_row_to_item_dto)?
