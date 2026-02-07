@@ -1,6 +1,12 @@
 <template>
   <div class="topbar">
     <div class="topbar-left">
+      <button class="btn-icon settings-btn" @click="showSettings = true" title="Settings">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
       <h1 class="app-title">Constellation</h1>
       
       <!-- Expanded Mode Title -->
@@ -45,15 +51,19 @@
         </button>
       </div>
     </div>
+
+    <SettingsDialog v-model="showSettings" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useAppStore } from '@/stores/app'
+import { SettingsDialog } from '@/components/Settings'
 import type { DisplayMode } from '@/types'
 
 const appStore = useAppStore()
+const showSettings = ref(false)
 
 const currentPath = computed(() => appStore.currentPath)
 const displayMode = computed(() => appStore.displayMode)
@@ -91,6 +101,22 @@ function handleSearch() {
   gap: 1rem;
   flex: 1;
   min-width: 0;
+}
+
+.settings-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.settings-btn:hover {
+  color: var(--text-primary);
+  background: var(--secondary-color);
 }
 
 .app-title {

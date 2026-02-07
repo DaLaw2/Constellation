@@ -3,14 +3,15 @@
 //! Holds all services and configuration for the application.
 
 use crate::application::services::{
-    ItemService, SearchService, TagGroupService, TagService, TagTemplateService,
+    ItemService, SearchService, SettingsService, TagGroupService, TagService, TagTemplateService,
 };
 use crate::domain::repositories::{
-    ItemRepository, TagGroupRepository, TagRepository, TagTemplateRepository,
+    ItemRepository, SettingsRepository, TagGroupRepository, TagRepository, TagTemplateRepository,
 };
 use crate::infrastructure::persistence::{
     SqliteItemRepository, SqliteSearchHistoryRepository, SqliteSearchRepository,
-    SqliteTagGroupRepository, SqliteTagRepository, SqliteTagTemplateRepository,
+    SqliteSettingsRepository, SqliteTagGroupRepository, SqliteTagRepository,
+    SqliteTagTemplateRepository,
 };
 use deadpool_sqlite::Pool;
 use std::sync::Arc;
@@ -30,6 +31,7 @@ pub struct AppState {
     pub tag_group_service: Arc<TagGroupService>,
     pub tag_template_service: Arc<TagTemplateService>,
     pub search_service: Arc<SearchService>,
+    pub settings_service: Arc<SettingsService>,
 }
 
 impl AppState {
@@ -45,6 +47,8 @@ impl AppState {
             Arc::new(SqliteTagTemplateRepository::new(pool.clone()));
         let search_repo = Arc::new(SqliteSearchRepository::new(pool.clone()));
         let search_history_repo = Arc::new(SqliteSearchHistoryRepository::new(pool.clone()));
+        let settings_repo: Arc<dyn SettingsRepository> =
+            Arc::new(SqliteSettingsRepository::new(pool.clone()));
 
         // Create application services
         let item_service = Arc::new(ItemService::new(item_repo.clone(), tag_repo.clone()));
@@ -55,6 +59,7 @@ impl AppState {
             item_repo.clone(),
         ));
         let search_service = Arc::new(SearchService::new(search_repo, search_history_repo));
+        let settings_service = Arc::new(SettingsService::new(settings_repo));
 
         Self {
             config,
@@ -63,6 +68,7 @@ impl AppState {
             tag_group_service,
             tag_template_service,
             search_service,
+            settings_service,
         }
     }
 }

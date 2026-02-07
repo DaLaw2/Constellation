@@ -97,6 +97,10 @@ pub fn run() {
             commands::search::get_recent_search_history,
             commands::search::delete_search_history,
             commands::search::clear_search_history,
+            // Settings commands
+            commands::settings::get_all_settings,
+            commands::settings::update_setting,
+            commands::settings::reset_setting,
         ])
         .run(tauri::generate_context!())
         // SAFETY: This is the main entry point. If Tauri runtime fails to start,
