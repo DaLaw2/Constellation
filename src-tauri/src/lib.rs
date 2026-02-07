@@ -11,12 +11,20 @@ mod state;
 
 use infrastructure::persistence::init_database;
 use state::{AppConfig, AppState};
+use tauri::http::Response;
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .register_asynchronous_uri_scheme_protocol("thumb", |ctx, request, responder| {
+            let app = ctx.app_handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let response = handle_thumb_request(&app, &request).await;
+                responder.respond(response);
+            });
+        })
         .setup(|app| {
             // Initialize database
             // SAFETY: App data directory is essential for application to function.
@@ -46,8 +54,16 @@ pub fn run() {
             };
 
             // Create and manage app state
-            let app_state = AppState::new(pool, config);
+            let app_state = AppState::new(pool, config, app_data_dir.clone());
             app.manage(app_state);
+
+            // Spawn background cache eviction on startup
+            let thumb_service = app.state::<AppState>().thumbnail_service.clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = thumb_service.evict_cache() {
+                    eprintln!("Background cache eviction failed: {}", e);
+                }
+            });
 
             Ok(())
         })
@@ -102,9 +118,138 @@ pub fn run() {
             commands::settings::get_all_settings,
             commands::settings::update_setting,
             commands::settings::reset_setting,
+            // Thumbnail commands
+            commands::thumbnails::get_cache_stats,
+            commands::thumbnails::clear_thumbnail_cache,
         ])
         .run(tauri::generate_context!())
         // SAFETY: This is the main entry point. If Tauri runtime fails to start,
         // there is no recovery path - the application cannot run.
         .expect("error while running tauri application");
+}
+
+/// Handle `thumb://localhost/{encoded_path}?size={size}` requests.
+///
+/// URL format: `thumb://localhost/{url_encoded_path}?size={thumb_size}`
+/// Returns WebP image bytes with aggressive caching headers.
+async fn handle_thumb_request(
+    app: &tauri::AppHandle,
+    request: &tauri::http::Request<Vec<u8>>,
+) -> Response<Vec<u8>> {
+    let uri = request.uri().to_string();
+
+    // Parse path and query from URI
+    let parsed = match parse_thumb_uri(&uri) {
+        Some(p) => p,
+        None => return thumb_error_response(400, "Invalid thumbnail URL"),
+    };
+
+    // Read file metadata for cache key
+    let metadata = match std::fs::metadata(&parsed.path) {
+        Ok(m) => m,
+        Err(_) => return thumb_error_response(404, "File not found"),
+    };
+
+    let mtime = metadata
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+    let file_size = metadata.len();
+
+    // Get thumbnail service from app state
+    let state = app.state::<AppState>();
+
+    match state
+        .thumbnail_service
+        .get_thumbnail(&parsed.path, mtime, file_size, parsed.size)
+        .await
+    {
+        Ok(webp_bytes) => Response::builder()
+            .status(200)
+            .header("Content-Type", "image/webp")
+            .header("Cache-Control", "public, max-age=31536000, immutable")
+            .body(webp_bytes)
+            .unwrap_or_else(|_| thumb_error_response(500, "Failed to build response")),
+        Err(_) => thumb_error_response(404, "Failed to generate thumbnail"),
+    }
+}
+
+struct ThumbUriParsed {
+    path: String,
+    size: u32,
+}
+
+/// Parse thumb URI into path and size.
+/// Handles both `http://thumb.localhost/` (WebView2) and `thumb://localhost/` formats.
+fn parse_thumb_uri(uri: &str) -> Option<ThumbUriParsed> {
+    let after_scheme = uri
+        .strip_prefix("http://thumb.localhost/")
+        .or_else(|| uri.strip_prefix("https://thumb.localhost/"))
+        .or_else(|| uri.strip_prefix("thumb://localhost/"))?;
+
+    // Split path and query
+    let (path_encoded, query) = match after_scheme.find('?') {
+        Some(idx) => (&after_scheme[..idx], &after_scheme[idx + 1..]),
+        None => (after_scheme, ""),
+    };
+
+    // URL decode the path
+    let path = percent_decode(path_encoded);
+    if path.is_empty() {
+        return None;
+    }
+
+    // Parse size from query string (default 256)
+    let size = parse_query_param(query, "size")
+        .and_then(|s| s.parse::<u32>().ok())
+        .unwrap_or(256);
+
+    Some(ThumbUriParsed { path, size })
+}
+
+/// Simple URL percent-decoding.
+fn percent_decode(input: &str) -> String {
+    let mut result = Vec::with_capacity(input.len());
+    let bytes = input.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            if let Ok(byte) = u8::from_str_radix(
+                &input[i + 1..i + 3],
+                16,
+            ) {
+                result.push(byte);
+                i += 3;
+                continue;
+            }
+        }
+        result.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&result).into_owned()
+}
+
+/// Extract a query parameter value by key.
+fn parse_query_param<'a>(query: &'a str, key: &str) -> Option<&'a str> {
+    for pair in query.split('&') {
+        if let Some(val) = pair.strip_prefix(key).and_then(|rest| rest.strip_prefix('=')) {
+            return Some(val);
+        }
+    }
+    None
+}
+
+fn thumb_error_response(status: u16, msg: &str) -> Response<Vec<u8>> {
+    Response::builder()
+        .status(status)
+        .header("Content-Type", "text/plain")
+        .body(msg.as_bytes().to_vec())
+        .unwrap_or_else(|_| {
+            Response::builder()
+                .status(500)
+                .body(Vec::new())
+                .unwrap()
+        })
 }

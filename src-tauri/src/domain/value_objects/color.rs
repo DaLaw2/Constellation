@@ -60,11 +60,13 @@ impl Color {
     }
 
     /// Returns the color as a string slice.
+    #[allow(dead_code)]
     pub fn as_str(&self) -> &str {
         &self.value
     }
 
     /// Consumes the Color and returns the inner string.
+    #[allow(dead_code)]
     pub fn into_string(self) -> String {
         self.value
     }

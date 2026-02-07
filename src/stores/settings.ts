@@ -7,6 +7,15 @@ export interface AppSettings {
   usn_refresh_interval: number
   usn_refresh_on_missing: boolean
   usn_cross_volume_match: boolean
+  thumbnail_size: number
+  thumbnail_force_shell_cache: boolean
+  thumbnail_cache_max_mb: number
+}
+
+export interface CacheStats {
+  total_size_bytes: number
+  file_count: number
+  max_size_bytes: number
 }
 
 const DEFAULTS: AppSettings = {
@@ -14,6 +23,9 @@ const DEFAULTS: AppSettings = {
   usn_refresh_interval: 0,
   usn_refresh_on_missing: true,
   usn_cross_volume_match: true,
+  thumbnail_size: 256,
+  thumbnail_force_shell_cache: false,
+  thumbnail_cache_max_mb: 500,
 }
 
 function parseSettings(raw: Record<string, string>): AppSettings {
@@ -22,6 +34,9 @@ function parseSettings(raw: Record<string, string>): AppSettings {
     usn_refresh_interval: parseInt(raw.usn_refresh_interval || '0', 10),
     usn_refresh_on_missing: raw.usn_refresh_on_missing !== 'false',
     usn_cross_volume_match: raw.usn_cross_volume_match !== 'false',
+    thumbnail_size: parseInt(raw.thumbnail_size || '256', 10),
+    thumbnail_force_shell_cache: raw.thumbnail_force_shell_cache === 'true',
+    thumbnail_cache_max_mb: parseInt(raw.thumbnail_cache_max_mb || '500', 10),
   }
 }
 
@@ -67,11 +82,21 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
+  async function getCacheStats(): Promise<CacheStats> {
+    return await invoke<CacheStats>('get_cache_stats')
+  }
+
+  async function clearThumbnailCache(): Promise<CacheStats> {
+    return await invoke<CacheStats>('clear_thumbnail_cache')
+  }
+
   return {
     settings,
     loading,
     loadSettings,
     updateSetting,
     resetSetting,
+    getCacheStats,
+    clearThumbnailCache,
   }
 })

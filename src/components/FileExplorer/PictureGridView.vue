@@ -2,9 +2,9 @@
   <div class="picture-grid-view">
     <div v-if="imageFiles.length === 0" class="empty-state">
       <div class="empty-icon">🖼️</div>
-      <div class="empty-title">No Images Found</div>
+      <div class="empty-title">No Media Found</div>
       <div class="empty-description">
-        This directory doesn't contain any image files.
+        This directory doesn't contain any image or video files.
       </div>
     </div>
 
@@ -24,7 +24,7 @@
 import { computed } from 'vue'
 import { useFileExplorerStore } from '@/stores/fileExplorer'
 import { useLightboxStore } from '@/stores/lightbox'
-import { isImageFile } from '@/utils'
+import { isMediaFile } from '@/utils'
 import ImageCard from './ImageCard.vue'
 
 const fileExplorerStore = useFileExplorerStore()
@@ -32,7 +32,7 @@ const lightboxStore = useLightboxStore()
 
 const imageFiles = computed(() => {
   return fileExplorerStore.currentFiles.filter(file =>
-    !file.is_directory && isImageFile(file.name)
+    !file.is_directory && isMediaFile(file.name)
   )
 })
 

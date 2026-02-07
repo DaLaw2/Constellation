@@ -1,6 +1,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error)]
+#[allow(dead_code)]
 pub enum AppError {
     #[error("Database error: {0}")]
     Database(#[from] rusqlite::Error),
@@ -25,6 +26,9 @@ pub enum AppError {
 
     #[error("Domain error: {0}")]
     Domain(String),
+
+    #[error("Thumbnail error: {0}")]
+    Thumbnail(String),
 }
 
 impl serde::Serialize for AppError {

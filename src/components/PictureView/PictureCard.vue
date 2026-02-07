@@ -1,12 +1,16 @@
 <template>
   <div class="picture-card" @click="handleClick">
-    <img 
-      :src="`file://${entry.path}`" 
+    <img
+      v-if="!imageError"
+      :src="thumbUrl"
       :alt="entry.name"
       loading="lazy"
       class="card-image"
       @error="handleImageError"
     />
+    <div v-else class="card-image card-fallback">
+      {{ getFileIcon(entry.name) }}
+    </div>
     <div class="card-overlay">
       <div class="card-name">{{ entry.name }}</div>
       <div v-if="itemTags.length > 0" class="card-tags">
@@ -27,9 +31,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { getThumbnailUrl, getFileIcon } from '@/utils'
 import { useItemsStore } from '@/stores/items'
 import { useTagsStore } from '@/stores/tags'
+import { useSettingsStore } from '@/stores/settings'
 import type { FileEntry, Tag } from '@/types'
 
 interface Props {
@@ -43,9 +49,11 @@ const emit = defineEmits<{
 
 const itemsStore = useItemsStore()
 const tagsStore = useTagsStore()
+const settingsStore = useSettingsStore()
 
 const itemTags = ref<Tag[]>([])
 const imageError = ref(false)
+const thumbUrl = computed(() => getThumbnailUrl(props.entry.path, settingsStore.settings.thumbnail_size))
 
 onMounted(async () => {
   // Load tags for this image
@@ -90,6 +98,14 @@ function handleImageError() {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.card-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  background: var(--surface);
 }
 
 .card-overlay {

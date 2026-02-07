@@ -130,3 +130,11 @@ pub struct SearchHistoryDto {
     pub criteria: SearchCriteriaDto, // Reuse SearchCriteriaDto or define similar output structure
     pub last_used_at: i64,
 }
+
+/// DTO for thumbnail cache statistics.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CacheStatsDto {
+    pub total_size_bytes: u64,
+    pub file_count: u64,
+    pub max_size_bytes: u64,
+}

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useFileExplorerStore } from './fileExplorer'
-import { isImageFile } from '@/utils'
+import { isMediaFile } from '@/utils'
 
 /**
  * Picture View store - manages grid layout for image viewing.
@@ -16,7 +16,7 @@ export const usePictureViewStore = defineStore('pictureView', () => {
     // Computed
     const currentImages = computed(() => {
         return fileExplorerStore.currentFiles.filter(file =>
-            !file.is_directory && isImageFile(file.name)
+            !file.is_directory && isMediaFile(file.name)
         )
     })
 

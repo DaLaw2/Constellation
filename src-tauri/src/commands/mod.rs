@@ -5,3 +5,4 @@ pub mod settings;
 pub mod tag_groups;
 pub mod tag_templates;
 pub mod tags;
+pub mod thumbnails;

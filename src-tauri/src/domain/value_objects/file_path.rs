@@ -47,6 +47,7 @@ impl FilePath {
     /// This bypasses validation and should ONLY be used in the repository layer
     /// as a fallback when recovering from corrupted database data.
     /// The caller must ensure the path is non-empty.
+    #[allow(dead_code)]
     pub(crate) fn new_unchecked(value: String) -> Self {
         Self { value }
     }
@@ -96,6 +97,7 @@ impl FilePath {
     }
 
     /// Consumes the FilePath and returns the inner string.
+    #[allow(dead_code)]
     pub fn into_string(self) -> String {
         self.value
     }

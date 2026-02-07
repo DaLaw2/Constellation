@@ -2,9 +2,9 @@
   <div class="picture-grid-container">
     <div v-if="!hasImages" class="empty-state">
       <div class="empty-icon">🖼️</div>
-      <div class="empty-title">No Images Found</div>
+      <div class="empty-title">No Media Found</div>
       <div class="empty-description">
-        This directory doesn't contain any image files.
+        This directory doesn't contain any image or video files.
       </div>
     </div>
 

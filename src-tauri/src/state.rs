@@ -4,6 +4,7 @@
 
 use crate::application::services::{
     ItemService, SearchService, SettingsService, TagGroupService, TagService, TagTemplateService,
+    ThumbnailService,
 };
 use crate::domain::repositories::{
     ItemRepository, SettingsRepository, TagGroupRepository, TagRepository, TagTemplateRepository,
@@ -17,13 +18,16 @@ use deadpool_sqlite::Pool;
 use std::sync::Arc;
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct AppConfig {
     pub db_path: String,
 }
 
 /// Application state containing all services.
+#[allow(dead_code)]
 pub struct AppState {
     pub config: AppConfig,
+    pub app_data_dir: std::path::PathBuf,
 
     // Application Services
     pub item_service: Arc<ItemService>,
@@ -32,10 +36,11 @@ pub struct AppState {
     pub tag_template_service: Arc<TagTemplateService>,
     pub search_service: Arc<SearchService>,
     pub settings_service: Arc<SettingsService>,
+    pub thumbnail_service: Arc<ThumbnailService>,
 }
 
 impl AppState {
-    pub fn new(pool: Pool, config: AppConfig) -> Self {
+    pub fn new(pool: Pool, config: AppConfig, app_data_dir: std::path::PathBuf) -> Self {
         let pool = Arc::new(pool);
 
         // Create repositories
@@ -60,15 +65,21 @@ impl AppState {
         ));
         let search_service = Arc::new(SearchService::new(search_repo, search_history_repo));
         let settings_service = Arc::new(SettingsService::new(settings_repo));
+        let thumbnail_service = Arc::new(ThumbnailService::new(
+            app_data_dir.clone(),
+            settings_service.clone(),
+        ));
 
         Self {
             config,
+            app_data_dir,
             item_service,
             tag_service,
             tag_group_service,
             tag_template_service,
             search_service,
             settings_service,
+            thumbnail_service,
         }
     }
 }

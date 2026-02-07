@@ -250,7 +250,7 @@ impl TagRepository for SqliteTagRepository {
         let conn = self.pool.get().await.map_err(map_pool_error)?;
 
         conn.interact(move |conn: &mut Connection| {
-            let sql = if let Some(gid) = group_id {
+            let sql = if let Some(_gid) = group_id {
                 "SELECT id, group_id, value, created_at, updated_at
                  FROM tags WHERE group_id = ?1 AND value LIKE ?2
                  ORDER BY value ASC LIMIT ?3"

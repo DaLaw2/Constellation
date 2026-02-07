@@ -79,12 +79,25 @@
 
         <!-- Main content -->
         <div class="lightbox-content" @click.stop>
+          <!-- Image -->
           <img
-            v-if="lightboxStore.currentImage"
-            :src="`file://${lightboxStore.currentImage.path}`"
+            v-if="isCurrentImage && lightboxStore.currentImage"
+            :src="currentAssetUrl"
             :alt="lightboxStore.currentImage.name"
             class="lightbox-image"
             @load="handleImageLoad"
+            @error="handleImageError"
+          />
+
+          <!-- Video -->
+          <video
+            v-else-if="isCurrentVideo && lightboxStore.currentImage"
+            ref="videoRef"
+            :src="currentAssetUrl"
+            class="lightbox-video"
+            controls
+            autoplay
+            @loadeddata="handleVideoLoad"
             @error="handleImageError"
           />
 
@@ -110,7 +123,7 @@
               <line x1="12" y1="8" x2="12" y2="12" />
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
-            <p>Failed to load image</p>
+            <p>Failed to load media</p>
           </div>
 
           <!-- Image info -->
@@ -145,11 +158,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useLightboxStore } from '@/stores/lightbox'
 import { useItemsStore } from '@/stores/items'
 import { useTagsStore } from '@/stores/tags'
-import { formatBytes, formatDateTime } from '@/utils'
+import { formatBytes, formatDateTime, getAssetUrl, isVideoFile } from '@/utils'
 import type { Tag } from '@/types'
 
 const lightboxStore = useLightboxStore()
@@ -160,6 +173,22 @@ const isMounted = ref(false)
 const itemTags = ref<Tag[]>([])
 const isLoading = ref(false)
 const hasError = ref(false)
+const videoRef = ref<HTMLVideoElement | null>(null)
+
+const isCurrentVideo = computed(() => {
+  const current = lightboxStore.currentImage
+  return current ? isVideoFile(current.name) : false
+})
+
+const isCurrentImage = computed(() => {
+  const current = lightboxStore.currentImage
+  return current ? !isVideoFile(current.name) : false
+})
+
+const currentAssetUrl = computed(() => {
+  const current = lightboxStore.currentImage
+  return current ? getAssetUrl(current.path) : ''
+})
 
 // Load tags when current image changes
 watch(
@@ -208,6 +237,21 @@ function handleImageError() {
   hasError.value = true
 }
 
+function handleVideoLoad() {
+  isLoading.value = false
+  hasError.value = false
+}
+
+function toggleVideoPlayback() {
+  const video = videoRef.value
+  if (!video) return
+  if (video.paused) {
+    video.play()
+  } else {
+    video.pause()
+  }
+}
+
 // Keyboard navigation
 function handleKeydown(event: KeyboardEvent) {
   if (!lightboxStore.isOpen) return
@@ -221,6 +265,12 @@ function handleKeydown(event: KeyboardEvent) {
       break
     case 'ArrowRight':
       lightboxStore.next()
+      break
+    case ' ':
+      if (isCurrentVideo.value) {
+        event.preventDefault()
+        toggleVideoPlayback()
+      }
       break
   }
 }
@@ -316,12 +366,18 @@ onUnmounted(() => {
   cursor: default;
 }
 
-.lightbox-image {
+.lightbox-image,
+.lightbox-video {
   max-width: 100%;
   max-height: calc(90vh - 120px);
   object-fit: contain;
   border-radius: 4px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.lightbox-video {
+  outline: none;
+  background: black;
 }
 
 .lightbox-loading,

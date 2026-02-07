@@ -17,6 +17,7 @@ pub trait TagRepository: Send + Sync {
     async fn find_by_id(&self, id: i64) -> Result<Option<Tag>, DomainError>;
 
     /// Finds tags by their IDs.
+    #[allow(dead_code)]
     async fn find_by_ids(&self, ids: &[i64]) -> Result<Vec<Tag>, DomainError>;
 
     /// Gets all tags for a specific group.

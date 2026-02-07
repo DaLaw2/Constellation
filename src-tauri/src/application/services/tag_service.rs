@@ -49,6 +49,7 @@ impl TagService {
     }
 
     /// Gets a tag by ID.
+    #[allow(dead_code)]
     pub async fn get_by_id(&self, id: i64) -> Result<Option<TagDto>, DomainError> {
         let tag = self.tag_repo.find_by_id(id).await?;
         Ok(tag.map(Self::to_dto))

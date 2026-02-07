@@ -113,6 +113,7 @@ impl TagGroup {
     }
 
     /// Updates the group's display order.
+    #[allow(dead_code)]
     pub fn update_display_order(&mut self, order: i32) {
         self.display_order = order;
     }

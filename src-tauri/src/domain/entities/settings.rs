@@ -15,6 +15,9 @@ impl SettingsDefaults {
             "usn_refresh_interval" => Some("0"),
             "usn_refresh_on_missing" => Some("true"),
             "usn_cross_volume_match" => Some("true"),
+            "thumbnail_size" => Some("256"),
+            "thumbnail_force_shell_cache" => Some("false"),
+            "thumbnail_cache_max_mb" => Some("500"),
             _ => None,
         }
     }
@@ -26,6 +29,9 @@ impl SettingsDefaults {
         map.insert("usn_refresh_interval".into(), "0".into());
         map.insert("usn_refresh_on_missing".into(), "true".into());
         map.insert("usn_cross_volume_match".into(), "true".into());
+        map.insert("thumbnail_size".into(), "256".into());
+        map.insert("thumbnail_force_shell_cache".into(), "false".into());
+        map.insert("thumbnail_cache_max_mb".into(), "500".into());
         map
     }
 }

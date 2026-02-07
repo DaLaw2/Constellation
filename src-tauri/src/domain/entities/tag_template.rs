@@ -100,6 +100,7 @@ impl TagTemplate {
     }
 
     /// Adds a tag to the template.
+    #[allow(dead_code)]
     pub fn add_tag(&mut self, tag_id: i64) {
         if !self.tag_ids.contains(&tag_id) {
             self.tag_ids.push(tag_id);
@@ -107,6 +108,7 @@ impl TagTemplate {
     }
 
     /// Removes a tag from the template.
+    #[allow(dead_code)]
     pub fn remove_tag(&mut self, tag_id: i64) {
         self.tag_ids.retain(|&id| id != tag_id);
     }

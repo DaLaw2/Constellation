@@ -18,7 +18,7 @@
           </button>
         </div>
         <div class="image-count">
-          {{ currentImages.length }} {{ currentImages.length === 1 ? 'image' : 'images' }}
+          {{ currentImages.length }} {{ currentImages.length === 1 ? 'file' : 'files' }}
         </div>
       </div>
     </div>
