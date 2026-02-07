@@ -304,16 +304,17 @@ async function clearHistory() {
 /* Filter Area */
 .filter-area {
   display: flex;
-  padding: 16px 20px;
+  padding: 16px 20px 24px;
   gap: 0;
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
-  max-height: 280px;
-  overflow-y: auto;
+  min-height: 180px;
+  max-height: 35vh;
 }
 
 .filter-column {
   padding: 0 16px;
+  overflow-y: auto;
 }
 
 .filter-tags {
@@ -330,6 +331,7 @@ async function clearHistory() {
   width: 1px;
   background: var(--border-color);
   flex-shrink: 0;
+  align-self: stretch;
 }
 
 /* History Dropdown */

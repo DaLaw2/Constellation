@@ -124,9 +124,8 @@ function startResize(e: MouseEvent) {
 }
 
 .file-info {
-  flex: 0 1 auto;
-  min-width: 200px;
-  max-width: 400px;
+  flex: 1 1 0;
+  min-width: 120px;
   overflow: hidden;
 }
 
@@ -159,10 +158,10 @@ function startResize(e: MouseEvent) {
 
 .file-tags-container {
   position: relative;
-  flex-shrink: 0;
+  flex-shrink: 1;
   display: flex;
   align-items: center;
-  min-width: 0;
+  min-width: 150px;
 }
 
 .resize-handle {

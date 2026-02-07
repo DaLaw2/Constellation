@@ -23,7 +23,7 @@
         <BaseButton
           v-if="activeTab === 'tags'"
           variant="primary"
-          size="small"
+          size="medium"
           @click="showCreateGroup = true"
         >
           + New Group

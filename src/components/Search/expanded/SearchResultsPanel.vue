@@ -132,14 +132,13 @@ function openItem(item: Item) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-top: 1px solid var(--border-color);
 }
 
 .results-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 20px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--border-color);
   background: var(--background);
   flex-shrink: 0;

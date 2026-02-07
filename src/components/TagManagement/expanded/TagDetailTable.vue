@@ -14,7 +14,7 @@
         <h3 class="table-title">
           Tags in "{{ selectedGroupName }}"
         </h3>
-        <BaseButton variant="primary" size="small" @click="emit('addTag', groupId!)">
+        <BaseButton variant="primary" size="medium" @click="emit('addTag', groupId!)">
           + Add Tag
         </BaseButton>
       </div>

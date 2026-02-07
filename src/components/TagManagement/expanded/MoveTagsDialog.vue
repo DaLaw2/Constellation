@@ -4,6 +4,7 @@
     @update:model-value="emit('update:modelValue', $event)"
     title="Move Tags to Group"
     width="400px"
+    show-default-footer
     :confirm-disabled="!selectedGroupId"
     confirm-text="Move"
     @confirm="handleConfirm"

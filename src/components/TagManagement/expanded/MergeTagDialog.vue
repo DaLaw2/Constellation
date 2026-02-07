@@ -4,6 +4,7 @@
     @update:model-value="emit('update:modelValue', $event)"
     title="Merge Tag"
     width="450px"
+    show-default-footer
     :confirm-disabled="!selectedTargetId"
     confirm-text="Merge"
     @confirm="handleConfirm"

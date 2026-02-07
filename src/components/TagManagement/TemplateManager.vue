@@ -46,6 +46,15 @@
       </div>
     </div>
 
+    <ConfirmDialog
+      v-model="showDeleteConfirm"
+      title="Delete Template"
+      message="Are you sure you want to delete this template?"
+      type="danger"
+      confirm-text="Delete"
+      @confirm="confirmDelete"
+    />
+
     <!-- Create Template Dialog -->
     <div v-if="showCreateDialog" class="dialog-overlay" @click.self="closeDialog">
       <div class="dialog">
@@ -108,6 +117,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useTagTemplatesStore } from '@/stores/tagTemplates'
 import { useTagsStore } from '@/stores/tags'
+import { ConfirmDialog } from '@/components/base'
 import type { Tag } from '@/types'
 
 const templatesStore = useTagTemplatesStore()
@@ -120,6 +130,10 @@ const tagGroups = computed(() => tagsStore.tagGroups)
 const showCreateDialog = ref(false)
 const newTemplateName = ref('')
 const selectedTagIds = ref<number[]>([])
+
+// Delete confirmation
+const showDeleteConfirm = ref(false)
+const pendingDeleteId = ref<number | null>(null)
 
 onMounted(() => {
   templatesStore.loadTemplates()
@@ -173,13 +187,20 @@ async function createTemplate() {
   }
 }
 
-async function handleDelete(id: number) {
-  if (confirm('Delete this template?')) {
-    try {
-      await templatesStore.deleteTemplate(id)
-    } catch (e) {
-      console.error('Failed to delete template:', e)
-    }
+function handleDelete(id: number) {
+  pendingDeleteId.value = id
+  showDeleteConfirm.value = true
+}
+
+async function confirmDelete() {
+  if (pendingDeleteId.value === null) return
+  try {
+    await templatesStore.deleteTemplate(pendingDeleteId.value)
+  } catch (e) {
+    console.error('Failed to delete template:', e)
+  } finally {
+    showDeleteConfirm.value = false
+    pendingDeleteId.value = null
   }
 }
 </script>

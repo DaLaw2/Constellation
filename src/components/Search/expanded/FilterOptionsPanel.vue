@@ -40,22 +40,46 @@
           min="0"
         />
       </div>
+      <p class="filter-hint">Files only. Directories are excluded.</p>
     </div>
 
     <!-- Date Filter -->
     <div class="filter-section">
       <h4 class="section-title">Modified After</h4>
-      <input
-        type="date"
-        v-model="modifiedAfter"
-        class="date-input"
-      />
+      <div class="date-inputs">
+        <input
+          type="number"
+          v-model.number="dateYear"
+          placeholder="YYYY"
+          class="date-part date-year"
+          min="2000"
+          max="2099"
+        />
+        <span class="date-separator">/</span>
+        <input
+          type="number"
+          v-model.number="dateMonth"
+          placeholder="MM"
+          class="date-part date-month"
+          min="1"
+          max="12"
+        />
+        <span class="date-separator">/</span>
+        <input
+          type="number"
+          v-model.number="dateDay"
+          placeholder="DD"
+          class="date-part date-day"
+          min="1"
+          max="31"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Item } from '@/types'
 
 const FILE_TYPE_EXTENSIONS: Record<string, string[]> = {
@@ -77,7 +101,19 @@ const fileTypes = [
 const selectedFileTypes = ref<Set<string>>(new Set())
 const sizeMin = ref<number | null>(null)
 const sizeMax = ref<number | null>(null)
-const modifiedAfter = ref<string>('')
+const dateYear = ref<number | null>(null)
+const dateMonth = ref<number | null>(null)
+const dateDay = ref<number | null>(null)
+
+const modifiedAfter = computed(() => {
+  if (dateYear.value && dateMonth.value && dateDay.value) {
+    const y = dateYear.value
+    const m = String(dateMonth.value).padStart(2, '0')
+    const d = String(dateDay.value).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+  return ''
+})
 
 const emit = defineEmits<{
   'update:filter': [filterFn: ((items: Item[]) => Item[]) | null]
@@ -124,12 +160,14 @@ function emitFilter() {
         if (!matchesType) return false
       }
 
-      // Size filter
-      if (minBytes !== null && (item.size === null || item.size === undefined || item.size < minBytes)) {
-        return false
-      }
-      if (maxBytes !== null && (item.size === null || item.size === undefined || item.size > maxBytes)) {
-        return false
+      // Size filter (files only, directories pass through)
+      if (!item.is_directory && (minBytes !== null || maxBytes !== null)) {
+        if (minBytes !== null && (item.size === null || item.size === undefined || item.size < minBytes)) {
+          return false
+        }
+        if (maxBytes !== null && (item.size === null || item.size === undefined || item.size > maxBytes)) {
+          return false
+        }
       }
 
       // Date filter
@@ -144,7 +182,7 @@ function emitFilter() {
   emit('update:filter', filterFn)
 }
 
-watch([sizeMin, sizeMax, modifiedAfter], () => {
+watch([sizeMin, sizeMax, dateYear, dateMonth, dateDay], () => {
   emitFilter()
 })
 </script>
@@ -200,6 +238,13 @@ watch([sizeMin, sizeMax, modifiedAfter], () => {
   color: var(--text-primary);
 }
 
+.filter-hint {
+  margin: 6px 0 0 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
 .range-inputs {
   display: flex;
   align-items: center;
@@ -226,17 +271,44 @@ watch([sizeMin, sizeMax, modifiedAfter], () => {
   color: var(--text-secondary);
 }
 
-.date-input {
-  width: 100%;
-  padding: 6px 10px;
+.date-inputs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.date-part {
+  padding: 6px 8px;
   border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 12px;
   background: var(--background);
+  text-align: center;
+  -moz-appearance: textfield;
 }
 
-.date-input:focus {
+.date-part::-webkit-inner-spin-button,
+.date-part::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.date-year {
+  width: 60px;
+}
+
+.date-month,
+.date-day {
+  width: 44px;
+}
+
+.date-part:focus {
   outline: none;
   border-color: var(--primary-color);
+}
+
+.date-separator {
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 </style>
