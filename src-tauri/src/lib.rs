@@ -66,6 +66,7 @@ pub fn run() {
             commands::tags::delete_tag,
             commands::tags::get_tag_usage_counts,
             commands::tags::search_tags,
+            commands::tags::merge_tags,
             // Item commands
             commands::items::create_item,
             commands::items::get_item,

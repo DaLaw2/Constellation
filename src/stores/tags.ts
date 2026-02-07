@@ -99,16 +99,29 @@ export const useTagsStore = defineStore('tags', () => {
     }
   }
 
-  async function updateTag(id: number, value: string) {
+  async function updateTag(id: number, value?: string, groupId?: number) {
     try {
       await invoke('update_tag', {
         id,
-        value,
+        value: value || null,
+        groupId: groupId || null,
       })
       await loadTags()
     } catch (e) {
       error.value = e as string
       console.error('Failed to update tag:', e)
+      throw e
+    }
+  }
+
+  async function mergeTags(sourceId: number, targetId: number) {
+    try {
+      await invoke('merge_tags', { sourceId, targetId })
+      await loadTags()
+      await loadUsageCounts()
+    } catch (e) {
+      error.value = e as string
+      console.error('Failed to merge tags:', e)
       throw e
     }
   }
@@ -172,6 +185,7 @@ export const useTagsStore = defineStore('tags', () => {
     updateTagGroup,
     createTag,
     updateTag,
+    mergeTags,
     getTagsByGroup,
     reorderTagGroups,
     deleteTagGroup,

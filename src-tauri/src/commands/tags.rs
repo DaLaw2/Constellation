@@ -48,13 +48,27 @@ pub async fn get_all_tags(state: State<'_, AppState>) -> AppResult<Vec<TagDto>> 
 pub async fn update_tag(
     id: i64,
     value: Option<String>,
+    group_id: Option<i64>,
     state: State<'_, AppState>,
 ) -> AppResult<()> {
-    let dto = UpdateTagDto { value };
+    let dto = UpdateTagDto { value, group_id };
 
     state
         .tag_service
         .update(id, dto)
+        .await
+        .map_err(|e| AppError::InvalidInput(e.to_string()))
+}
+
+#[tauri::command]
+pub async fn merge_tags(
+    source_id: i64,
+    target_id: i64,
+    state: State<'_, AppState>,
+) -> AppResult<()> {
+    state
+        .tag_service
+        .merge(source_id, target_id)
         .await
         .map_err(|e| AppError::InvalidInput(e.to_string()))
 }

@@ -54,7 +54,7 @@ impl TagService {
         Ok(tag.map(Self::to_dto))
     }
 
-    /// Updates a tag.
+    /// Updates a tag (value and/or group).
     pub async fn update(&self, id: i64, dto: UpdateTagDto) -> Result<(), DomainError> {
         let mut tag = self
             .tag_repo
@@ -67,7 +67,42 @@ impl TagService {
             tag.update_value(value);
         }
 
+        if let Some(group_id) = dto.group_id {
+            // Verify target group exists
+            if !self.group_repo.exists(group_id).await? {
+                return Err(DomainError::TagGroupNotFound(group_id.to_string()));
+            }
+            tag.move_to_group(group_id)?;
+        }
+
         self.tag_repo.update(&tag).await
+    }
+
+    /// Merges a source tag into a target tag.
+    ///
+    /// Reassigns all item associations from source to target (with deduplication),
+    /// then deletes the source tag.
+    pub async fn merge(
+        &self,
+        source_id: i64,
+        target_id: i64,
+    ) -> Result<(), DomainError> {
+        // Verify both tags exist
+        self.tag_repo
+            .find_by_id(source_id)
+            .await?
+            .ok_or_else(|| DomainError::TagNotFound(source_id.to_string()))?;
+
+        self.tag_repo
+            .find_by_id(target_id)
+            .await?
+            .ok_or_else(|| DomainError::TagNotFound(target_id.to_string()))?;
+
+        // Reassign all item associations
+        self.tag_repo.reassign_items(source_id, target_id).await?;
+
+        // Delete the source tag
+        self.tag_repo.delete(source_id).await
     }
 
     /// Deletes a tag.

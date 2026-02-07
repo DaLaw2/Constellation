@@ -178,6 +178,7 @@ impl TagRepository for SqliteTagRepository {
         let conn = self.pool.get().await.map_err(map_pool_error)?;
 
         let value = tag.value().to_string();
+        let group_id = tag.group_id();
 
         conn.interact(move |conn: &mut Connection| {
             conn.execute("BEGIN IMMEDIATE", [])?;
@@ -193,8 +194,8 @@ impl TagRepository for SqliteTagRepository {
                 }
 
                 conn.execute(
-                    "UPDATE tags SET value = ?1, updated_at = unixepoch() WHERE id = ?2",
-                    (&value, id),
+                    "UPDATE tags SET value = ?1, group_id = ?2, updated_at = unixepoch() WHERE id = ?3",
+                    (&value, group_id, id),
                 )?;
 
                 Ok::<(), rusqlite::Error>(())
@@ -317,6 +318,53 @@ impl TagRepository for SqliteTagRepository {
                 .collect::<Result<Vec<Tag>, _>>()?;
 
             Ok::<Vec<Tag>, rusqlite::Error>(tags)
+        })
+        .await
+        .map_err(map_interact_error)?
+        .map_err(map_db_error)
+    }
+
+    async fn reassign_items(
+        &self,
+        source_tag_id: i64,
+        target_tag_id: i64,
+    ) -> Result<(), DomainError> {
+        let conn = self.pool.get().await.map_err(map_pool_error)?;
+
+        conn.interact(move |conn: &mut Connection| {
+            conn.execute("BEGIN IMMEDIATE", [])?;
+
+            let result = (|| {
+                // Update item_tags: change source to target, skip duplicates
+                // First, delete rows where the item already has the target tag
+                conn.execute(
+                    "DELETE FROM item_tags
+                     WHERE tag_id = ?1
+                     AND item_id IN (
+                         SELECT item_id FROM item_tags WHERE tag_id = ?2
+                     )",
+                    [source_tag_id, target_tag_id],
+                )?;
+
+                // Then reassign remaining source associations to target
+                conn.execute(
+                    "UPDATE item_tags SET tag_id = ?1 WHERE tag_id = ?2",
+                    [target_tag_id, source_tag_id],
+                )?;
+
+                Ok::<(), rusqlite::Error>(())
+            })();
+
+            match result {
+                Ok(_) => {
+                    conn.execute("COMMIT", [])?;
+                    Ok(())
+                }
+                Err(e) => {
+                    conn.execute("ROLLBACK", [])?;
+                    Err(e)
+                }
+            }
         })
         .await
         .map_err(map_interact_error)?

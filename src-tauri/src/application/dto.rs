@@ -80,6 +80,7 @@ pub struct CreateTagDto {
 #[derive(Debug, Clone, Deserialize)]
 pub struct UpdateTagDto {
     pub value: Option<String>,
+    pub group_id: Option<i64>,
 }
 
 /// DTO for TagTemplate data transfer.
