@@ -282,8 +282,13 @@ impl TagRepository for SqliteTagRepository {
         let conn = self.pool.get().await.map_err(map_pool_error)?;
 
         conn.interact(|conn: &mut Connection| {
-            let mut stmt =
-                conn.prepare("SELECT tag_id, COUNT(*) as count FROM item_tags GROUP BY tag_id")?;
+            let mut stmt = conn.prepare(
+                "SELECT it.tag_id, COUNT(*) as count
+                 FROM item_tags it
+                 INNER JOIN items i ON i.id = it.item_id
+                 WHERE i.is_deleted = 0
+                 GROUP BY it.tag_id",
+            )?;
 
             let rows =
                 stmt.query_map([], |row| Ok((row.get::<_, i64>(0)?, row.get::<_, i64>(1)?)))?;
@@ -318,6 +323,59 @@ impl TagRepository for SqliteTagRepository {
                 .collect::<Result<Vec<Tag>, _>>()?;
 
             Ok::<Vec<Tag>, rusqlite::Error>(tags)
+        })
+        .await
+        .map_err(map_interact_error)?
+        .map_err(map_db_error)
+    }
+
+    async fn find_by_items(&self, item_ids: &[i64]) -> Result<HashMap<i64, Vec<Tag>>, DomainError> {
+        if item_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let conn = self.pool.get().await.map_err(map_pool_error)?;
+        let ids = item_ids.to_vec();
+
+        conn.interact(move |conn: &mut Connection| {
+            let placeholders: Vec<String> = ids.iter().map(|_| "?".to_string()).collect();
+            let sql = format!(
+                "SELECT it.item_id, t.id, t.group_id, t.value, t.created_at, t.updated_at
+                 FROM item_tags it
+                 INNER JOIN tags t ON t.id = it.tag_id
+                 WHERE it.item_id IN ({})
+                 ORDER BY it.item_id, t.value ASC",
+                placeholders.join(", ")
+            );
+
+            let mut stmt = conn.prepare(&sql)?;
+            let params: Vec<Box<dyn rusqlite::ToSql>> = ids
+                .iter()
+                .map(|id| Box::new(*id) as Box<dyn rusqlite::ToSql>)
+                .collect();
+            let params_refs: Vec<&dyn rusqlite::ToSql> =
+                params.iter().map(|p| p.as_ref()).collect();
+
+            let mut map: HashMap<i64, Vec<Tag>> = HashMap::new();
+            let mut rows = stmt.query(params_refs.as_slice())?;
+            while let Some(row) = rows.next()? {
+                let item_id: i64 = row.get(0)?;
+                let value_str: String = row.get(3)?;
+                let value =
+                    crate::domain::value_objects::TagValue::new(value_str).unwrap_or_else(|_| {
+                        crate::domain::value_objects::TagValue::invalid()
+                    });
+                let tag = Tag::reconstitute(
+                    row.get(1)?,
+                    row.get(2)?,
+                    value,
+                    row.get(4)?,
+                    row.get(5)?,
+                );
+                map.entry(item_id).or_default().push(tag);
+            }
+
+            Ok::<HashMap<i64, Vec<Tag>>, rusqlite::Error>(map)
         })
         .await
         .map_err(map_interact_error)?

@@ -66,32 +66,29 @@ pub fn run() {
             });
 
             // Auto-refresh USN index on startup if enabled
-            #[cfg(windows)]
-            {
-                let refresh_service = app.state::<AppState>().usn_refresh_service.clone();
-                let settings = app.state::<AppState>().settings_service.clone();
+            let refresh_service = app.state::<AppState>().usn_refresh_service.clone();
+            let settings = app.state::<AppState>().settings_service.clone();
 
-                tauri::async_runtime::spawn(async move {
-                    let auto_refresh = settings
-                        .get("usn_auto_refresh")
-                        .await
-                        .ok()
-                        .flatten()
-                        .unwrap_or_else(|| "false".to_string());
+            tauri::async_runtime::spawn(async move {
+                let auto_refresh = settings
+                    .get("usn_auto_refresh")
+                    .await
+                    .ok()
+                    .flatten()
+                    .unwrap_or_else(|| "false".to_string());
 
-                    if auto_refresh == "true" {
-                        let drives: Vec<char> = ('A'..='Z')
-                            .filter(|&c| {
-                                crate::infrastructure::usn_journal::is_ntfs(c).unwrap_or(false)
-                            })
-                            .collect();
+                if auto_refresh == "true" {
+                    let drives: Vec<char> = ('A'..='Z')
+                        .filter(|&c| {
+                            crate::infrastructure::usn_journal::is_ntfs(c).unwrap_or(false)
+                        })
+                        .collect();
 
-                        if let Err(e) = refresh_service.refresh(&drives).await {
-                            eprintln!("Auto USN refresh failed: {}", e);
-                        }
+                    if let Err(e) = refresh_service.refresh(&drives).await {
+                        eprintln!("Auto USN refresh failed: {}", e);
                     }
-                });
-            }
+                }
+            });
 
             Ok(())
         })
@@ -120,6 +117,7 @@ pub fn run() {
             commands::items::add_tag_to_item,
             commands::items::remove_tag_from_item,
             commands::items::get_tags_for_item,
+            commands::items::get_tags_for_items,
             commands::items::update_item_tags,
             // Tag Template commands
             commands::tag_templates::create_tag_template,

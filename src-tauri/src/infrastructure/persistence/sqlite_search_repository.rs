@@ -46,7 +46,7 @@ impl SqliteSearchRepository {
                         i.created_at, i.updated_at
                  FROM items i
                  INNER JOIN item_tags it ON i.id = it.item_id
-                 WHERE it.tag_id IN ({})
+                 WHERE i.is_deleted = 0 AND it.tag_id IN ({})
                  GROUP BY i.id
                  HAVING COUNT(DISTINCT it.tag_id) = ?
                  ORDER BY i.path ASC",
@@ -88,7 +88,7 @@ impl SqliteSearchRepository {
                         i.created_at, i.updated_at
                  FROM items i
                  INNER JOIN item_tags it ON i.id = it.item_id
-                 WHERE it.tag_id IN ({})
+                 WHERE i.is_deleted = 0 AND it.tag_id IN ({})
                  ORDER BY i.path ASC",
                 placeholders_str
             );
@@ -124,7 +124,7 @@ impl SqliteSearchRepository {
                 "SELECT id, path, is_directory, size, modified_time,
                         created_at, updated_at
                  FROM items
-                 WHERE path LIKE ?1
+                 WHERE is_deleted = 0 AND path LIKE ?1
                  ORDER BY path ASC",
             )?;
 
@@ -168,7 +168,7 @@ impl SqliteSearchRepository {
                                 i.created_at, i.updated_at
                          FROM items i
                          INNER JOIN item_tags it ON i.id = it.item_id
-                         WHERE it.tag_id IN ({}) AND i.path LIKE ?
+                         WHERE i.is_deleted = 0 AND it.tag_id IN ({}) AND i.path LIKE ?
                          GROUP BY i.id
                          HAVING COUNT(DISTINCT it.tag_id) = ?
                          ORDER BY i.path ASC",
@@ -179,7 +179,7 @@ impl SqliteSearchRepository {
                                 i.created_at, i.updated_at
                          FROM items i
                          INNER JOIN item_tags it ON i.id = it.item_id
-                         WHERE it.tag_id IN ({}) AND i.path LIKE ?
+                         WHERE i.is_deleted = 0 AND it.tag_id IN ({}) AND i.path LIKE ?
                          ORDER BY i.path ASC",
                         placeholders_str
                     ),
@@ -194,7 +194,7 @@ impl SqliteSearchRepository {
                                 i.created_at, i.updated_at
                          FROM items i
                          INNER JOIN item_tags it ON i.id = it.item_id
-                         WHERE it.tag_id IN ({})
+                         WHERE i.is_deleted = 0 AND it.tag_id IN ({})
                          GROUP BY i.id
                          HAVING COUNT(DISTINCT it.tag_id) = ?
                          ORDER BY i.path ASC",
@@ -205,7 +205,7 @@ impl SqliteSearchRepository {
                                 i.created_at, i.updated_at
                          FROM items i
                          INNER JOIN item_tags it ON i.id = it.item_id
-                         WHERE it.tag_id IN ({})
+                         WHERE i.is_deleted = 0 AND it.tag_id IN ({})
                          ORDER BY i.path ASC",
                         placeholders_str
                     ),
@@ -214,7 +214,7 @@ impl SqliteSearchRepository {
                 "SELECT id, path, is_directory, size, modified_time,
                         created_at, updated_at
                  FROM items
-                 WHERE path LIKE ?
+                 WHERE is_deleted = 0 AND path LIKE ?
                  ORDER BY path ASC"
                     .to_string()
             };

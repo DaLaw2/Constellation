@@ -51,7 +51,7 @@ export interface ColorPickerProps {
   presets?: string[]
 }
 
-const props = withDefaults(defineProps<ColorPickerProps>(), {
+withDefaults(defineProps<ColorPickerProps>(), {
   label: '',
   presets: () => [
     '#f44336', // Red

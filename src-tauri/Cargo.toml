@@ -1,6 +1,6 @@
 [package]
 name = "constellation"
-version = "1.0.0"
+version = "1.1.0"
 description = "A Tauri App"
 authors = ["DaLaw2"]
 edition = "2021"
@@ -33,8 +33,6 @@ opener = "0.7"
 deadpool = "0.10"
 image = { version = "0.25", default-features = false, features = ["webp", "png"] }
 blake3 = "1"
-
-[target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["fileapi", "winbase", "winnt", "shellapi", "winuser"] }
 windows = { version = "0.58", features = [
     "Win32_UI_Shell",

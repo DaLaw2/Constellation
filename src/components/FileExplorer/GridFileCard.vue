@@ -64,7 +64,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
-import { getFileIcon, isImageFile, isVideoFile, isMediaFile, getThumbnailUrl } from '@/utils'
+import { getFileIcon, isImageFile, isVideoFile, getThumbnailUrl } from '@/utils'
 import { useItemsStore } from '@/stores/items'
 import { useTagsStore } from '@/stores/tags'
 import { useSettingsStore } from '@/stores/settings'

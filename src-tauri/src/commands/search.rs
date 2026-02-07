@@ -8,21 +8,15 @@ use crate::state::AppState;
 use tauri::State;
 
 /// Runs USN refresh on all NTFS drives before a search so results reflect recent file moves/deletes.
-#[cfg(windows)]
 async fn refresh_before_search(state: &AppState) {
     let drives: Vec<char> = ('A'..='Z')
-        .filter(|&c| {
-            crate::infrastructure::usn_journal::is_ntfs(c).unwrap_or(false)
-        })
+        .filter(|&c| crate::infrastructure::usn_journal::is_ntfs(c).unwrap_or(false))
         .collect();
 
     if let Err(e) = state.usn_refresh_service.refresh(&drives).await {
         eprintln!("[USN] pre-search refresh failed: {}", e);
     }
 }
-
-#[cfg(not(windows))]
-async fn refresh_before_search(_state: &AppState) {}
 
 #[tauri::command]
 pub async fn search_items_by_tags_and(

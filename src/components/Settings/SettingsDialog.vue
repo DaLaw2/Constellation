@@ -60,7 +60,7 @@ const activeTab = ref<'tracking' | 'preview' | 'about'>('tracking')
   gap: 0;
   border-bottom: 1px solid var(--border-color);
   margin: -24px -24px 16px -24px;
-  padding: 0 24px;
+  padding: 0 24px 0 8px;
 }
 
 .tab-btn {

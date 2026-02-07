@@ -91,6 +91,17 @@ export const useItemsStore = defineStore('items', () => {
     }
   }
 
+  async function getTagsForItems(itemIds: number[]) {
+    try {
+      const tagsMap = await invoke<Record<number, Tag[]>>('get_tags_for_items', { itemIds })
+      return tagsMap
+    } catch (e) {
+      error.value = e as string
+      console.error('Failed to get tags for items:', e)
+      throw e
+    }
+  }
+
   async function updateItemTags(itemId: number, tagIds: number[]) {
     try {
       await invoke('update_item_tags', { itemId, tagIds })
@@ -112,6 +123,7 @@ export const useItemsStore = defineStore('items', () => {
     addTagToItem,
     removeTagFromItem,
     getTagsForItem,
+    getTagsForItems,
     updateItemTags,
   }
 })

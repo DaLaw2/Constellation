@@ -12,21 +12,16 @@ use rusqlite::{Connection, OptionalExtension};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-#[cfg(windows)]
 use crate::infrastructure::usn_journal::{
     is_ntfs, read_journal_records, resolve_path_by_frn, RawUsnRecord, VolumeHandle,
 };
 
 /// USN reason flags for matching.
-#[cfg(windows)]
 const USN_REASON_FILE_CREATE: u32 = 0x0000_0100;
-#[cfg(windows)]
 const USN_REASON_FILE_DELETE: u32 = 0x0000_0200;
-#[cfg(windows)]
 const USN_REASON_RENAME_NEW_NAME: u32 = 0x0000_2000;
 
 /// Per-drive data collected in phase 1, kept alive for cross-volume resolution.
-#[cfg(windows)]
 struct DriveContext {
     drive: char,
     volume: VolumeHandle,
@@ -36,7 +31,6 @@ struct DriveContext {
 }
 
 /// An item whose file was not found on its original volume.
-#[cfg(windows)]
 struct PendingDelete {
     item_id: i64,
     old_path: String,
@@ -67,7 +61,6 @@ impl UsnRefreshService {
     /// Two-phase process:
     /// 1. Read USN records per drive, resolve same-volume renames, collect missing items
     /// 2. Cross-volume matching: search other drives' records for missing items by filename
-    #[cfg(windows)]
     pub async fn refresh(&self, drives: &[char]) -> Result<RefreshResultDto, DomainError> {
         let mut result = RefreshResultDto::default();
         let refresh_on_missing = self.get_setting_bool("usn_refresh_on_missing", true).await;
@@ -121,16 +114,8 @@ impl UsnRefreshService {
         Ok(result)
     }
 
-    #[cfg(not(windows))]
-    pub async fn refresh(&self, _drives: &[char]) -> Result<RefreshResultDto, DomainError> {
-        Err(DomainError::UsnJournalError(
-            "USN Journal is only supported on Windows".to_string(),
-        ))
-    }
-
     /// Processes a single drive: reads USN records, resolves same-volume renames,
     /// and collects items whose files were not found (for cross-volume matching later).
-    #[cfg(windows)]
     async fn process_drive(
         &self,
         drive: char,
@@ -301,7 +286,6 @@ impl UsnRefreshService {
     /// FSCTL_READ_UNPRIVILEGED_USN_JOURNAL does NOT include filenames in records,
     /// so we resolve FRNs from FILE_CREATE records to full paths via the filesystem,
     /// then match by filename component.
-    #[cfg(windows)]
     async fn cross_volume_match(
         &self,
         drive_contexts: &[DriveContext],
@@ -427,7 +411,6 @@ impl UsnRefreshService {
     }
 
     /// Updates an item's path and FRN (for cross-volume moves where FRN changes).
-    #[cfg(windows)]
     async fn update_item_path_and_frn(
         &self,
         item_id: i64,
@@ -478,7 +461,6 @@ impl UsnRefreshService {
     }
 
     /// Gets the USN status for all NTFS drives.
-    #[cfg(windows)]
     pub async fn get_drive_status(&self) -> Result<Vec<DriveUsnStatusDto>, DomainError> {
         let mut results = Vec::new();
 
@@ -501,10 +483,6 @@ impl UsnRefreshService {
         Ok(results)
     }
 
-    #[cfg(not(windows))]
-    pub async fn get_drive_status(&self) -> Result<Vec<DriveUsnStatusDto>, DomainError> {
-        Ok(Vec::new())
-    }
 }
 
 /// Loads USN state (last_usn, journal_id) for a drive.

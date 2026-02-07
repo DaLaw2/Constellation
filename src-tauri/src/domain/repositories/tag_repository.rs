@@ -46,6 +46,9 @@ pub trait TagRepository: Send + Sync {
     /// Gets tags for a specific item.
     async fn find_by_item(&self, item_id: i64) -> Result<Vec<Tag>, DomainError>;
 
+    /// Gets tags for multiple items at once (batch query).
+    async fn find_by_items(&self, item_ids: &[i64]) -> Result<HashMap<i64, Vec<Tag>>, DomainError>;
+
     /// Reassigns all item-tag associations from source tag to target tag.
     /// Handles deduplication (skips if target already exists for an item).
     /// Does NOT delete the source tag.
