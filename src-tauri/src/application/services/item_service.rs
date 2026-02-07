@@ -26,8 +26,22 @@ impl ItemService {
     /// Creates a new item.
     pub async fn create(&self, dto: CreateItemDto) -> Result<i64, DomainError> {
         let path = FilePath::new(&dto.path)?;
-        let mut item = Item::new(path, dto.is_directory, dto.size, dto.modified_time);
+        let frn = Self::get_frn(path.as_str());
+        let mut item = Item::new(path, dto.is_directory, dto.size, dto.modified_time, frn);
         self.item_repo.save(&mut item).await
+    }
+
+    /// Gets the NTFS File Reference Number for a path. Returns 0 on non-Windows or on error.
+    #[cfg(windows)]
+    fn get_frn(path: &str) -> u64 {
+        crate::infrastructure::usn_journal::get_file_reference_number(path)
+            .unwrap_or(None)
+            .unwrap_or(0)
+    }
+
+    #[cfg(not(windows))]
+    fn get_frn(_path: &str) -> u64 {
+        0
     }
 
     /// Gets an item by ID.

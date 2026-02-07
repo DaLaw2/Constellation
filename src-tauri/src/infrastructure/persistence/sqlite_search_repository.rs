@@ -2,10 +2,10 @@
 //!
 //! Specialized repository for search operations.
 
+use super::cql_executor::expr_to_sql;
 use crate::application::dto::{ItemDto, SearchMode};
 use crate::domain::errors::DomainError;
 use crate::domain::search::parse_cql;
-use super::cql_executor::expr_to_sql;
 use deadpool_sqlite::Pool;
 use rusqlite::Connection;
 use std::sync::Arc;
@@ -270,8 +270,11 @@ impl SqliteSearchRepository {
 
             let mut stmt = conn.prepare(&sql)?;
 
-            let params_refs: Vec<&dyn rusqlite::ToSql> =
-                fragment.params.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
+            let params_refs: Vec<&dyn rusqlite::ToSql> = fragment
+                .params
+                .iter()
+                .map(|p| p as &dyn rusqlite::ToSql)
+                .collect();
 
             let items = stmt
                 .query_map(params_refs.as_slice(), Self::map_row_to_item_dto)?

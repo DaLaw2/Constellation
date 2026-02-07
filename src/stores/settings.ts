@@ -4,7 +4,6 @@ import { invoke } from '@tauri-apps/api/core'
 
 export interface AppSettings {
   usn_auto_refresh: boolean
-  usn_refresh_interval: number
   usn_refresh_on_missing: boolean
   usn_cross_volume_match: boolean
   thumbnail_size: number
@@ -20,7 +19,6 @@ export interface CacheStats {
 
 const DEFAULTS: AppSettings = {
   usn_auto_refresh: false,
-  usn_refresh_interval: 0,
   usn_refresh_on_missing: true,
   usn_cross_volume_match: true,
   thumbnail_size: 256,
@@ -31,7 +29,6 @@ const DEFAULTS: AppSettings = {
 function parseSettings(raw: Record<string, string>): AppSettings {
   return {
     usn_auto_refresh: raw.usn_auto_refresh === 'true',
-    usn_refresh_interval: parseInt(raw.usn_refresh_interval || '0', 10),
     usn_refresh_on_missing: raw.usn_refresh_on_missing !== 'false',
     usn_cross_volume_match: raw.usn_cross_volume_match !== 'false',
     thumbnail_size: parseInt(raw.thumbnail_size || '256', 10),

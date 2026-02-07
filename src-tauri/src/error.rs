@@ -29,6 +29,9 @@ pub enum AppError {
 
     #[error("Thumbnail error: {0}")]
     Thumbnail(String),
+
+    #[error("USN Journal error: {0}")]
+    UsnJournal(String),
 }
 
 impl serde::Serialize for AppError {

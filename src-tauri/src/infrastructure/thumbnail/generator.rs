@@ -12,7 +12,9 @@ use windows::Win32::Graphics::Gdi::{
     CreateCompatibleDC, DeleteDC, DeleteObject, GetDIBits, GetObjectW, BITMAP, BITMAPINFO,
     BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, RGBQUAD,
 };
-use windows::Win32::UI::Shell::{IShellItemImageFactory, SHCreateItemFromParsingName, SIIGBF_RESIZETOFIT};
+use windows::Win32::UI::Shell::{
+    IShellItemImageFactory, SHCreateItemFromParsingName, SIIGBF_RESIZETOFIT,
+};
 
 #[derive(Debug, Error)]
 pub enum ThumbnailError {
@@ -40,10 +42,7 @@ pub enum ThumbnailError {
 /// **Must be called from a COM STA-initialized thread.**
 ///
 /// Returns RGBA pixel data and the actual (width, height) of the thumbnail.
-pub fn generate_thumbnail(
-    path: &Path,
-    size: u32,
-) -> Result<(Vec<u8>, u32, u32), ThumbnailError> {
+pub fn generate_thumbnail(path: &Path, size: u32) -> Result<(Vec<u8>, u32, u32), ThumbnailError> {
     let path_str = path
         .to_str()
         .ok_or_else(|| ThumbnailError::FileNotFound(path.display().to_string()))?;

@@ -31,6 +31,7 @@ pub async fn init_database(
     conn.interact(|conn: &mut Connection| {
         initialize_schema(conn)?;
         migrate_tag_group_order(conn)?;
+        migrate_add_file_reference_number(conn)?;
         Ok::<(), rusqlite::Error>(())
     })
     .await??;
@@ -68,7 +69,6 @@ pub fn initialize_schema(conn: &Connection) -> Result<()> {
     )?;
 
     // Items table (files and folders)
-    // Note: is_deleted and deleted_at columns are deprecated but kept for backward compatibility
     conn.execute(
         "CREATE TABLE IF NOT EXISTS items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,6 +76,7 @@ pub fn initialize_schema(conn: &Connection) -> Result<()> {
             is_directory BOOLEAN NOT NULL,
             size INTEGER,
             modified_time INTEGER,
+            file_reference_number INTEGER,
             created_at INTEGER NOT NULL DEFAULT (unixepoch()),
             updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
             is_deleted BOOLEAN NOT NULL DEFAULT 0,
@@ -153,6 +154,17 @@ pub fn initialize_schema(conn: &Connection) -> Result<()> {
         [],
     )?;
 
+    // USN Journal state table (per-drive tracking)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS usn_state (
+            drive_letter TEXT PRIMARY KEY,
+            last_usn INTEGER NOT NULL DEFAULT 0,
+            journal_id INTEGER NOT NULL DEFAULT 0,
+            last_synced_at INTEGER NOT NULL DEFAULT 0
+        )",
+        [],
+    )?;
+
     // Create indexes for performance
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_items_path ON items(path)",
@@ -166,6 +178,8 @@ pub fn initialize_schema(conn: &Connection) -> Result<()> {
         "CREATE INDEX IF NOT EXISTS idx_items_is_deleted ON items(is_deleted)",
         [],
     )?;
+    // Note: idx_items_file_reference_number is created in migrate_add_file_reference_number()
+    // to avoid failure on existing databases where the column doesn't exist yet.
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_tags_group_id ON tags(group_id)",
         [],
@@ -211,6 +225,29 @@ pub fn migrate_tag_group_order(conn: &Connection) -> Result<()> {
             [],
         )?;
     }
+
+    Ok(())
+}
+
+/// Adds the file_reference_number column to existing items tables.
+pub fn migrate_add_file_reference_number(conn: &Connection) -> Result<()> {
+    let has_column: bool = conn.query_row(
+        "SELECT COUNT(*) FROM pragma_table_info('items') WHERE name = 'file_reference_number'",
+        [],
+        |row| row.get::<_, i64>(0).map(|c| c > 0),
+    )?;
+
+    if !has_column {
+        conn.execute(
+            "ALTER TABLE items ADD COLUMN file_reference_number INTEGER",
+            [],
+        )?;
+    }
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_items_file_reference_number ON items(file_reference_number)",
+        [],
+    )?;
 
     Ok(())
 }

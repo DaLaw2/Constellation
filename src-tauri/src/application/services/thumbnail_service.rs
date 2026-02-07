@@ -118,7 +118,11 @@ impl ThumbnailService {
 
     /// Check if force shell cache mode is enabled.
     async fn is_force_shell_cache(&self) -> bool {
-        match self.settings_service.get("thumbnail_force_shell_cache").await {
+        match self
+            .settings_service
+            .get("thumbnail_force_shell_cache")
+            .await
+        {
             Ok(Some(val)) => val == "true",
             _ => false,
         }

@@ -21,11 +21,7 @@ pub fn expr_to_sql(expr: &Expr) -> SqlFragment {
     SqlFragment { sql, params }
 }
 
-fn build_sql(
-    expr: &Expr,
-    counter: &mut usize,
-    params: &mut Vec<rusqlite::types::Value>,
-) -> String {
+fn build_sql(expr: &Expr, counter: &mut usize, params: &mut Vec<rusqlite::types::Value>) -> String {
     match expr {
         Expr::Comparison { field, op, value } => {
             build_comparison_sql(*field, *op, value, counter, params)
@@ -291,7 +287,9 @@ fn type_to_extensions(type_name: &str) -> &'static [&'static str] {
         "image" => &[
             ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg", ".ico", ".tiff", ".tif",
         ],
-        "video" => &[".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".m4v"],
+        "video" => &[
+            ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".m4v",
+        ],
         "document" => &[
             ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv", ".rtf",
         ],

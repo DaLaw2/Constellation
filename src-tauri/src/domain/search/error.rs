@@ -17,10 +17,7 @@ pub enum CqlParseError {
     /// Invalid date format (expected YYYY-MM-DD)
     InvalidDate(String),
     /// Operator not supported for the given field
-    InvalidOperator {
-        field: String,
-        op: String,
-    },
+    InvalidOperator { field: String, op: String },
 }
 
 impl fmt::Display for CqlParseError {
@@ -30,9 +27,15 @@ impl fmt::Display for CqlParseError {
             CqlParseError::SyntaxError(msg) => write!(f, "Syntax error: {}", msg),
             CqlParseError::InvalidField(name) => write!(f, "Unknown field: {}", name),
             CqlParseError::InvalidSize(val) => write!(f, "Invalid size value: {}", val),
-            CqlParseError::InvalidDate(val) => write!(f, "Invalid date (expected YYYY-MM-DD): {}", val),
+            CqlParseError::InvalidDate(val) => {
+                write!(f, "Invalid date (expected YYYY-MM-DD): {}", val)
+            }
             CqlParseError::InvalidOperator { field, op } => {
-                write!(f, "Operator '{}' is not supported for field '{}'", op, field)
+                write!(
+                    f,
+                    "Operator '{}' is not supported for field '{}'",
+                    op, field
+                )
             }
         }
     }

@@ -65,6 +65,34 @@ pub fn run() {
                 }
             });
 
+            // Auto-refresh USN index on startup if enabled
+            #[cfg(windows)]
+            {
+                let refresh_service = app.state::<AppState>().usn_refresh_service.clone();
+                let settings = app.state::<AppState>().settings_service.clone();
+
+                tauri::async_runtime::spawn(async move {
+                    let auto_refresh = settings
+                        .get("usn_auto_refresh")
+                        .await
+                        .ok()
+                        .flatten()
+                        .unwrap_or_else(|| "false".to_string());
+
+                    if auto_refresh == "true" {
+                        let drives: Vec<char> = ('A'..='Z')
+                            .filter(|&c| {
+                                crate::infrastructure::usn_journal::is_ntfs(c).unwrap_or(false)
+                            })
+                            .collect();
+
+                        if let Err(e) = refresh_service.refresh(&drives).await {
+                            eprintln!("Auto USN refresh failed: {}", e);
+                        }
+                    }
+                });
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -121,6 +149,11 @@ pub fn run() {
             // Thumbnail commands
             commands::thumbnails::get_cache_stats,
             commands::thumbnails::clear_thumbnail_cache,
+            // File Monitor commands
+            commands::file_monitor::refresh_file_index,
+            commands::file_monitor::check_usn_support,
+            commands::file_monitor::get_usn_drive_status,
+            commands::file_monitor::enable_usn_journal,
         ])
         .run(tauri::generate_context!())
         // SAFETY: This is the main entry point. If Tauri runtime fails to start,
@@ -216,10 +249,7 @@ fn percent_decode(input: &str) -> String {
     let mut i = 0;
     while i < bytes.len() {
         if bytes[i] == b'%' && i + 2 < bytes.len() {
-            if let Ok(byte) = u8::from_str_radix(
-                &input[i + 1..i + 3],
-                16,
-            ) {
+            if let Ok(byte) = u8::from_str_radix(&input[i + 1..i + 3], 16) {
                 result.push(byte);
                 i += 3;
                 continue;
@@ -234,7 +264,10 @@ fn percent_decode(input: &str) -> String {
 /// Extract a query parameter value by key.
 fn parse_query_param<'a>(query: &'a str, key: &str) -> Option<&'a str> {
     for pair in query.split('&') {
-        if let Some(val) = pair.strip_prefix(key).and_then(|rest| rest.strip_prefix('=')) {
+        if let Some(val) = pair
+            .strip_prefix(key)
+            .and_then(|rest| rest.strip_prefix('='))
+        {
             return Some(val);
         }
     }
@@ -246,10 +279,5 @@ fn thumb_error_response(status: u16, msg: &str) -> Response<Vec<u8>> {
         .status(status)
         .header("Content-Type", "text/plain")
         .body(msg.as_bytes().to_vec())
-        .unwrap_or_else(|_| {
-            Response::builder()
-                .status(500)
-                .body(Vec::new())
-                .unwrap()
-        })
+        .unwrap_or_else(|_| Response::builder().status(500).body(Vec::new()).unwrap())
 }

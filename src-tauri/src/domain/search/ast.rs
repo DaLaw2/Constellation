@@ -12,10 +12,7 @@ pub enum Expr {
         value: Value,
     },
     /// Field IN (value_list)
-    InExpr {
-        field: Field,
-        values: Vec<Value>,
-    },
+    InExpr { field: Field, values: Vec<Value> },
     /// Logical AND
     And(Box<Expr>, Box<Expr>),
     /// Logical OR

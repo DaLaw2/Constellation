@@ -16,25 +16,6 @@
       </label>
     </div>
 
-    <!-- Refresh interval -->
-    <div class="setting-row">
-      <div class="setting-info">
-        <label class="setting-label">Refresh interval</label>
-        <p class="setting-desc">Periodically scan for file changes</p>
-      </div>
-      <select
-        class="setting-select"
-        :value="settings.usn_refresh_interval"
-        @change="updateInterval(($event.target as HTMLSelectElement).value)"
-      >
-        <option value="0">Disabled</option>
-        <option value="5">5 minutes</option>
-        <option value="15">15 minutes</option>
-        <option value="30">30 minutes</option>
-        <option value="60">1 hour</option>
-      </select>
-    </div>
-
     <!-- Refresh on missing -->
     <div class="setting-row">
       <div class="setting-info">
@@ -73,26 +54,77 @@
         <label class="setting-label">Manual refresh</label>
         <p class="setting-desc">Scan all volumes for file changes now</p>
       </div>
-      <button class="btn-refresh" disabled title="USN tracking not yet implemented">
-        Refresh Now
+      <button class="btn-refresh" :disabled="refreshing" @click="manualRefresh">
+        {{ refreshing ? 'Refreshing...' : 'Refresh Now' }}
       </button>
+    </div>
+
+    <!-- Refresh result -->
+    <div v-if="refreshResult" class="refresh-result">
+      <p class="refresh-result-text">{{ refreshResult }}</p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
 import { useSettingsStore } from '@/stores/settings'
 
 const settingsStore = useSettingsStore()
 const settings = computed(() => settingsStore.settings)
+const refreshing = ref(false)
+const refreshResult = ref('')
+
+interface DriveInfo {
+  letter: string
+  label: string | null
+  drive_type: string
+  total_space: number | null
+  available_space: number | null
+}
+
+interface RefreshResult {
+  drives_scanned: string[]
+  items_updated: { item_id: number; old_path: string; new_path: string | null; action: string }[]
+  journal_stale: string[]
+  journal_inactive: string[]
+  first_time_drives: string[]
+  errors: string[]
+}
 
 function toggle(key: string, checked: boolean) {
   settingsStore.updateSetting(key, String(checked))
 }
 
-function updateInterval(value: string) {
-  settingsStore.updateSetting('usn_refresh_interval', value)
+async function manualRefresh() {
+  refreshing.value = true
+  refreshResult.value = ''
+  try {
+    const drives = await invoke<DriveInfo[]>('get_drives')
+    const driveLetters = drives.map((d) => d.letter)
+    const result = await invoke<RefreshResult>('refresh_file_index', { drives: driveLetters })
+
+    const parts: string[] = []
+    parts.push(`Scanned: ${result.drives_scanned.join(', ')}`)
+    if (result.items_updated.length > 0) {
+      parts.push(`Updated: ${result.items_updated.length} items`)
+    }
+    if (result.first_time_drives.length > 0) {
+      parts.push(`Initialized: ${result.first_time_drives.join(', ')}`)
+    }
+    if (result.errors.length > 0) {
+      parts.push(`Errors: ${result.errors.join('; ')}`)
+    }
+    if (result.items_updated.length === 0 && result.errors.length === 0) {
+      parts.push('Everything up to date')
+    }
+    refreshResult.value = parts.join(' · ')
+  } catch (e) {
+    refreshResult.value = `Error: ${e}`
+  } finally {
+    refreshing.value = false
+  }
 }
 </script>
 
@@ -181,23 +213,6 @@ function updateInterval(value: string) {
   transform: translateX(20px);
 }
 
-/* Select */
-.setting-select {
-  padding: 6px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  font-size: 13px;
-  background: var(--background);
-  color: var(--text-primary);
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.setting-select:focus {
-  outline: none;
-  border-color: var(--primary-color);
-}
-
 /* Refresh Button */
 .btn-refresh {
   padding: 8px 16px;
@@ -220,5 +235,16 @@ function updateInterval(value: string) {
 .btn-refresh:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Refresh Result */
+.refresh-result {
+  padding: 12px 0 4px;
+}
+
+.refresh-result-text {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 </style>

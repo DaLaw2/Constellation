@@ -28,11 +28,9 @@ impl SettingsRepository for SqliteSettingsRepository {
 
         conn.interact(move |conn: &mut Connection| {
             let result = conn
-                .query_row(
-                    "SELECT value FROM settings WHERE key = ?1",
-                    [&key],
-                    |row| row.get::<_, String>(0),
-                )
+                .query_row("SELECT value FROM settings WHERE key = ?1", [&key], |row| {
+                    row.get::<_, String>(0)
+                })
                 .optional();
             match result {
                 Ok(value) => Ok(value),

@@ -43,9 +43,7 @@ impl ComWorker {
                         eprintln!("Failed to initialize COM: {}", e);
                         // Drain remaining requests with error
                         while let Some(req) = rx.blocking_recv() {
-                            let _ = req
-                                .response
-                                .send(Err(ThumbnailError::Com(e.clone())));
+                            let _ = req.response.send(Err(ThumbnailError::Com(e.clone())));
                         }
                         return;
                     }
@@ -70,11 +68,7 @@ impl ComWorker {
     ///
     /// Sends the request to the COM worker thread and awaits the result.
     /// Returns WebP-encoded bytes.
-    pub async fn generate(
-        &self,
-        path: PathBuf,
-        size: u32,
-    ) -> Result<Vec<u8>, ThumbnailError> {
+    pub async fn generate(&self, path: PathBuf, size: u32) -> Result<Vec<u8>, ThumbnailError> {
         let (tx, rx) = oneshot::channel();
 
         self.sender

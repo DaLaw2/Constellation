@@ -8,9 +8,7 @@ use std::collections::HashMap;
 use tauri::State;
 
 #[tauri::command]
-pub async fn get_all_settings(
-    state: State<'_, AppState>,
-) -> AppResult<HashMap<String, String>> {
+pub async fn get_all_settings(state: State<'_, AppState>) -> AppResult<HashMap<String, String>> {
     state
         .settings_service
         .get_all()
@@ -32,10 +30,7 @@ pub async fn update_setting(
 }
 
 #[tauri::command]
-pub async fn reset_setting(
-    key: String,
-    state: State<'_, AppState>,
-) -> AppResult<()> {
+pub async fn reset_setting(key: String, state: State<'_, AppState>) -> AppResult<()> {
     state
         .settings_service
         .reset(&key)

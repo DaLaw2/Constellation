@@ -1,3 +1,4 @@
+pub mod file_monitor;
 pub mod filesystem;
 pub mod items;
 pub mod search;

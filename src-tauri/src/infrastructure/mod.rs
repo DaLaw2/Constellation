@@ -5,3 +5,4 @@
 
 pub mod persistence;
 pub mod thumbnail;
+pub mod usn_journal;

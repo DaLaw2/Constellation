@@ -83,11 +83,7 @@ impl TagService {
     ///
     /// Reassigns all item associations from source to target (with deduplication),
     /// then deletes the source tag.
-    pub async fn merge(
-        &self,
-        source_id: i64,
-        target_id: i64,
-    ) -> Result<(), DomainError> {
+    pub async fn merge(&self, source_id: i64, target_id: i64) -> Result<(), DomainError> {
         // Verify both tags exist
         self.tag_repo
             .find_by_id(source_id)

@@ -12,6 +12,7 @@ pub struct Item {
     is_directory: bool,
     size: Option<i64>,
     modified_time: Option<i64>,
+    file_reference_number: u64,
     created_at: Option<i64>,
     updated_at: Option<i64>,
 }
@@ -23,6 +24,7 @@ impl Item {
         is_directory: bool,
         size: Option<i64>,
         modified_time: Option<i64>,
+        file_reference_number: u64,
     ) -> Self {
         Self {
             id: None,
@@ -30,6 +32,7 @@ impl Item {
             is_directory,
             size,
             modified_time,
+            file_reference_number,
             created_at: None,
             updated_at: None,
         }
@@ -42,6 +45,7 @@ impl Item {
         is_directory: bool,
         size: Option<i64>,
         modified_time: Option<i64>,
+        file_reference_number: u64,
         created_at: i64,
         updated_at: i64,
     ) -> Self {
@@ -51,6 +55,7 @@ impl Item {
             is_directory,
             size,
             modified_time,
+            file_reference_number,
             created_at: Some(created_at),
             updated_at: Some(updated_at),
         }
@@ -86,6 +91,10 @@ impl Item {
         self.updated_at
     }
 
+    pub fn file_reference_number(&self) -> u64 {
+        self.file_reference_number
+    }
+
     // Domain behavior
 
     /// Updates the item's path.
@@ -101,6 +110,11 @@ impl Item {
     /// Updates the item's modified time.
     pub fn update_modified_time(&mut self, modified_time: Option<i64>) {
         self.modified_time = modified_time;
+    }
+
+    /// Updates the file reference number (e.g. after cross-volume move).
+    pub fn update_file_reference_number(&mut self, frn: u64) {
+        self.file_reference_number = frn;
     }
 
     /// Sets the ID after persistence (used by repository).

@@ -36,4 +36,7 @@ pub enum DomainError {
 
     #[error("Database error: {0}")]
     DatabaseError(String),
+
+    #[error("USN Journal error: {0}")]
+    UsnJournalError(String),
 }

@@ -20,9 +20,8 @@ pub fn parse_cql(input: &str) -> Result<Expr, CqlParseError> {
         return Err(CqlParseError::EmptyQuery);
     }
 
-    let pairs = CqlParser::parse(Rule::query, input).map_err(|e| {
-        CqlParseError::SyntaxError(format_pest_error(e))
-    })?;
+    let pairs = CqlParser::parse(Rule::query, input)
+        .map_err(|e| CqlParseError::SyntaxError(format_pest_error(e)))?;
 
     let query_pair = pairs.into_iter().next().unwrap();
     let expr_pair = query_pair
@@ -67,9 +66,7 @@ fn format_pest_error(e: pest::error::Error<Rule>) -> String {
 }
 
 /// Builds an expression AST from a pest expression pair (handles OR).
-fn build_expression(
-    pair: pest::iterators::Pair<Rule>,
-) -> Result<Expr, CqlParseError> {
+fn build_expression(pair: pest::iterators::Pair<Rule>) -> Result<Expr, CqlParseError> {
     let mut inner = pair.into_inner();
     let first = inner.next().unwrap();
     let mut left = build_and_expr(first)?;
@@ -83,9 +80,7 @@ fn build_expression(
 }
 
 /// Builds an AND expression from a pest and_expr pair.
-fn build_and_expr(
-    pair: pest::iterators::Pair<Rule>,
-) -> Result<Expr, CqlParseError> {
+fn build_and_expr(pair: pest::iterators::Pair<Rule>) -> Result<Expr, CqlParseError> {
     let mut inner = pair.into_inner();
     let first = inner.next().unwrap();
     let mut left = build_unary_expr(first)?;
@@ -99,9 +94,7 @@ fn build_and_expr(
 }
 
 /// Builds a unary (NOT or primary) expression.
-fn build_unary_expr(
-    pair: pest::iterators::Pair<Rule>,
-) -> Result<Expr, CqlParseError> {
+fn build_unary_expr(pair: pest::iterators::Pair<Rule>) -> Result<Expr, CqlParseError> {
     let mut inner = pair.into_inner();
     let first = inner.next().unwrap();
 
@@ -116,9 +109,7 @@ fn build_unary_expr(
 }
 
 /// Builds a primary expression (comparison, in_expr, or grouped expression).
-fn build_primary(
-    pair: pest::iterators::Pair<Rule>,
-) -> Result<Expr, CqlParseError> {
+fn build_primary(pair: pest::iterators::Pair<Rule>) -> Result<Expr, CqlParseError> {
     match pair.as_rule() {
         Rule::primary => {
             let inner = pair.into_inner().next().unwrap();
@@ -135,9 +126,7 @@ fn build_primary(
 }
 
 /// Builds a comparison expression (field op value).
-fn build_comparison(
-    pair: pest::iterators::Pair<Rule>,
-) -> Result<Expr, CqlParseError> {
+fn build_comparison(pair: pest::iterators::Pair<Rule>) -> Result<Expr, CqlParseError> {
     let mut inner = pair.into_inner();
 
     let field_pair = inner.next().unwrap();
@@ -145,9 +134,8 @@ fn build_comparison(
 
     let op_pair = inner.next().unwrap();
     let op_str = op_pair.as_str();
-    let op = ComparisonOp::from_str(op_str).ok_or_else(|| {
-        CqlParseError::SyntaxError(format!("Unknown operator: {}", op_str))
-    })?;
+    let op = ComparisonOp::from_str(op_str)
+        .ok_or_else(|| CqlParseError::SyntaxError(format!("Unknown operator: {}", op_str)))?;
 
     let value_pair = inner.next().unwrap();
     let value = parse_value(value_pair, field)?;
@@ -156,9 +144,7 @@ fn build_comparison(
 }
 
 /// Builds an IN expression (field IN (values...)).
-fn build_in_expr(
-    pair: pest::iterators::Pair<Rule>,
-) -> Result<Expr, CqlParseError> {
+fn build_in_expr(pair: pest::iterators::Pair<Rule>) -> Result<Expr, CqlParseError> {
     let mut inner = pair.into_inner();
 
     let field_pair = inner.next().unwrap();
@@ -185,10 +171,7 @@ fn parse_field(s: &str) -> Result<Field, CqlParseError> {
 }
 
 /// Parses a value pair, using field context for type coercion.
-fn parse_value(
-    pair: pest::iterators::Pair<Rule>,
-    field: Field,
-) -> Result<Value, CqlParseError> {
+fn parse_value(pair: pest::iterators::Pair<Rule>, field: Field) -> Result<Value, CqlParseError> {
     let inner = pair.into_inner().next().unwrap();
 
     match inner.as_rule() {
@@ -339,8 +322,14 @@ fn validate_semantics(expr: &Expr) -> Result<(), CqlParseError> {
 /// Validates that an operator is supported for a given field.
 fn validate_field_op(field: Field, op: ComparisonOp) -> Result<(), CqlParseError> {
     let valid = match field {
-        Field::Tag => matches!(op, ComparisonOp::Eq | ComparisonOp::NotEq | ComparisonOp::Like),
-        Field::Name => matches!(op, ComparisonOp::Eq | ComparisonOp::NotEq | ComparisonOp::Like),
+        Field::Tag => matches!(
+            op,
+            ComparisonOp::Eq | ComparisonOp::NotEq | ComparisonOp::Like
+        ),
+        Field::Name => matches!(
+            op,
+            ComparisonOp::Eq | ComparisonOp::NotEq | ComparisonOp::Like
+        ),
         Field::Size => matches!(
             op,
             ComparisonOp::Eq
@@ -474,9 +463,8 @@ mod tests {
 
     #[test]
     fn parse_complex_query() {
-        let expr = parse_cql(
-            r#"(tag = "work" OR tag = "personal") AND name ~ "report*" AND size > 1MB"#,
-        );
+        let expr =
+            parse_cql(r#"(tag = "work" OR tag = "personal") AND name ~ "report*" AND size > 1MB"#);
         assert!(expr.is_ok());
     }
 

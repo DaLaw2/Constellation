@@ -4,7 +4,7 @@
 
 use crate::application::services::{
     ItemService, SearchService, SettingsService, TagGroupService, TagService, TagTemplateService,
-    ThumbnailService,
+    ThumbnailService, UsnRefreshService,
 };
 use crate::domain::repositories::{
     ItemRepository, SettingsRepository, TagGroupRepository, TagRepository, TagTemplateRepository,
@@ -37,6 +37,7 @@ pub struct AppState {
     pub search_service: Arc<SearchService>,
     pub settings_service: Arc<SettingsService>,
     pub thumbnail_service: Arc<ThumbnailService>,
+    pub usn_refresh_service: Arc<UsnRefreshService>,
 }
 
 impl AppState {
@@ -65,6 +66,11 @@ impl AppState {
         ));
         let search_service = Arc::new(SearchService::new(search_repo, search_history_repo));
         let settings_service = Arc::new(SettingsService::new(settings_repo));
+        let usn_refresh_service = Arc::new(UsnRefreshService::new(
+            pool.clone(),
+            item_repo.clone(),
+            settings_service.clone(),
+        ));
         let thumbnail_service = Arc::new(ThumbnailService::new(
             app_data_dir.clone(),
             settings_service.clone(),
@@ -80,6 +86,7 @@ impl AppState {
             search_service,
             settings_service,
             thumbnail_service,
+            usn_refresh_service,
         }
     }
 }
