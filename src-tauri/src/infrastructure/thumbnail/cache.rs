@@ -9,16 +9,12 @@ use std::path::{Path, PathBuf};
 /// Manages a disk-based thumbnail cache.
 pub struct ThumbnailCache {
     base_dir: PathBuf,
-    max_size_bytes: u64,
 }
 
 impl ThumbnailCache {
     /// Create a new cache at the given base directory.
-    pub fn new(base_dir: PathBuf, max_size_mb: u64) -> Self {
-        Self {
-            base_dir,
-            max_size_bytes: max_size_mb * 1024 * 1024,
-        }
+    pub fn new(base_dir: PathBuf) -> Self {
+        Self { base_dir }
     }
 
     /// Compute a cache key from file metadata and thumbnail size.
@@ -53,7 +49,7 @@ impl ThumbnailCache {
         let data = fs::read(&path)?;
 
         // Touch mtime for LRU tracking (best-effort)
-        let _ = filetime::set_file_mtime(&path, filetime::FileTime::now());
+        let _ = touch_mtime(&path);
 
         Ok(Some(data))
     }
@@ -96,14 +92,14 @@ impl ThumbnailCache {
         Ok(count)
     }
 
-    /// Evict oldest entries until the cache is under `max_size_bytes`.
-    pub fn evict_to_limit(&self) -> Result<u64, std::io::Error> {
-        if !self.base_dir.exists() || self.max_size_bytes == 0 {
+    /// Evict oldest entries until the cache is under `max_bytes`.
+    pub fn evict_to_limit(&self, max_bytes: u64) -> Result<u64, std::io::Error> {
+        if !self.base_dir.exists() || max_bytes == 0 {
             return Ok(0);
         }
 
         let current = self.total_size()?;
-        if current <= self.max_size_bytes {
+        if current <= max_bytes {
             return Ok(0);
         }
 
@@ -120,7 +116,7 @@ impl ThumbnailCache {
         entries.sort_by_key(|(_, _, mtime)| *mtime);
 
         let mut freed = 0u64;
-        let target = current - self.max_size_bytes;
+        let target = current - max_bytes;
 
         for (path, size, _) in &entries {
             if freed >= target {
@@ -136,6 +132,13 @@ impl ThumbnailCache {
 
         Ok(freed)
     }
+}
+
+/// Touch file mtime to current time for LRU tracking.
+fn touch_mtime(path: &Path) -> Result<(), std::io::Error> {
+    let file = fs::OpenOptions::new().write(true).open(path)?;
+    let times = fs::FileTimes::new().set_modified(std::time::SystemTime::now());
+    file.set_times(times)
 }
 
 /// Recursively calculate directory size.
@@ -181,28 +184,4 @@ fn cleanup_empty_dirs(dir: &Path) -> Result<(), std::io::Error> {
         }
     }
     Ok(())
-}
-
-/// Minimal mtime manipulation without extra dependency.
-mod filetime {
-    use std::path::Path;
-    use std::time::SystemTime;
-
-    #[derive(Clone, Copy)]
-    pub struct FileTime(#[allow(dead_code)] SystemTime);
-
-    impl FileTime {
-        pub fn now() -> Self {
-            Self(SystemTime::now())
-        }
-    }
-
-    /// Best-effort touch of file mtime. Uses open+close on Windows
-    /// which updates the access time.
-    pub fn set_file_mtime(path: &Path, _time: FileTime) -> Result<(), std::io::Error> {
-        // Opening and closing the file is enough to update the access metadata
-        // on most file systems. For cache LRU purposes this is sufficient.
-        let _ = std::fs::OpenOptions::new().write(true).open(path)?;
-        Ok(())
-    }
 }

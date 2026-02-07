@@ -12,6 +12,7 @@ pub async fn get_cache_stats(state: State<'_, AppState>) -> AppResult<CacheStats
     let stats = state
         .thumbnail_service
         .cache_stats()
+        .await
         .map_err(|e| AppError::Thumbnail(e.to_string()))?;
 
     Ok(CacheStatsDto {
@@ -26,6 +27,7 @@ pub async fn clear_thumbnail_cache(state: State<'_, AppState>) -> AppResult<Cach
     let stats = state
         .thumbnail_service
         .clear_cache()
+        .await
         .map_err(|e| AppError::Thumbnail(e.to_string()))?;
 
     Ok(CacheStatsDto {

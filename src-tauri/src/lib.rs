@@ -60,7 +60,7 @@ pub fn run() {
             // Spawn background cache eviction on startup
             let thumb_service = app.state::<AppState>().thumbnail_service.clone();
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = thumb_service.evict_cache() {
+                if let Err(e) = thumb_service.evict_cache().await {
                     eprintln!("Background cache eviction failed: {}", e);
                 }
             });
