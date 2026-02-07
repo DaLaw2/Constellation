@@ -6,4 +6,5 @@
 pub mod entities;
 pub mod errors;
 pub mod repositories;
+pub mod search;
 pub mod value_objects;

@@ -42,6 +42,7 @@ impl TagValue {
     /// This bypasses validation and should ONLY be used in the repository layer
     /// as a fallback when recovering from corrupted database data.
     /// The caller must ensure the value is non-empty.
+    #[allow(dead_code)]
     pub(crate) fn new_unchecked(value: String) -> Self {
         Self { value }
     }
@@ -55,11 +56,13 @@ impl TagValue {
     }
 
     /// Returns the tag value as a string slice.
+    #[allow(dead_code)]
     pub fn as_str(&self) -> &str {
         &self.value
     }
 
     /// Consumes the TagValue and returns the inner string.
+    #[allow(dead_code)]
     pub fn into_string(self) -> String {
         self.value
     }

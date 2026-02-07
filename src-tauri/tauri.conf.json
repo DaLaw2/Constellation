@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Constellation",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "identifier": "dalaw2.club",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -19,7 +19,11 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' ipc: tauri:"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: asset: https://asset.localhost http://asset.localhost thumb: https://thumb.localhost http://thumb.localhost; media-src 'self' asset: https://asset.localhost http://asset.localhost; font-src 'self' data:; connect-src 'self' ipc: tauri:",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["**"]
+      }
     }
   },
   "bundle": {

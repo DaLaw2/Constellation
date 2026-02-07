@@ -5,6 +5,7 @@
 use crate::application::dto::{CreateItemDto, ItemDto, TagDto, UpdateItemDto};
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
+use std::collections::HashMap;
 use tauri::State;
 
 #[tauri::command]
@@ -112,6 +113,18 @@ pub async fn get_tags_for_item(item_id: i64, state: State<'_, AppState>) -> AppR
     state
         .item_service
         .get_tags(item_id)
+        .await
+        .map_err(|e| AppError::InvalidInput(e.to_string()))
+}
+
+#[tauri::command]
+pub async fn get_tags_for_items(
+    item_ids: Vec<i64>,
+    state: State<'_, AppState>,
+) -> AppResult<HashMap<i64, Vec<TagDto>>> {
+    state
+        .item_service
+        .get_tags_batch(item_ids)
         .await
         .map_err(|e| AppError::InvalidInput(e.to_string()))
 }

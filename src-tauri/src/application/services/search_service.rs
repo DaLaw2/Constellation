@@ -88,6 +88,15 @@ impl SearchService {
         Ok(results)
     }
 
+    /// Searches items using a CQL query string.
+    pub async fn search_cql(&self, query: &str) -> Result<Vec<ItemDto>, DomainError> {
+        let query = query.trim();
+        if query.is_empty() {
+            return Ok(Vec::new());
+        }
+        self.search_repo.search_cql(query).await
+    }
+
     /// Retrieves recent search history.
     pub async fn get_recent_history(
         &self,

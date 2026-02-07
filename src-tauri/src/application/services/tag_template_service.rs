@@ -38,6 +38,7 @@ impl TagTemplateService {
     }
 
     /// Gets a template by ID.
+    #[allow(dead_code)]
     pub async fn get_by_id(&self, id: i64) -> Result<Option<TagTemplateDto>, DomainError> {
         let template = self.template_repo.find_by_id(id).await?;
         Ok(template.map(Self::to_dto))

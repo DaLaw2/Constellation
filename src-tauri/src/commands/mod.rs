@@ -1,6 +1,9 @@
+pub mod file_monitor;
 pub mod filesystem;
 pub mod items;
 pub mod search;
+pub mod settings;
 pub mod tag_groups;
 pub mod tag_templates;
 pub mod tags;
+pub mod thumbnails;

@@ -80,6 +80,7 @@ pub struct CreateTagDto {
 #[derive(Debug, Clone, Deserialize)]
 pub struct UpdateTagDto {
     pub value: Option<String>,
+    pub group_id: Option<i64>,
 }
 
 /// DTO for TagTemplate data transfer.
@@ -128,4 +129,41 @@ pub struct SearchHistoryDto {
     pub id: i64,
     pub criteria: SearchCriteriaDto, // Reuse SearchCriteriaDto or define similar output structure
     pub last_used_at: i64,
+}
+
+/// DTO for thumbnail cache statistics.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CacheStatsDto {
+    pub total_size_bytes: u64,
+    pub file_count: u64,
+    pub max_size_bytes: u64,
+}
+
+/// DTO for a single item's refresh result.
+#[derive(Debug, Clone, Serialize)]
+pub struct RefreshedItemDto {
+    pub item_id: i64,
+    pub old_path: String,
+    pub new_path: Option<String>,
+    pub action: String, // "renamed" | "moved" | "deleted"
+}
+
+/// DTO for the overall refresh result.
+#[derive(Debug, Clone, Serialize, Default)]
+pub struct RefreshResultDto {
+    pub drives_scanned: Vec<String>,
+    pub items_updated: Vec<RefreshedItemDto>,
+    pub journal_stale: Vec<String>,
+    pub journal_inactive: Vec<String>,
+    pub first_time_drives: Vec<String>,
+    pub errors: Vec<String>,
+}
+
+/// DTO for per-drive USN Journal status.
+#[derive(Debug, Clone, Serialize)]
+pub struct DriveUsnStatusDto {
+    pub drive: String,
+    pub supported: bool,
+    pub last_usn: i64,
+    pub last_synced_at: i64,
 }

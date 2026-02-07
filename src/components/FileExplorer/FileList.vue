@@ -86,10 +86,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import { useFileExplorerStore } from '@/stores/fileExplorer'
 import { useAppStore } from '@/stores/app'
+import { useTagsStore } from '@/stores/tags'
 import { useFileContextMenu, useResizable, useLocalStorage } from '@/composables'
 import { fuzzyMatch } from '@/utils'
 import { LAYOUT, STORAGE_KEYS } from '@/constants'
@@ -100,7 +101,18 @@ import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 
 const fileExplorerStore = useFileExplorerStore()
 const appStore = useAppStore()
+const tagsStore = useTagsStore()
 const { showFileContextMenu } = useFileContextMenu()
+
+// Preload tag data on mount for better performance
+onMounted(() => {
+  if (tagsStore.tagGroups.length === 0) {
+    tagsStore.loadTagGroups()
+  }
+  if (tagsStore.tags.length === 0) {
+    tagsStore.loadTags()
+  }
+})
 
 const currentPath = computed(() => fileExplorerStore.currentPath)
 const files = computed(() => fileExplorerStore.currentFiles)

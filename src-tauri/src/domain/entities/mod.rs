@@ -5,12 +5,14 @@
 
 mod item;
 mod search_history;
+mod settings;
 mod tag;
 mod tag_group;
 mod tag_template;
 
 pub use item::Item;
 pub use search_history::{SearchCriteria, SearchHistory};
+pub use settings::SettingsDefaults;
 pub use tag::Tag;
 pub use tag_group::TagGroup;
 pub use tag_template::TagTemplate;

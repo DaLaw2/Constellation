@@ -11,3 +11,6 @@ export type DisplayMode = 'detail' | 'large-icons'
 
 /** Search mode for tag-based searches */
 export type SearchMode = 'and' | 'or'
+
+/** Search input mode: simple filter UI or CQL query language */
+export type SearchInputMode = 'simple' | 'cql'

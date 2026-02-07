@@ -5,17 +5,26 @@
     @dblclick="handleOpen"
     @contextmenu.prevent="handleContextMenu"
   >
-    <!-- Image files: Show thumbnail -->
-    <img 
-      v-if="isImage" 
-      :src="`file://${file.path}`" 
+    <!-- Media files (images/videos): Show thumbnail -->
+    <img
+      v-if="isMedia && !imageError"
+      :src="thumbUrl"
       :alt="file.name"
       loading="lazy"
       class="file-thumbnail"
       :style="{ height: `${thumbnailHeight}px` }"
       @error="handleImageError"
     />
-    
+
+    <!-- Media fallback on error -->
+    <div
+      v-else-if="isMedia && imageError"
+      class="file-icon"
+      :style="{ fontSize: `${iconSize}px`, height: `${iconHeight}px`, maxHeight: `${iconHeight}px` }"
+    >
+      {{ fileIcon }}
+    </div>
+
     <!-- Directories: Show folder icon -->
     <div 
       v-else-if="file.is_directory" 
@@ -55,9 +64,10 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, watch } from 'vue'
-import { getFileIcon, isImageFile } from '@/utils'
+import { getFileIcon, isImageFile, isVideoFile, getThumbnailUrl } from '@/utils'
 import { useItemsStore } from '@/stores/items'
 import { useTagsStore } from '@/stores/tags'
+import { useSettingsStore } from '@/stores/settings'
 import TagCell from '../TagManagement/TagCell.vue'
 import type { FileEntry, Tag } from '@/types'
 
@@ -77,13 +87,17 @@ const emit = defineEmits<{
 
 const itemsStore = useItemsStore()
 const tagsStore = useTagsStore()
+const settingsStore = useSettingsStore()
 
 const imageError = ref(false)
 const itemTags = ref<Tag[]>([])
 const itemId = ref<number | null>(null)
 
 const isImage = computed(() => !props.file.is_directory && isImageFile(props.file.name))
+const isVideo = computed(() => !props.file.is_directory && isVideoFile(props.file.name))
+const isMedia = computed(() => isImage.value || isVideo.value)
 const fileIcon = computed(() => getFileIcon(props.file.name))
+const thumbUrl = computed(() => getThumbnailUrl(props.file.path, settingsStore.settings.thumbnail_size))
 const tagGroups = computed(() => tagsStore.tagGroups)
 const allTags = computed(() => tagsStore.tags)
 

@@ -18,13 +18,12 @@
           </button>
         </div>
         <div class="image-count">
-          {{ currentImages.length }} {{ currentImages.length === 1 ? 'image' : 'images' }}
+          {{ currentImages.length }} {{ currentImages.length === 1 ? 'file' : 'files' }}
         </div>
       </div>
     </div>
 
     <PictureGrid />
-    <Lightbox />
   </div>
 </template>
 
@@ -32,7 +31,6 @@
 import { computed } from 'vue'
 import { usePictureViewStore } from '@/stores/pictureView'
 import PictureGrid from '@/components/PictureView/PictureGrid.vue'
-import Lightbox from '@/components/PictureView/Lightbox.vue'
 
 const pictureViewStore = usePictureViewStore()
 

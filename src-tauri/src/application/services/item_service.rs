@@ -7,6 +7,7 @@ use crate::domain::entities::Item;
 use crate::domain::errors::DomainError;
 use crate::domain::repositories::{ItemRepository, TagRepository};
 use crate::domain::value_objects::FilePath;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Service for item operations.
@@ -26,8 +27,16 @@ impl ItemService {
     /// Creates a new item.
     pub async fn create(&self, dto: CreateItemDto) -> Result<i64, DomainError> {
         let path = FilePath::new(&dto.path)?;
-        let mut item = Item::new(path, dto.is_directory, dto.size, dto.modified_time);
+        let frn = Self::get_frn(path.as_str());
+        let mut item = Item::new(path, dto.is_directory, dto.size, dto.modified_time, frn);
         self.item_repo.save(&mut item).await
+    }
+
+    /// Gets the NTFS File Reference Number for a path. Returns 0 on error.
+    fn get_frn(path: &str) -> u64 {
+        crate::infrastructure::usn_journal::get_file_reference_number(path)
+            .unwrap_or(None)
+            .unwrap_or(0)
     }
 
     /// Gets an item by ID.
@@ -89,6 +98,18 @@ impl ItemService {
     pub async fn get_tags(&self, item_id: i64) -> Result<Vec<TagDto>, DomainError> {
         let tags = self.tag_repo.find_by_item(item_id).await?;
         Ok(tags.into_iter().map(TagDto::from).collect())
+    }
+
+    /// Gets tags for multiple items at once (batch query to avoid N+1).
+    pub async fn get_tags_batch(
+        &self,
+        item_ids: Vec<i64>,
+    ) -> Result<HashMap<i64, Vec<TagDto>>, DomainError> {
+        let tags_map = self.tag_repo.find_by_items(&item_ids).await?;
+        Ok(tags_map
+            .into_iter()
+            .map(|(id, tags)| (id, tags.into_iter().map(TagDto::from).collect()))
+            .collect())
     }
 
     /// Replaces all tags for an item.

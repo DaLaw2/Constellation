@@ -2,9 +2,9 @@
   <div class="picture-grid-container">
     <div v-if="!hasImages" class="empty-state">
       <div class="empty-icon">🖼️</div>
-      <div class="empty-title">No Images Found</div>
+      <div class="empty-title">No Media Found</div>
       <div class="empty-description">
-        This directory doesn't contain any image files.
+        This directory doesn't contain any image or video files.
       </div>
     </div>
 
@@ -22,9 +22,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { usePictureViewStore } from '@/stores/pictureView'
+import { useLightboxStore } from '@/stores/lightbox'
 import PictureCard from './PictureCard.vue'
 
 const pictureViewStore = usePictureViewStore()
+const lightboxStore = useLightboxStore()
 
 const currentImages = computed(() => pictureViewStore.currentImages)
 const hasImages = computed(() => pictureViewStore.hasImages)
@@ -43,7 +45,7 @@ function getCardSize(): number {
 }
 
 function handleCardClick(index: number) {
-  pictureViewStore.openLightbox(index)
+  lightboxStore.open(currentImages.value, index)
 }
 </script>
 

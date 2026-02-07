@@ -26,14 +26,19 @@ impl SqliteItemRepository {
         // Use safe fallback for corrupted database data
         let path = FilePath::new(path_str).unwrap_or_else(|_| FilePath::invalid());
 
+        // file_reference_number is stored as nullable i64 in SQLite, convert to u64 (0 = none)
+        let frn: Option<i64> = row.get(5)?;
+        let frn = frn.map(|v| v as u64).unwrap_or(0);
+
         Ok(Item::reconstitute(
             row.get(0)?,
             path,
             row.get(2)?,
             row.get(3)?,
             row.get(4)?,
-            row.get(5)?,
+            frn,
             row.get(6)?,
+            row.get(7)?,
         ))
     }
 }
@@ -47,12 +52,13 @@ impl ItemRepository for SqliteItemRepository {
         let is_directory = item.is_directory();
         let size = item.size();
         let modified_time = item.modified_time();
+        let frn = item.file_reference_number() as i64;
 
         let id = conn
             .interact(move |conn: &mut Connection| {
                 conn.execute(
-                    "INSERT INTO items (path, is_directory, size, modified_time) VALUES (?1, ?2, ?3, ?4)",
-                    (&path, &is_directory, &size, &modified_time),
+                    "INSERT INTO items (path, is_directory, size, modified_time, file_reference_number) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    (&path, &is_directory, &size, &modified_time, frn),
                 )?;
                 Ok::<i64, rusqlite::Error>(conn.last_insert_rowid())
             })
@@ -70,7 +76,7 @@ impl ItemRepository for SqliteItemRepository {
         conn.interact(move |conn: &mut Connection| {
             let result = conn
                 .query_row(
-                    "SELECT id, path, is_directory, size, modified_time, created_at, updated_at
+                    "SELECT id, path, is_directory, size, modified_time, file_reference_number, created_at, updated_at
                      FROM items WHERE id = ?1",
                     [id],
                     Self::map_row_to_item,
@@ -90,7 +96,7 @@ impl ItemRepository for SqliteItemRepository {
         conn.interact(move |conn: &mut Connection| {
             let result = conn
                 .query_row(
-                    "SELECT id, path, is_directory, size, modified_time, created_at, updated_at
+                    "SELECT id, path, is_directory, size, modified_time, file_reference_number, created_at, updated_at
                      FROM items WHERE path = ?1",
                     [&path],
                     Self::map_row_to_item,
@@ -113,6 +119,7 @@ impl ItemRepository for SqliteItemRepository {
         let path = item.path().to_string();
         let size = item.size();
         let modified_time = item.modified_time();
+        let frn = item.file_reference_number() as i64;
 
         conn.interact(move |conn: &mut Connection| {
             conn.execute("BEGIN IMMEDIATE", [])?;
@@ -129,8 +136,8 @@ impl ItemRepository for SqliteItemRepository {
                 }
 
                 conn.execute(
-                    "UPDATE items SET path = ?1, size = ?2, modified_time = ?3, updated_at = unixepoch() WHERE id = ?4",
-                    (&path, &size, &modified_time, id),
+                    "UPDATE items SET path = ?1, size = ?2, modified_time = ?3, file_reference_number = ?4, updated_at = unixepoch() WHERE id = ?5",
+                    (&path, &size, &modified_time, frn, id),
                 )?;
 
                 Ok::<(), rusqlite::Error>(())
@@ -255,6 +262,26 @@ impl ItemRepository for SqliteItemRepository {
                     Err(e)
                 }
             }
+        })
+        .await
+        .map_err(map_interact_error)?
+        .map_err(map_db_error)
+    }
+
+    async fn find_active_by_path_prefix(&self, prefix: &str) -> Result<Vec<Item>, DomainError> {
+        let conn = self.pool.get().await.map_err(map_pool_error)?;
+        let pattern = format!("{}%", prefix);
+
+        conn.interact(move |conn: &mut Connection| {
+            let mut stmt = conn.prepare(
+                "SELECT id, path, is_directory, size, modified_time, file_reference_number,
+                        created_at, updated_at
+                 FROM items WHERE path LIKE ?1 AND is_deleted = 0",
+            )?;
+            let items = stmt
+                .query_map([&pattern], Self::map_row_to_item)?
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok::<Vec<Item>, rusqlite::Error>(items)
         })
         .await
         .map_err(map_interact_error)?

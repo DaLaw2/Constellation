@@ -4,12 +4,18 @@
 
 mod item_service;
 mod search_service;
+mod settings_service;
 mod tag_group_service;
 mod tag_service;
 mod tag_template_service;
+mod thumbnail_service;
+mod usn_refresh_service;
 
 pub use item_service::ItemService;
 pub use search_service::SearchService;
+pub use settings_service::SettingsService;
 pub use tag_group_service::TagGroupService;
 pub use tag_service::TagService;
 pub use tag_template_service::TagTemplateService;
+pub use thumbnail_service::ThumbnailService;
+pub use usn_refresh_service::UsnRefreshService;

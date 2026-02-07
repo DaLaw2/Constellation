@@ -2,8 +2,10 @@
 //!
 //! Specialized repository for search operations.
 
+use super::cql_executor::expr_to_sql;
 use crate::application::dto::{ItemDto, SearchMode};
 use crate::domain::errors::DomainError;
+use crate::domain::search::parse_cql;
 use deadpool_sqlite::Pool;
 use rusqlite::Connection;
 use std::sync::Arc;
@@ -44,7 +46,7 @@ impl SqliteSearchRepository {
                         i.created_at, i.updated_at
                  FROM items i
                  INNER JOIN item_tags it ON i.id = it.item_id
-                 WHERE it.tag_id IN ({})
+                 WHERE i.is_deleted = 0 AND it.tag_id IN ({})
                  GROUP BY i.id
                  HAVING COUNT(DISTINCT it.tag_id) = ?
                  ORDER BY i.path ASC",
@@ -86,7 +88,7 @@ impl SqliteSearchRepository {
                         i.created_at, i.updated_at
                  FROM items i
                  INNER JOIN item_tags it ON i.id = it.item_id
-                 WHERE it.tag_id IN ({})
+                 WHERE i.is_deleted = 0 AND it.tag_id IN ({})
                  ORDER BY i.path ASC",
                 placeholders_str
             );
@@ -122,7 +124,7 @@ impl SqliteSearchRepository {
                 "SELECT id, path, is_directory, size, modified_time,
                         created_at, updated_at
                  FROM items
-                 WHERE path LIKE ?1
+                 WHERE is_deleted = 0 AND path LIKE ?1
                  ORDER BY path ASC",
             )?;
 
@@ -166,7 +168,7 @@ impl SqliteSearchRepository {
                                 i.created_at, i.updated_at
                          FROM items i
                          INNER JOIN item_tags it ON i.id = it.item_id
-                         WHERE it.tag_id IN ({}) AND i.path LIKE ?
+                         WHERE i.is_deleted = 0 AND it.tag_id IN ({}) AND i.path LIKE ?
                          GROUP BY i.id
                          HAVING COUNT(DISTINCT it.tag_id) = ?
                          ORDER BY i.path ASC",
@@ -177,7 +179,7 @@ impl SqliteSearchRepository {
                                 i.created_at, i.updated_at
                          FROM items i
                          INNER JOIN item_tags it ON i.id = it.item_id
-                         WHERE it.tag_id IN ({}) AND i.path LIKE ?
+                         WHERE i.is_deleted = 0 AND it.tag_id IN ({}) AND i.path LIKE ?
                          ORDER BY i.path ASC",
                         placeholders_str
                     ),
@@ -192,7 +194,7 @@ impl SqliteSearchRepository {
                                 i.created_at, i.updated_at
                          FROM items i
                          INNER JOIN item_tags it ON i.id = it.item_id
-                         WHERE it.tag_id IN ({})
+                         WHERE i.is_deleted = 0 AND it.tag_id IN ({})
                          GROUP BY i.id
                          HAVING COUNT(DISTINCT it.tag_id) = ?
                          ORDER BY i.path ASC",
@@ -203,7 +205,7 @@ impl SqliteSearchRepository {
                                 i.created_at, i.updated_at
                          FROM items i
                          INNER JOIN item_tags it ON i.id = it.item_id
-                         WHERE it.tag_id IN ({})
+                         WHERE i.is_deleted = 0 AND it.tag_id IN ({})
                          ORDER BY i.path ASC",
                         placeholders_str
                     ),
@@ -212,7 +214,7 @@ impl SqliteSearchRepository {
                 "SELECT id, path, is_directory, size, modified_time,
                         created_at, updated_at
                  FROM items
-                 WHERE path LIKE ?
+                 WHERE is_deleted = 0 AND path LIKE ?
                  ORDER BY path ASC"
                     .to_string()
             };
@@ -237,6 +239,42 @@ impl SqliteSearchRepository {
 
             let params_refs: Vec<&dyn rusqlite::ToSql> =
                 params.iter().map(|p| p.as_ref()).collect();
+
+            let items = stmt
+                .query_map(params_refs.as_slice(), Self::map_row_to_item_dto)?
+                .collect::<Result<Vec<ItemDto>, _>>()?;
+
+            Ok::<Vec<ItemDto>, rusqlite::Error>(items)
+        })
+        .await
+        .map_err(map_interact_error)?
+        .map_err(map_db_error)
+    }
+
+    /// Searches items using a CQL query string.
+    pub async fn search_cql(&self, query: &str) -> Result<Vec<ItemDto>, DomainError> {
+        let expr = parse_cql(query).map_err(|e| DomainError::ValidationError(e.to_string()))?;
+        let fragment = expr_to_sql(&expr);
+
+        let conn = self.pool.get().await.map_err(map_pool_error)?;
+
+        conn.interact(move |conn: &mut Connection| {
+            let sql = format!(
+                "SELECT DISTINCT i.id, i.path, i.is_directory, i.size, i.modified_time, \
+                        i.created_at, i.updated_at \
+                 FROM items i \
+                 WHERE i.is_deleted = 0 AND ({}) \
+                 ORDER BY i.path ASC",
+                fragment.sql
+            );
+
+            let mut stmt = conn.prepare(&sql)?;
+
+            let params_refs: Vec<&dyn rusqlite::ToSql> = fragment
+                .params
+                .iter()
+                .map(|p| p as &dyn rusqlite::ToSql)
+                .collect();
 
             let items = stmt
                 .query_map(params_refs.as_slice(), Self::map_row_to_item_dto)?

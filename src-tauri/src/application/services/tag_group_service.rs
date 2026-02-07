@@ -41,6 +41,7 @@ impl TagGroupService {
     }
 
     /// Gets a tag group by ID.
+    #[allow(dead_code)]
     pub async fn get_by_id(&self, id: i64) -> Result<Option<TagGroupDto>, DomainError> {
         let group = self.repo.find_by_id(id).await?;
         Ok(group.map(Self::to_dto))

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useAppStore } from './app'
 import type { DriveInfo, FileEntry, FileMetadata } from '@/types'
@@ -135,52 +135,6 @@ export const useFileExplorerStore = defineStore('fileExplorer', () => {
     }
   }
 
-  // Lightbox State
-  const showLightbox = ref(false)
-  const lightboxIndex = ref(-1)
-
-  // Computed: Get all images from current files
-  const currentImages = computed(() => {
-    return currentFiles.value.filter(file => isImageFile(file.name))
-  })
-
-  const selectedImage = computed(() => {
-    if (lightboxIndex.value === -1 || !currentImages.value[lightboxIndex.value]) return null
-    return currentImages.value[lightboxIndex.value]
-  })
-
-  const canNavigatePrevImage = computed(() => lightboxIndex.value > 0)
-  const canNavigateNextImage = computed(() => lightboxIndex.value < currentImages.value.length - 1)
-
-  function isImageFile(filename: string): boolean {
-    const ext = filename.split('.').pop()?.toLowerCase()
-    return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'].includes(ext || '')
-  }
-
-  function openLightbox(index: number) {
-    if (index >= 0 && index < currentImages.value.length) {
-      lightboxIndex.value = index
-      showLightbox.value = true
-    }
-  }
-
-  function closeLightbox() {
-    showLightbox.value = false
-    lightboxIndex.value = -1
-  }
-
-  function navigatePrevImage() {
-    if (canNavigatePrevImage.value) {
-      lightboxIndex.value--
-    }
-  }
-
-  function navigateNextImage() {
-    if (canNavigateNextImage.value) {
-      lightboxIndex.value++
-    }
-  }
-
   return {
     currentPath,
     currentFiles,
@@ -189,11 +143,6 @@ export const useFileExplorerStore = defineStore('fileExplorer', () => {
     error,
     history,
     historyIndex,
-    // Lightbox
-    showLightbox,
-    selectedImage,
-    canNavigatePrevImage,
-    canNavigateNextImage,
     getDrives,
     readDirectory,
     getFileMetadata,
@@ -203,9 +152,5 @@ export const useFileExplorerStore = defineStore('fileExplorer', () => {
     navigateTo,
     goBack,
     goForward,
-    openLightbox,
-    closeLightbox,
-    navigatePrevImage,
-    navigateNextImage,
   }
 })

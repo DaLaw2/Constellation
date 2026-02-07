@@ -5,6 +5,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error, Clone)]
+#[allow(dead_code)]
 pub enum DomainError {
     #[error("Invalid file path: {0}")]
     InvalidFilePath(String),
@@ -35,4 +36,7 @@ pub enum DomainError {
 
     #[error("Database error: {0}")]
     DatabaseError(String),
+
+    #[error("USN Journal error: {0}")]
+    UsnJournalError(String),
 }
