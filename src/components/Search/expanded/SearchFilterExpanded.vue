@@ -143,7 +143,26 @@
     </div>
 
     <!-- Filter Area (Simple mode only) -->
-    <div v-if="searchStore.searchInputMode === 'simple'" class="filter-area">
+    <div v-if="searchStore.searchInputMode === 'simple'" class="filter-section">
+      <button class="filter-collapse-btn" @click="filterCollapsed = !filterCollapsed">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          :class="{ 'chevron-collapsed': filterCollapsed }"
+        >
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+        <span>{{ filterCollapsed ? 'Show Filters' : 'Hide Filters' }}</span>
+      </button>
+      <Transition name="collapse">
+        <div v-show="!filterCollapsed" class="filter-area">
       <div class="filter-column filter-tags">
         <TagGroupFilter
           :tag-groups="tagGroups"
@@ -161,6 +180,8 @@
           @update:filter="clientFilterFn = $event"
         />
       </div>
+        </div>
+      </Transition>
     </div>
 
     <!-- Results -->
@@ -193,6 +214,7 @@ const cqlInput = ref('')
 const showHistory = ref(false)
 const showCqlHelp = ref(false)
 const hasSearched = ref(false)
+const filterCollapsed = ref(false)
 const clientFilterFn = ref<((items: Item[]) => Item[]) | null>(null)
 
 const tagGroups = computed(() => tagsStore.tagGroups)
@@ -555,12 +577,68 @@ async function clearHistory() {
   cursor: not-allowed;
 }
 
+/* Filter Section */
+.filter-section {
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.filter-collapse-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 20px;
+  background: var(--background);
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: var(--transition-fast);
+}
+
+.filter-collapse-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--text-primary);
+}
+
+.filter-collapse-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.filter-collapse-btn .chevron-collapsed {
+  transform: rotate(-90deg);
+}
+
+/* Collapse Animation */
+.collapse-enter-active,
+.collapse-leave-active {
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.collapse-enter-from,
+.collapse-leave-to {
+  opacity: 0;
+  max-height: 0 !important;
+  min-height: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.collapse-enter-to,
+.collapse-leave-from {
+  opacity: 1;
+  max-height: 35vh;
+}
+
 /* Filter Area */
 .filter-area {
   display: flex;
   padding: 16px 20px 24px;
   gap: 0;
-  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
   min-height: 180px;
   max-height: 35vh;

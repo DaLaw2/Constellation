@@ -37,10 +37,11 @@
     </div>
     
     <div class="file-name" :style="{ fontSize: `${fontSize}px` }" :title="file.name">{{ file.name }}</div>
-    
+
     <!-- Tags section -->
-    <div 
-      class="tags-section" 
+    <div
+      v-if="showTags"
+      class="tags-section"
       :style="{ fontSize: `${Math.max(10, fontSize - 2)}px` }"
       @click.stop
     >
@@ -69,12 +70,14 @@ interface Props {
   zoomLevel?: number
   tags: Tag[]
   selected?: boolean
+  showTags?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   zoomLevel: 100,
   tags: () => [],
-  selected: false
+  selected: false,
+  showTags: true
 })
 
 const emit = defineEmits<{

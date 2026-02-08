@@ -5,7 +5,18 @@
       <button class="nav-btn" @click="navigateUp" :disabled="!canNavigateUp">
         ⬆️ Up
       </button>
-      <div class="current-path">{{ currentPath }}</div>
+      <div class="current-path" @click="startEditPath">
+        <input
+          v-if="isEditingPath"
+          ref="pathInputRef"
+          v-model="editingPath"
+          class="path-input"
+          @blur="finishEditPath"
+          @keyup.enter="finishEditPath"
+          @keyup.escape="cancelEditPath"
+        />
+        <span v-else class="path-text">{{ currentPath }}</span>
+      </div>
       <button class="refresh-btn" @click="refresh" title="Refresh">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21.5 2v6h-6"></path>
@@ -99,7 +110,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue'
+import { computed, ref, onMounted, watch, nextTick } from 'vue'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import { useFileExplorerStore } from '@/stores/fileExplorer'
 import { useAppStore } from '@/stores/app'
@@ -289,6 +300,42 @@ function refresh() {
   }
 }
 
+// Path editing
+const isEditingPath = ref(false)
+const editingPath = ref('')
+const pathInputRef = ref<HTMLInputElement | null>(null)
+
+function startEditPath() {
+  editingPath.value = currentPath.value
+  isEditingPath.value = true
+  nextTick(() => {
+    pathInputRef.value?.focus()
+    pathInputRef.value?.select()
+  })
+}
+
+async function finishEditPath() {
+  if (!isEditingPath.value) return
+  isEditingPath.value = false
+
+  const targetPath = editingPath.value.trim()
+  if (!targetPath || targetPath === currentPath.value) return
+
+  // Try to navigate to the entered path
+  try {
+    await fileExplorerStore.readDirectory(targetPath)
+    clearSelection()
+  } catch {
+    // Navigation failed - path doesn't exist or is inaccessible
+    // currentPath remains unchanged
+  }
+}
+
+function cancelEditPath() {
+  isEditingPath.value = false
+  editingPath.value = currentPath.value
+}
+
 function handleFileClick(entry: FileEntry, event: MouseEvent) {
   const index = filteredFiles.value.findIndex(f => f.path === entry.path)
 
@@ -381,11 +428,35 @@ function handleFileContextMenu(entry: FileEntry, event: MouseEvent) {
 .current-path {
   flex: 1;
   font-size: 13px;
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: var(--transition-fast);
+}
+
+.current-path:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.path-text {
+  display: block;
+  padding: 6px 8px;
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 0 8px;
+}
+
+.path-input {
+  width: 100%;
+  padding: 5px 8px;
+  font-size: 13px;
+  border: 1px solid var(--primary-color);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text-primary);
+  outline: none;
 }
 
 .file-scroller {
