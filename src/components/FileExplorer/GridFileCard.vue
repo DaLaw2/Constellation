@@ -85,7 +85,6 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   open: [file: FileEntry]
   contextmenu: [event: MouseEvent, file: FileEntry]
-  tagsUpdated: []
 }>()
 
 const itemsStore = useItemsStore()
@@ -129,8 +128,8 @@ async function handleTagsUpdate(tagIds: number[]) {
       }
     }
 
+    // Update tags (triggers itemTagsVersion increment for cache refresh)
     await itemsStore.updateItemTags(itemId.value!, tagIds)
-    emit('tagsUpdated')
   } catch (error) {
     console.error('Failed to update tags:', error)
   }

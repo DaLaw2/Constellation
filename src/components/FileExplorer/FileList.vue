@@ -68,7 +68,6 @@
         @double-click="handleFileDoubleClick"
         @context-menu="handleFileContextMenu"
         @resize-start="handleResizeStart"
-        @tags-updated="refreshTagsCache"
       />
     </RecycleScroller>
 
@@ -116,8 +115,13 @@ const { showFileContextMenu } = useFileContextMenu()
 // Cache for tags: path -> tags (used by detail view)
 const tagsCache = ref<Map<string, Tag[]>>(new Map())
 
+// Request counter to prevent race conditions
+let requestId = 0
+
 async function refreshTagsCache() {
+  const currentRequestId = ++requestId
   const fileList = files.value
+
   if (fileList.length === 0) {
     tagsCache.value = new Map()
     return
@@ -127,6 +131,9 @@ async function refreshTagsCache() {
 
   // Batch fetch items by paths
   const items = await itemsStore.getItemsByPaths(paths)
+
+  // Check if this request is still the latest
+  if (currentRequestId !== requestId) return
 
   if (items.length === 0) {
     tagsCache.value = new Map()
@@ -139,6 +146,9 @@ async function refreshTagsCache() {
   // Batch fetch tags for all items
   const itemIds = items.map(item => item.id)
   const tagsMap = await itemsStore.getTagsForItems(itemIds)
+
+  // Check if this request is still the latest
+  if (currentRequestId !== requestId) return
 
   // Build path -> tags cache
   const newCache = new Map<string, Tag[]>()
@@ -173,6 +183,9 @@ watch(files, refreshTagsCache, { immediate: true })
 
 // Refresh cache when item-tag associations change
 watch(() => tagsStore.itemTagsVersion, refreshTagsCache)
+
+// Refresh cache when tag metadata (name, color, group) changes
+watch(() => tagsStore.tags, refreshTagsCache, { deep: true })
 
 // Error dialog state
 const showErrorDialog = ref(false)

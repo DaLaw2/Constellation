@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useTagsStore } from '@/stores/tags'
 import { useItemsStore } from '@/stores/items'
 import TagCell from '../TagManagement/TagCell.vue'
@@ -26,14 +26,15 @@ const props = withDefaults(defineProps<FileItemTagsProps>(), {
   tags: () => []
 })
 
-const emit = defineEmits<{
-  tagsUpdated: []
-}>()
-
 const tagsStore = useTagsStore()
 const itemsStore = useItemsStore()
 
 const itemId = ref<number | null>(null)
+
+// Reset itemId when entry changes (important for RecycleScroller component reuse)
+watch(() => props.entry.path, () => {
+  itemId.value = null
+})
 
 const tagGroups = computed(() => tagsStore.tagGroups)
 const allTags = computed(() => tagsStore.tags)
@@ -57,9 +58,8 @@ async function handleTagsUpdate(tagIds: number[]) {
       }
     }
 
-    // Update tags
+    // Update tags (triggers itemTagsVersion increment for cache refresh)
     await itemsStore.updateItemTags(itemId.value, tagIds)
-    emit('tagsUpdated')
   } catch (e) {
     console.error('Failed to update tags:', e)
   }
@@ -85,10 +85,9 @@ async function handleCreateTag(groupId: number, value: string) {
       }
     }
 
-    // Add the new tag
+    // Add the new tag (triggers itemTagsVersion increment for cache refresh)
     const currentIds = props.tags.map(t => t.id)
     await itemsStore.updateItemTags(itemId.value, [...currentIds, newTagId])
-    emit('tagsUpdated')
   } catch (e) {
     console.error('Failed to create tag:', e)
   }

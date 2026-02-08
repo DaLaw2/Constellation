@@ -12,7 +12,6 @@
       :tags="getTagsForFile(file.path)"
       @open="handleOpen"
       @contextmenu="handleContextMenu"
-      @tags-updated="refreshTagsCache"
     />
   </div>
 </template>
@@ -36,8 +35,13 @@ const tagsStore = useTagsStore()
 // Cache for tags: path -> tags
 const tagsCache = ref<Map<string, Tag[]>>(new Map())
 
+// Request counter to prevent race conditions
+let requestId = 0
+
 async function refreshTagsCache() {
+  const currentRequestId = ++requestId
   const files = props.files
+
   if (files.length === 0) {
     tagsCache.value = new Map()
     return
@@ -47,6 +51,9 @@ async function refreshTagsCache() {
 
   // Batch fetch items by paths
   const items = await itemsStore.getItemsByPaths(paths)
+
+  // Check if this request is still the latest
+  if (currentRequestId !== requestId) return
 
   if (items.length === 0) {
     tagsCache.value = new Map()
@@ -59,6 +66,9 @@ async function refreshTagsCache() {
   // Batch fetch tags for all items
   const itemIds = items.map(item => item.id)
   const tagsMap = await itemsStore.getTagsForItems(itemIds)
+
+  // Check if this request is still the latest
+  if (currentRequestId !== requestId) return
 
   // Build path -> tags cache
   const newCache = new Map<string, Tag[]>()
@@ -73,6 +83,9 @@ watch(() => props.files, refreshTagsCache, { immediate: true })
 
 // Refresh cache when item-tag associations change
 watch(() => tagsStore.itemTagsVersion, refreshTagsCache)
+
+// Refresh cache when tag metadata (name, color, group) changes
+watch(() => tagsStore.tags, refreshTagsCache, { deep: true })
 
 function getTagsForFile(path: string): Tag[] {
   return tagsCache.value.get(path) || []

@@ -338,34 +338,39 @@ impl TagRepository for SqliteTagRepository {
         let ids = item_ids.to_vec();
 
         conn.interact(move |conn: &mut Connection| {
-            let placeholders: Vec<String> = ids.iter().map(|_| "?".to_string()).collect();
-            let sql = format!(
-                "SELECT it.item_id, t.id, t.group_id, t.value, t.created_at, t.updated_at
-                 FROM item_tags it
-                 INNER JOIN tags t ON t.id = it.tag_id
-                 WHERE it.item_id IN ({})
-                 ORDER BY it.item_id, t.value ASC",
-                placeholders.join(", ")
-            );
-
-            let mut stmt = conn.prepare(&sql)?;
-            let params: Vec<Box<dyn rusqlite::ToSql>> = ids
-                .iter()
-                .map(|id| Box::new(*id) as Box<dyn rusqlite::ToSql>)
-                .collect();
-            let params_refs: Vec<&dyn rusqlite::ToSql> =
-                params.iter().map(|p| p.as_ref()).collect();
-
             let mut map: HashMap<i64, Vec<Tag>> = HashMap::new();
-            let mut rows = stmt.query(params_refs.as_slice())?;
-            while let Some(row) = rows.next()? {
-                let item_id: i64 = row.get(0)?;
-                let value_str: String = row.get(3)?;
-                let value = crate::domain::value_objects::TagValue::new(value_str)
-                    .unwrap_or_else(|_| crate::domain::value_objects::TagValue::invalid());
-                let tag =
-                    Tag::reconstitute(row.get(1)?, row.get(2)?, value, row.get(4)?, row.get(5)?);
-                map.entry(item_id).or_default().push(tag);
+
+            // SQLite has a limit of ~999 bound parameters, chunk to stay safe
+            const CHUNK_SIZE: usize = 500;
+            for chunk in ids.chunks(CHUNK_SIZE) {
+                let placeholders: Vec<String> = chunk.iter().map(|_| "?".to_string()).collect();
+                let sql = format!(
+                    "SELECT it.item_id, t.id, t.group_id, t.value, t.created_at, t.updated_at
+                     FROM item_tags it
+                     INNER JOIN tags t ON t.id = it.tag_id
+                     WHERE it.item_id IN ({})
+                     ORDER BY it.item_id, t.value ASC",
+                    placeholders.join(", ")
+                );
+
+                let mut stmt = conn.prepare(&sql)?;
+                let params: Vec<Box<dyn rusqlite::ToSql>> = chunk
+                    .iter()
+                    .map(|id| Box::new(*id) as Box<dyn rusqlite::ToSql>)
+                    .collect();
+                let params_refs: Vec<&dyn rusqlite::ToSql> =
+                    params.iter().map(|p| p.as_ref()).collect();
+
+                let mut rows = stmt.query(params_refs.as_slice())?;
+                while let Some(row) = rows.next()? {
+                    let item_id: i64 = row.get(0)?;
+                    let value_str: String = row.get(3)?;
+                    let value = crate::domain::value_objects::TagValue::new(value_str)
+                        .unwrap_or_else(|_| crate::domain::value_objects::TagValue::invalid());
+                    let tag =
+                        Tag::reconstitute(row.get(1)?, row.get(2)?, value, row.get(4)?, row.get(5)?);
+                    map.entry(item_id).or_default().push(tag);
+                }
             }
 
             Ok::<HashMap<i64, Vec<Tag>>, rusqlite::Error>(map)

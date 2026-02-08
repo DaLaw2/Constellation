@@ -118,22 +118,30 @@ impl ItemRepository for SqliteItemRepository {
         let paths = paths.to_vec();
 
         conn.interact(move |conn: &mut Connection| {
-            let placeholders: Vec<&str> = paths.iter().map(|_| "?").collect();
-            let sql = format!(
-                "SELECT id, path, is_directory, size, modified_time, file_reference_number, created_at, updated_at
-                 FROM items WHERE path IN ({})",
-                placeholders.join(", ")
-            );
+            let mut all_items = Vec::new();
 
-            let mut stmt = conn.prepare(&sql)?;
-            let params: Vec<&dyn rusqlite::ToSql> =
-                paths.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
+            // SQLite has a limit of ~999 bound parameters, chunk to stay safe
+            const CHUNK_SIZE: usize = 500;
+            for chunk in paths.chunks(CHUNK_SIZE) {
+                let placeholders: Vec<&str> = chunk.iter().map(|_| "?").collect();
+                let sql = format!(
+                    "SELECT id, path, is_directory, size, modified_time, file_reference_number, created_at, updated_at
+                     FROM items WHERE path IN ({})",
+                    placeholders.join(", ")
+                );
 
-            let items = stmt
-                .query_map(params.as_slice(), Self::map_row_to_item)?
-                .collect::<Result<Vec<_>, _>>()?;
+                let mut stmt = conn.prepare(&sql)?;
+                let params: Vec<&dyn rusqlite::ToSql> =
+                    chunk.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
 
-            Ok::<Vec<Item>, rusqlite::Error>(items)
+                let items = stmt
+                    .query_map(params.as_slice(), Self::map_row_to_item)?
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                all_items.extend(items);
+            }
+
+            Ok::<Vec<Item>, rusqlite::Error>(all_items)
         })
         .await
         .map_err(map_interact_error)?

@@ -201,9 +201,9 @@ const usageCounts = computed(() => tagsStore.usageCounts)
 
 const canSearch = computed(() => {
   if (searchStore.searchInputMode === 'cql') {
-    // CQL must contain tag condition
+    // CQL must contain tag condition (use word boundary to avoid false positives like "stage")
     const query = cqlInput.value.trim().toLowerCase()
-    return query.length > 0 && query.includes('tag')
+    return query.length > 0 && /\btag\b/.test(query)
   }
   // Simple mode must have at least one tag selected
   return searchStore.selectedTagIds.length > 0

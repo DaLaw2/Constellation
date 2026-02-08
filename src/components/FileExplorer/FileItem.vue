@@ -40,7 +40,7 @@
     <div class="file-tags-container" :style="{ width: tagAreaWidth + 'px' }">
       <div class="resize-handle" @mousedown="startResize"></div>
       <div class="file-tags" @click.stop>
-        <FileItemTags :entry="entry" :tags="tags" @tags-updated="$emit('tagsUpdated')" />
+        <FileItemTags :entry="entry" :tags="tags" />
       </div>
     </div>
   </div>
@@ -69,7 +69,6 @@ const emit = defineEmits<{
   doubleClick: [entry: FileEntry]
   contextMenu: [entry: FileEntry, event: MouseEvent]
   resizeStart: [event: MouseEvent]
-  tagsUpdated: []
 }>()
 
 const isSelected = computed(() => props.selected)
