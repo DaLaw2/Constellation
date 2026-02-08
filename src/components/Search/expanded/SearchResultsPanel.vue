@@ -58,7 +58,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useFileExplorerStore } from '@/stores/fileExplorer'
-import { useAppStore } from '@/stores/app'
 import { getFileName, getParentPath } from '@/utils/path'
 import { formatBytes, formatDate } from '@/utils/format'
 import type { Item } from '@/types'
@@ -74,7 +73,6 @@ interface Props {
 const props = defineProps<Props>()
 
 const fileExplorerStore = useFileExplorerStore()
-const appStore = useAppStore()
 
 const sortBy = ref<'name' | 'date' | 'size'>('name')
 const sortOrder = ref<'asc' | 'desc'>('asc')
@@ -122,7 +120,7 @@ function toggleSortOrder() {
 function openItem(item: Item) {
   const dirPath = item.is_directory ? item.path : getParentPath(item.path)
   fileExplorerStore.navigateTo(dirPath)
-  appStore.setLeftPanelMode('file-browser')
+  // Don't change tab - user should stay on Search tab when clicking results
 }
 </script>
 

@@ -1,6 +1,6 @@
 <template>
-  <div 
-    class="grid-view" 
+  <div
+    class="grid-view"
     :style="gridStyle"
     @wheel.ctrl.prevent="handleZoom"
   >
@@ -9,6 +9,7 @@
       :key="file.path"
       :file="file"
       :zoom-level="zoomLevel"
+      :tags="getTagsForFile(file.path)"
       @open="handleOpen"
       @contextmenu="handleContextMenu"
     />
@@ -16,15 +17,79 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useItemsStore } from '@/stores/items'
+import { useTagsStore } from '@/stores/tags'
 import GridFileCard from './GridFileCard.vue'
-import type { FileEntry } from '@/types'
+import type { FileEntry, Tag } from '@/types'
 
 interface Props {
   files: FileEntry[]
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+
+const itemsStore = useItemsStore()
+const tagsStore = useTagsStore()
+
+// Cache for tags: path -> tags
+const tagsCache = ref<Map<string, Tag[]>>(new Map())
+
+// Request counter to prevent race conditions
+let requestId = 0
+
+async function refreshTagsCache() {
+  const currentRequestId = ++requestId
+  const files = props.files
+
+  if (files.length === 0) {
+    tagsCache.value = new Map()
+    return
+  }
+
+  const paths = files.map(f => f.path)
+
+  // Batch fetch items by paths
+  const items = await itemsStore.getItemsByPaths(paths)
+
+  // Check if this request is still the latest
+  if (currentRequestId !== requestId) return
+
+  if (items.length === 0) {
+    tagsCache.value = new Map()
+    return
+  }
+
+  // Create path -> item ID map
+  const pathToId = new Map(items.map(item => [item.path, item.id]))
+
+  // Batch fetch tags for all items
+  const itemIds = items.map(item => item.id)
+  const tagsMap = await itemsStore.getTagsForItems(itemIds)
+
+  // Check if this request is still the latest
+  if (currentRequestId !== requestId) return
+
+  // Build path -> tags cache
+  const newCache = new Map<string, Tag[]>()
+  for (const [path, itemId] of pathToId) {
+    newCache.set(path, tagsMap[itemId] || [])
+  }
+  tagsCache.value = newCache
+}
+
+// Batch load tags when files change
+watch(() => props.files, refreshTagsCache, { immediate: true })
+
+// Refresh cache when item-tag associations change
+watch(() => tagsStore.itemTagsVersion, refreshTagsCache)
+
+// Refresh cache when tag metadata (name, color, group) changes
+watch(() => tagsStore.tags, refreshTagsCache, { deep: true })
+
+function getTagsForFile(path: string): Tag[] {
+  return tagsCache.value.get(path) || []
+}
 
 const emit = defineEmits<{
   open: [file: FileEntry]

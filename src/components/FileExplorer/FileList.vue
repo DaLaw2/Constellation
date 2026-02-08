@@ -63,6 +63,7 @@
         :selected="selectedPath === item.path"
         :tag-area-width="tagAreaWidth"
         :highlight-query="appStore.searchQuery"
+        :tags="getTagsForFile(item.path)"
         @click="handleFileClick"
         @double-click="handleFileDoubleClick"
         @context-menu="handleFileContextMenu"
@@ -78,31 +79,88 @@
       @contextmenu="(event, file) => handleFileContextMenu(file, event)"
     />
 
-    <!-- Error state -->
-    <div v-if="error" class="error-toast">
-      {{ error }}
-    </div>
+    <!-- Error dialog -->
+    <AlertDialog
+      v-model="showErrorDialog"
+      title="Error"
+      :message="error || ''"
+      type="error"
+      @dismiss="clearError"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import { useFileExplorerStore } from '@/stores/fileExplorer'
 import { useAppStore } from '@/stores/app'
 import { useTagsStore } from '@/stores/tags'
+import { useItemsStore } from '@/stores/items'
 import { useFileContextMenu, useResizable, useLocalStorage } from '@/composables'
 import { fuzzyMatch } from '@/utils'
 import { LAYOUT, STORAGE_KEYS } from '@/constants'
+import { AlertDialog } from '@/components/base'
 import FileItem from './FileItem.vue'
 import GridView from './GridView.vue'
-import type { FileEntry } from '@/types'
+import type { FileEntry, Tag } from '@/types'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 
 const fileExplorerStore = useFileExplorerStore()
 const appStore = useAppStore()
 const tagsStore = useTagsStore()
+const itemsStore = useItemsStore()
 const { showFileContextMenu } = useFileContextMenu()
+
+// Cache for tags: path -> tags (used by detail view)
+const tagsCache = ref<Map<string, Tag[]>>(new Map())
+
+// Request counter to prevent race conditions
+let requestId = 0
+
+async function refreshTagsCache() {
+  const currentRequestId = ++requestId
+  const fileList = files.value
+
+  if (fileList.length === 0) {
+    tagsCache.value = new Map()
+    return
+  }
+
+  const paths = fileList.map(f => f.path)
+
+  // Batch fetch items by paths
+  const items = await itemsStore.getItemsByPaths(paths)
+
+  // Check if this request is still the latest
+  if (currentRequestId !== requestId) return
+
+  if (items.length === 0) {
+    tagsCache.value = new Map()
+    return
+  }
+
+  // Create path -> item ID map
+  const pathToId = new Map(items.map(item => [item.path, item.id]))
+
+  // Batch fetch tags for all items
+  const itemIds = items.map(item => item.id)
+  const tagsMap = await itemsStore.getTagsForItems(itemIds)
+
+  // Check if this request is still the latest
+  if (currentRequestId !== requestId) return
+
+  // Build path -> tags cache
+  const newCache = new Map<string, Tag[]>()
+  for (const [path, itemId] of pathToId) {
+    newCache.set(path, tagsMap[itemId] || [])
+  }
+  tagsCache.value = newCache
+}
+
+function getTagsForFile(path: string): Tag[] {
+  return tagsCache.value.get(path) || []
+}
 
 // Preload tag data on mount for better performance
 onMounted(() => {
@@ -119,6 +177,29 @@ const files = computed(() => fileExplorerStore.currentFiles)
 const loading = computed(() => fileExplorerStore.loading)
 const error = computed(() => fileExplorerStore.error)
 const displayMode = computed(() => appStore.displayMode)
+
+// Batch load tags when files change (for detail view)
+watch(files, refreshTagsCache, { immediate: true })
+
+// Refresh cache when item-tag associations change
+watch(() => tagsStore.itemTagsVersion, refreshTagsCache)
+
+// Refresh cache when tag metadata (name, color, group) changes
+watch(() => tagsStore.tags, refreshTagsCache, { deep: true })
+
+// Error dialog state
+const showErrorDialog = ref(false)
+
+// Show dialog when error occurs
+watch(error, (newError) => {
+  if (newError) {
+    showErrorDialog.value = true
+  }
+})
+
+function clearError() {
+  fileExplorerStore.clearError()
+}
 
 const filteredFiles = computed(() => {
   const query = appStore.searchQuery.trim()
@@ -292,17 +373,4 @@ function handleFileContextMenu(entry: FileEntry, event: MouseEvent) {
   max-width: 300px;
 }
 
-.error-toast {
-  position: absolute;
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 12px 24px;
-  background: #ef4444;
-  color: white;
-  border-radius: 6px;
-  font-size: 13px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  z-index: 100;
-}
 </style>

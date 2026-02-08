@@ -86,6 +86,7 @@ fn build_tag_comparison_sql(
             params.push(rusqlite::types::Value::Text(like_pattern));
             ("EXISTS", format!("t_{}.value LIKE ? ESCAPE '\\'", idx))
         }
+        // SAFETY: Parser semantic validation ensures only Eq/NotEq/Like reach here for tag field
         _ => unreachable!("Invalid operator for tag field"),
     };
 
@@ -147,6 +148,7 @@ fn build_name_sql(
             params.push(rusqlite::types::Value::Text(like_pattern));
             format!("{} LIKE ? ESCAPE '\\'", FILENAME_EXPR)
         }
+        // SAFETY: Parser semantic validation ensures only Eq/NotEq/Like reach here for name field
         _ => unreachable!("Invalid operator for name field"),
     }
 }
@@ -181,6 +183,7 @@ fn build_type_sql(
     let type_name = extract_string(value).to_lowercase();
 
     if type_name == "directory" {
+        // SAFETY: Parser semantic validation ensures only Eq/NotEq reach here for type field
         return match op {
             ComparisonOp::Eq => "i.is_directory = 1".to_string(),
             ComparisonOp::NotEq => "i.is_directory = 0".to_string(),
@@ -191,10 +194,11 @@ fn build_type_sql(
     let extensions = type_to_extensions(&type_name);
     if extensions.is_empty() {
         // Unknown type name — match nothing for =, everything for !=
+        // SAFETY: Parser semantic validation ensures only Eq/NotEq reach here for type field
         return match op {
             ComparisonOp::Eq => "0".to_string(),
             ComparisonOp::NotEq => "1".to_string(),
-            _ => unreachable!(),
+            _ => unreachable!("Invalid operator for type field"),
         };
     }
 
@@ -207,6 +211,7 @@ fn build_type_sql(
         .collect();
     let joined = conditions.join(" OR ");
 
+    // SAFETY: Parser semantic validation ensures only Eq/NotEq reach here for type field
     match op {
         ComparisonOp::Eq => format!("(i.is_directory = 0 AND ({}))", joined),
         ComparisonOp::NotEq => format!("(i.is_directory = 1 OR NOT ({}))", joined),
@@ -250,6 +255,7 @@ fn build_in_sql(
                 format!("({})", all_conditions.join(" OR "))
             }
         }
+        // SAFETY: Parser semantic validation ensures only Tag/Name/Type fields reach here for IN expr
         _ => unreachable!("IN not supported for this field"),
     }
 }
@@ -307,9 +313,13 @@ fn comparison_op_to_sql(op: ComparisonOp) -> &'static str {
         ComparisonOp::Lt => "<",
         ComparisonOp::Gte => ">=",
         ComparisonOp::Lte => "<=",
+        // SAFETY: LIKE is handled by dedicated SQL generation; this fn is never called for LIKE
         ComparisonOp::Like => unreachable!("LIKE handled separately"),
     }
 }
+
+// SAFETY: Parser constructs AST with correct value types per field; these extractors
+// are only called after semantic validation ensures value type matches field expectations.
 
 fn extract_string(value: &Value) -> String {
     match value {

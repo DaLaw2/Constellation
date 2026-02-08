@@ -197,6 +197,11 @@ function openContextMenu(event: MouseEvent, tag: Tag) {
     target: tag,
   }
 }
+
+// Expose clearSelection for parent to call after batch operations
+defineExpose({
+  clearSelection,
+})
 </script>
 
 <style scoped>

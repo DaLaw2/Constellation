@@ -18,6 +18,8 @@ pub enum CqlParseError {
     InvalidDate(String),
     /// Operator not supported for the given field
     InvalidOperator { field: String, op: String },
+    /// Internal parser error (grammar/AST mismatch - should never occur)
+    InternalError(String),
 }
 
 impl fmt::Display for CqlParseError {
@@ -36,6 +38,9 @@ impl fmt::Display for CqlParseError {
                     "Operator '{}' is not supported for field '{}'",
                     op, field
                 )
+            }
+            CqlParseError::InternalError(msg) => {
+                write!(f, "Internal parser error: {}", msg)
             }
         }
     }

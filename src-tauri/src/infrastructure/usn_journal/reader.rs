@@ -151,8 +151,7 @@ fn read_journal_batch(
     while offset + 6 <= returned {
         let record_length =
             u32::from_le_bytes(buffer[offset..offset + 4].try_into().unwrap()) as usize;
-        let major_version =
-            u16::from_le_bytes(buffer[offset + 4..offset + 6].try_into().unwrap());
+        let major_version = u16::from_le_bytes(buffer[offset + 4..offset + 6].try_into().unwrap());
 
         let is_v3 = major_version >= 3;
         let min_size: usize = if is_v3 { 76 } else { 64 };
@@ -198,8 +197,7 @@ fn read_journal_batch(
         };
 
         // Only keep records with reasons we care about
-        if reason
-            & (USN_REASON_FILE_CREATE | USN_REASON_RENAME_NEW_NAME | USN_REASON_FILE_DELETE)
+        if reason & (USN_REASON_FILE_CREATE | USN_REASON_RENAME_NEW_NAME | USN_REASON_FILE_DELETE)
             != 0
         {
             records.push(RawUsnRecord {

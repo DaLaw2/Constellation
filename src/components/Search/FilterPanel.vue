@@ -134,6 +134,9 @@
 
     <!-- Search Button -->
     <div class="search-actions">
+      <div v-if="!hasAnyCriteria" class="search-hint">
+        Select at least one tag to search
+      </div>
       <button
         class="btn btn-primary search-btn"
         @click="executeSearch"
@@ -204,7 +207,8 @@ const filteredTagGroups = computed(() => {
 })
 
 const hasAnyCriteria = computed(() => {
-  return searchStore.selectedTagIds.length > 0 || filenameInput.value.trim().length > 0
+  // Must have at least one tag selected to search (filename-only search not supported)
+  return searchStore.selectedTagIds.length > 0
 })
 
 onMounted(async () => {
@@ -292,7 +296,7 @@ function openItem(item: Item) {
   // Navigate to the item's directory in file browser
   const dirPath = item.is_directory ? item.path : getParentPath(item.path)
   fileExplorerStore.navigateTo(dirPath)
-  appStore.setLeftPanelMode('file-browser')
+  // Don't change mode - user should stay on current panel when clicking results
 }
 </script>
 
@@ -611,6 +615,14 @@ function openItem(item: Item) {
   width: 100%;
   padding: 10px;
   font-size: 13px;
+}
+
+.search-hint {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 8px;
+  font-style: italic;
 }
 
 .results-summary {

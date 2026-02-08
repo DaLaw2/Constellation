@@ -52,13 +52,26 @@ export const useItemsStore = defineStore('items', () => {
     }
   }
 
+  async function getItemsByPaths(paths: string[]) {
+    try {
+      const items = await invoke<Item[]>('get_items_by_paths', { paths })
+      return items
+    } catch (e) {
+      error.value = e as string
+      console.error('Failed to get items by paths:', e)
+      throw e
+    }
+  }
+
   async function addTagToItem(itemId: number, tagId: number) {
     try {
       await invoke('add_tag_to_item', {
         itemId,
         tagId,
       })
-      await useTagsStore().loadUsageCounts()
+      const tagsStore = useTagsStore()
+      await tagsStore.loadUsageCounts()
+      tagsStore.itemTagsVersion++
     } catch (e) {
       error.value = e as string
       console.error('Failed to add tag to item:', e)
@@ -72,7 +85,9 @@ export const useItemsStore = defineStore('items', () => {
         itemId,
         tagId,
       })
-      await useTagsStore().loadUsageCounts()
+      const tagsStore = useTagsStore()
+      await tagsStore.loadUsageCounts()
+      tagsStore.itemTagsVersion++
     } catch (e) {
       error.value = e as string
       console.error('Failed to remove tag from item:', e)
@@ -105,7 +120,9 @@ export const useItemsStore = defineStore('items', () => {
   async function updateItemTags(itemId: number, tagIds: number[]) {
     try {
       await invoke('update_item_tags', { itemId, tagIds })
-      await useTagsStore().loadUsageCounts()
+      const tagsStore = useTagsStore()
+      await tagsStore.loadUsageCounts()
+      tagsStore.itemTagsVersion++
     } catch (e) {
       error.value = e as string
       console.error('Failed to update item tags:', e)
@@ -120,6 +137,7 @@ export const useItemsStore = defineStore('items', () => {
     createItem,
     getItem,
     getItemByPath,
+    getItemsByPaths,
     addTagToItem,
     removeTagFromItem,
     getTagsForItem,

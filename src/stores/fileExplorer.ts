@@ -135,6 +135,10 @@ export const useFileExplorerStore = defineStore('fileExplorer', () => {
     }
   }
 
+  function clearError() {
+    error.value = null
+  }
+
   return {
     currentPath,
     currentFiles,
@@ -152,5 +156,6 @@ export const useFileExplorerStore = defineStore('fileExplorer', () => {
     navigateTo,
     goBack,
     goForward,
+    clearError,
   }
 })

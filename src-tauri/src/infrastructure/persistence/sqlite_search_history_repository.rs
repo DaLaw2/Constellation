@@ -35,10 +35,10 @@ impl SearchHistoryRepository for SqliteSearchHistoryRepository {
             // Matching: same search_mode AND same text_query AND same set of tags.
             // This is complex in SQL, so we can do a simplified check:
             // Find candidates by (text_query, search_mode), then verify tags in application or complex JOIN.
-            // 
+            //
             // Better approach (SQL):
             // SELECT id FROM search_histories WHERE text_query = ? AND search_mode = ?
-            
+
             let mode_str = match criteria.mode {
                 SearchMode::And => "AND",
                 SearchMode::Or => "OR",
@@ -134,7 +134,7 @@ impl SearchHistoryRepository for SqliteSearchHistoryRepository {
             // N+1 query is acceptable here for ensuring correct assembly and normally 'limit' is small (e.g. 10).
             for row in histories_iter {
                 let (id, text_query, mode, last_used_at) = row?;
-                
+
                 let mut tag_stmt = conn.prepare(
                     "SELECT tag_id FROM search_history_tags WHERE search_history_id = ? ORDER BY tag_id ASC"
                 )?;

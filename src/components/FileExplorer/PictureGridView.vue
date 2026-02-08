@@ -13,6 +13,7 @@
         v-for="(file, index) in imageFiles"
         :key="file.path"
         :file="file"
+        :tags="getTagsForFile(file.path)"
         @click="openLightbox(index)"
       />
     </div>
@@ -21,20 +22,70 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useFileExplorerStore } from '@/stores/fileExplorer'
 import { useLightboxStore } from '@/stores/lightbox'
+import { useItemsStore } from '@/stores/items'
+import { useTagsStore } from '@/stores/tags'
 import { isMediaFile } from '@/utils'
 import ImageCard from './ImageCard.vue'
+import type { Tag } from '@/types'
 
 const fileExplorerStore = useFileExplorerStore()
 const lightboxStore = useLightboxStore()
+const itemsStore = useItemsStore()
+const tagsStore = useTagsStore()
+
+// Cache for tags: path -> tags
+const tagsCache = ref<Map<string, Tag[]>>(new Map())
 
 const imageFiles = computed(() => {
   return fileExplorerStore.currentFiles.filter(file =>
     !file.is_directory && isMediaFile(file.name)
   )
 })
+
+async function refreshTagsCache() {
+  const files = imageFiles.value
+  if (files.length === 0) {
+    tagsCache.value = new Map()
+    return
+  }
+
+  const paths = files.map(f => f.path)
+
+  // Batch fetch items by paths
+  const items = await itemsStore.getItemsByPaths(paths)
+
+  if (items.length === 0) {
+    tagsCache.value = new Map()
+    return
+  }
+
+  // Create path -> item ID map
+  const pathToId = new Map(items.map(item => [item.path, item.id]))
+
+  // Batch fetch tags for all items
+  const itemIds = items.map(item => item.id)
+  const tagsMap = await itemsStore.getTagsForItems(itemIds)
+
+  // Build path -> tags cache
+  const newCache = new Map<string, Tag[]>()
+  for (const [path, itemId] of pathToId) {
+    newCache.set(path, tagsMap[itemId] || [])
+  }
+  tagsCache.value = newCache
+}
+
+// Batch load items and tags when imageFiles changes
+watch(imageFiles, refreshTagsCache, { immediate: true })
+
+// Refresh cache when item-tag associations change (e.g., tag deleted/merged)
+watch(() => tagsStore.itemTagsVersion, refreshTagsCache)
+
+function getTagsForFile(path: string): Tag[] {
+  return tagsCache.value.get(path) || []
+}
 
 function openLightbox(index: number) {
   lightboxStore.open(imageFiles.value, index)

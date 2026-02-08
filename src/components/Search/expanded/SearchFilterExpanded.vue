@@ -131,6 +131,7 @@
         class="btn btn-primary"
         @click="executeSearch"
         :disabled="!canSearch || searchStore.loading"
+        :title="searchHint"
       >
         {{ searchStore.loading ? 'Searching...' : 'Search' }}
       </button>
@@ -200,9 +201,20 @@ const usageCounts = computed(() => tagsStore.usageCounts)
 
 const canSearch = computed(() => {
   if (searchStore.searchInputMode === 'cql') {
-    return cqlInput.value.trim().length > 0
+    // CQL must contain tag condition (use word boundary to avoid false positives like "stage")
+    const query = cqlInput.value.trim().toLowerCase()
+    return query.length > 0 && /\btag\b/.test(query)
   }
-  return searchStore.selectedTagIds.length > 0 || filenameInput.value.trim().length > 0
+  // Simple mode must have at least one tag selected
+  return searchStore.selectedTagIds.length > 0
+})
+
+const searchHint = computed(() => {
+  if (canSearch.value) return ''
+  if (searchStore.searchInputMode === 'cql') {
+    return 'CQL query must include a tag condition'
+  }
+  return 'Select at least one tag to search'
 })
 
 const canClear = computed(() => {
@@ -566,7 +578,7 @@ async function clearHistory() {
 
 .filter-options {
   flex: 1;
-  padding-right: 0;
+  padding-right: 12px;
 }
 
 .filter-divider {

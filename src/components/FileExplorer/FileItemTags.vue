@@ -11,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useTagsStore } from '@/stores/tags'
 import { useItemsStore } from '@/stores/items'
 import TagCell from '../TagManagement/TagCell.vue'
@@ -19,59 +19,47 @@ import type { FileEntry, Tag } from '@/types'
 
 interface FileItemTagsProps {
   entry: FileEntry
+  tags?: Tag[]
 }
 
-const props = defineProps<FileItemTagsProps>()
+const props = withDefaults(defineProps<FileItemTagsProps>(), {
+  tags: () => []
+})
 
 const tagsStore = useTagsStore()
 const itemsStore = useItemsStore()
 
-const itemTags = ref<Tag[]>([])
 const itemId = ref<number | null>(null)
+
+// Reset itemId when entry changes (important for RecycleScroller component reuse)
+watch(() => props.entry.path, () => {
+  itemId.value = null
+})
 
 const tagGroups = computed(() => tagsStore.tagGroups)
 const allTags = computed(() => tagsStore.tags)
-
-// Load tags when entry changes
-watch(
-  () => props.entry.path,
-  async (newPath) => {
-    try {
-      const item = await itemsStore.getItemByPath(newPath)
-      if (item) {
-        itemId.value = item.id
-        const tags = await itemsStore.getTagsForItem(item.id)
-        itemTags.value = tags
-      } else {
-        itemId.value = null
-        itemTags.value = []
-      }
-    } catch (e) {
-      console.error('Failed to load item tags:', e)
-      itemTags.value = []
-    }
-  },
-  { immediate: true }
-)
+const itemTags = computed(() => props.tags)
 
 async function handleTagsUpdate(tagIds: number[]) {
   try {
-    // Create item if it doesn't exist
-    if (itemId.value === null) {
-      const newId = await itemsStore.createItem(
-        props.entry.path,
-        props.entry.is_directory,
-        props.entry.size,
-        props.entry.modified_time
-      )
-      itemId.value = newId
+    // Get or create item
+    if (!itemId.value) {
+      const item = await itemsStore.getItemByPath(props.entry.path)
+      if (item) {
+        itemId.value = item.id
+      } else {
+        const newId = await itemsStore.createItem(
+          props.entry.path,
+          props.entry.is_directory,
+          props.entry.size,
+          props.entry.modified_time
+        )
+        itemId.value = newId
+      }
     }
 
-    // Update tags
+    // Update tags (triggers itemTagsVersion increment for cache refresh)
     await itemsStore.updateItemTags(itemId.value, tagIds)
-    const tags = await itemsStore.getTagsForItem(itemId.value)
-    itemTags.value = tags
-    await tagsStore.loadUsageCounts()
   } catch (e) {
     console.error('Failed to update tags:', e)
   }
@@ -80,36 +68,30 @@ async function handleTagsUpdate(tagIds: number[]) {
 async function handleCreateTag(groupId: number, value: string) {
   try {
     const newTagId = await tagsStore.createTag(groupId, value)
-    if (itemId.value !== null) {
-      const currentIds = itemTags.value.map(t => t.id)
-      await itemsStore.updateItemTags(itemId.value, [...currentIds, newTagId])
-      const tags = await itemsStore.getTagsForItem(itemId.value)
-      itemTags.value = tags
-      await tagsStore.loadUsageCounts()
+
+    // Get or create item
+    if (!itemId.value) {
+      const item = await itemsStore.getItemByPath(props.entry.path)
+      if (item) {
+        itemId.value = item.id
+      } else {
+        const newId = await itemsStore.createItem(
+          props.entry.path,
+          props.entry.is_directory,
+          props.entry.size,
+          props.entry.modified_time
+        )
+        itemId.value = newId
+      }
     }
+
+    // Add the new tag (triggers itemTagsVersion increment for cache refresh)
+    const currentIds = props.tags.map(t => t.id)
+    await itemsStore.updateItemTags(itemId.value, [...currentIds, newTagId])
   } catch (e) {
     console.error('Failed to create tag:', e)
   }
 }
-
-// Sync itemTags when store tags change (tag deleted/renamed/group deleted)
-watch(() => tagsStore.tags, (storeTags) => {
-  if (itemTags.value.length === 0) return
-  const tagMap = new Map(storeTags.map(t => [t.id, t]))
-  itemTags.value = itemTags.value
-    .filter(t => tagMap.has(t.id))
-    .map(t => tagMap.get(t.id)!)
-})
-
-// Load tag groups and tags on mount
-onMounted(() => {
-  if (tagsStore.tagGroups.length === 0) {
-    tagsStore.loadTagGroups()
-  }
-  if (tagsStore.tags.length === 0) {
-    tagsStore.loadTags()
-  }
-})
 </script>
 
 <style scoped>

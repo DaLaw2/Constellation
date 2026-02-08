@@ -109,6 +109,45 @@ impl ItemRepository for SqliteItemRepository {
         .map_err(map_db_error)
     }
 
+    async fn find_by_paths(&self, paths: &[String]) -> Result<Vec<Item>, DomainError> {
+        if paths.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let conn = self.pool.get().await.map_err(map_pool_error)?;
+        let paths = paths.to_vec();
+
+        conn.interact(move |conn: &mut Connection| {
+            let mut all_items = Vec::new();
+
+            // SQLite has a limit of ~999 bound parameters, chunk to stay safe
+            const CHUNK_SIZE: usize = 500;
+            for chunk in paths.chunks(CHUNK_SIZE) {
+                let placeholders: Vec<&str> = chunk.iter().map(|_| "?").collect();
+                let sql = format!(
+                    "SELECT id, path, is_directory, size, modified_time, file_reference_number, created_at, updated_at
+                     FROM items WHERE path IN ({})",
+                    placeholders.join(", ")
+                );
+
+                let mut stmt = conn.prepare(&sql)?;
+                let params: Vec<&dyn rusqlite::ToSql> =
+                    chunk.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
+
+                let items = stmt
+                    .query_map(params.as_slice(), Self::map_row_to_item)?
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                all_items.extend(items);
+            }
+
+            Ok::<Vec<Item>, rusqlite::Error>(all_items)
+        })
+        .await
+        .map_err(map_interact_error)?
+        .map_err(map_db_error)
+    }
+
     async fn update(&self, item: &Item) -> Result<(), DomainError> {
         let id = item.id().ok_or_else(|| {
             DomainError::ValidationError("Cannot update item without ID".to_string())

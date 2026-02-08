@@ -227,6 +227,8 @@ label {
 
 .tag-input-container {
   position: relative;
+  min-height: 40px;
+  margin-bottom: 200px;
 }
 
 input[type='text'] {
@@ -267,6 +269,7 @@ input.input-error {
   max-height: 200px;
   overflow-y: auto;
   z-index: 1000;
+  padding-bottom: 5px;
 }
 
 .suggestions-header {
@@ -281,10 +284,14 @@ input.input-error {
 .suggestion-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
+  padding: 10px 12px;
   cursor: pointer;
   transition: var(--transition-fast);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
 }
 
 .suggestion-item:hover,
@@ -293,6 +300,7 @@ input.input-error {
 }
 
 .suggestion-value {
+  flex: 1;
   font-size: 14px;
   color: var(--text-primary);
 }
@@ -303,5 +311,7 @@ input.input-error {
   padding: 2px 8px;
   background: var(--surface);
   border-radius: 3px;
+  margin-left: 12px;
+  flex-shrink: 0;
 }
 </style>

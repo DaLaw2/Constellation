@@ -105,9 +105,7 @@ impl ThumbnailService {
     /// Run cache eviction (delete oldest entries until under size limit).
     pub async fn evict_cache(&self) -> Result<u64, ThumbnailError> {
         let max = self.cache_max_bytes().await;
-        self.cache
-            .evict_to_limit(max)
-            .map_err(ThumbnailError::Io)
+        self.cache.evict_to_limit(max).map_err(ThumbnailError::Io)
     }
 
     /// Check if force shell cache mode is enabled.

@@ -45,7 +45,7 @@
               <!-- Create new tag inline (only show when not searching or exact match not found) -->
               <div v-if="creatingInGroup === group.id" class="new-tag-input">
                 <input
-                  ref="newTagInputRef"
+                  :ref="setNewTagInputRef"
                   v-model="newTagValue"
                   type="text"
                   placeholder="New tag name..."
@@ -84,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, computed, onMounted } from 'vue'
+import { ref, nextTick, computed, onMounted, type ComponentPublicInstance } from 'vue'
 import type { Tag, TagGroup } from '@/types'
 
 interface Props {
@@ -103,10 +103,16 @@ const emit = defineEmits<{
 
 const creatingInGroup = ref<number | null>(null)
 const newTagValue = ref('')
-const newTagInputRef = ref<HTMLInputElement | null>(null)
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const isDuplicate = ref(false)
 const searchQuery = ref('')
+
+// Use a function ref for the new tag input since it's inside v-for
+function setNewTagInputRef(el: Element | ComponentPublicInstance | null) {
+  if (el instanceof HTMLInputElement) {
+    el.focus()
+  }
+}
 
 // Focus search on mount
 onMounted(() => {
@@ -159,9 +165,7 @@ function startCreate(groupId: number) {
   creatingInGroup.value = groupId
   newTagValue.value = ''
   isDuplicate.value = false
-  nextTick(() => {
-    newTagInputRef.value?.focus()
-  })
+  // Focus is handled by the function ref setNewTagInputRef
 }
 
 function cancelCreate() {
@@ -180,11 +184,7 @@ function createTag(groupId: number) {
 
   if (isDup) {
     isDuplicate.value = true
-    nextTick(() => {
-        // Shake animation could be added here if desired, 
-        // but for now the red border is the feedback
-        newTagInputRef.value?.focus()
-    })
+    // Input will be re-focused by setNewTagInputRef when component updates
     return
   }
 

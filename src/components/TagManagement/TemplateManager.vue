@@ -72,7 +72,10 @@
             v-model="dialogName"
             type="text"
             placeholder="e.g., Work Documents"
+            :class="{ 'input-error': dialogError }"
+            @input="dialogError = ''"
           />
+          <span v-if="dialogError" class="error-text">{{ dialogError }}</span>
         </div>
 
         <div class="form-group">
@@ -139,6 +142,7 @@ const showDialog = ref(false)
 const editingTemplate = ref<TagTemplate | null>(null)
 const dialogName = ref('')
 const dialogTagIds = ref<number[]>([])
+const dialogError = ref('')
 
 // Delete confirmation
 const showDeleteConfirm = ref(false)
@@ -207,6 +211,7 @@ function closeDialog() {
   editingTemplate.value = null
   dialogName.value = ''
   dialogTagIds.value = []
+  dialogError.value = ''
 }
 
 function toggleDialogTag(tagId: number) {
@@ -218,8 +223,23 @@ function toggleDialogTag(tagId: number) {
   }
 }
 
+function isDuplicateName(name: string): boolean {
+  const normalized = name.trim().toLowerCase()
+  return templates.value.some(t => {
+    // Skip the current template when editing
+    if (editingTemplate.value && t.id === editingTemplate.value.id) return false
+    return t.name.toLowerCase() === normalized
+  })
+}
+
 async function saveTemplate() {
   if (!dialogName.value.trim() || dialogTagIds.value.length === 0) return
+
+  // Check for duplicate name
+  if (isDuplicateName(dialogName.value)) {
+    dialogError.value = 'A template with this name already exists'
+    return
+  }
 
   try {
     if (editingTemplate.value) {
@@ -233,6 +253,7 @@ async function saveTemplate() {
     }
     closeDialog()
   } catch (e) {
+    dialogError.value = String(e)
     console.error('Failed to save template:', e)
   }
 }
@@ -409,6 +430,17 @@ async function confirmDelete() {
   border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 14px;
+}
+
+.form-group input.input-error {
+  border-color: #dc3545;
+}
+
+.error-text {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #dc3545;
 }
 
 .tag-selection {
