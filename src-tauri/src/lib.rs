@@ -112,6 +112,7 @@ pub fn run() {
             commands::items::create_item,
             commands::items::get_item,
             commands::items::get_item_by_path,
+            commands::items::get_items_by_paths,
             commands::items::update_item,
             commands::items::delete_item,
             commands::items::add_tag_to_item,

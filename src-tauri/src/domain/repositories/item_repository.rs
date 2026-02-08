@@ -18,6 +18,9 @@ pub trait ItemRepository: Send + Sync {
     /// Finds an item by its path.
     async fn find_by_path(&self, path: &str) -> Result<Option<Item>, DomainError>;
 
+    /// Finds multiple items by their paths (batch query).
+    async fn find_by_paths(&self, paths: &[String]) -> Result<Vec<Item>, DomainError>;
+
     /// Updates an existing item.
     async fn update(&self, item: &Item) -> Result<(), DomainError>;
 

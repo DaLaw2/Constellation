@@ -23,11 +23,14 @@ pub fn parse_cql(input: &str) -> Result<Expr, CqlParseError> {
     let pairs = CqlParser::parse(Rule::query, input)
         .map_err(|e| CqlParseError::SyntaxError(format_pest_error(e)))?;
 
-    let query_pair = pairs.into_iter().next().unwrap();
+    let query_pair = pairs
+        .into_iter()
+        .next()
+        .ok_or_else(|| CqlParseError::InternalError("Missing query pair".to_string()))?;
     let expr_pair = query_pair
         .into_inner()
         .find(|p| p.as_rule() == Rule::expression)
-        .unwrap();
+        .ok_or_else(|| CqlParseError::InternalError("Missing expression in query".to_string()))?;
 
     let expr = build_expression(expr_pair)?;
     validate_semantics(&expr)?;
@@ -68,7 +71,9 @@ fn format_pest_error(e: pest::error::Error<Rule>) -> String {
 /// Builds an expression AST from a pest expression pair (handles OR).
 fn build_expression(pair: pest::iterators::Pair<Rule>) -> Result<Expr, CqlParseError> {
     let mut inner = pair.into_inner();
-    let first = inner.next().unwrap();
+    let first = inner
+        .next()
+        .ok_or_else(|| CqlParseError::InternalError("Empty expression".to_string()))?;
     let mut left = build_and_expr(first)?;
 
     while let Some(next) = inner.next() {
@@ -82,7 +87,9 @@ fn build_expression(pair: pest::iterators::Pair<Rule>) -> Result<Expr, CqlParseE
 /// Builds an AND expression from a pest and_expr pair.
 fn build_and_expr(pair: pest::iterators::Pair<Rule>) -> Result<Expr, CqlParseError> {
     let mut inner = pair.into_inner();
-    let first = inner.next().unwrap();
+    let first = inner
+        .next()
+        .ok_or_else(|| CqlParseError::InternalError("Empty and_expr".to_string()))?;
     let mut left = build_unary_expr(first)?;
 
     while let Some(next) = inner.next() {
@@ -94,17 +101,27 @@ fn build_and_expr(pair: pest::iterators::Pair<Rule>) -> Result<Expr, CqlParseErr
 }
 
 /// Builds a unary (NOT or primary) expression.
+///
+/// Grammar: `unary_expr = { not_op ~ unary_expr | primary }`
+/// Since `not_op` is silent, we detect NOT by checking if the first child is unary_expr.
 fn build_unary_expr(pair: pest::iterators::Pair<Rule>) -> Result<Expr, CqlParseError> {
     let mut inner = pair.into_inner();
-    let first = inner.next().unwrap();
+    let first = inner
+        .next()
+        .ok_or_else(|| CqlParseError::InternalError("Empty unary_expr".to_string()))?;
 
     match first.as_rule() {
-        Rule::not_op => {
-            let operand = inner.next().unwrap();
-            let expr = build_unary_expr(operand)?;
+        // NOT was present: silent not_op consumed, nested unary_expr is the operand
+        Rule::unary_expr => {
+            let expr = build_unary_expr(first)?;
             Ok(Expr::Not(Box::new(expr)))
         }
-        _ => build_primary(first),
+        // No NOT: the child is a primary
+        Rule::primary => build_primary(first),
+        _ => Err(CqlParseError::InternalError(format!(
+            "Unexpected rule in unary_expr: {:?}",
+            first.as_rule()
+        ))),
     }
 }
 
@@ -112,7 +129,10 @@ fn build_unary_expr(pair: pest::iterators::Pair<Rule>) -> Result<Expr, CqlParseE
 fn build_primary(pair: pest::iterators::Pair<Rule>) -> Result<Expr, CqlParseError> {
     match pair.as_rule() {
         Rule::primary => {
-            let inner = pair.into_inner().next().unwrap();
+            let inner = pair
+                .into_inner()
+                .next()
+                .ok_or_else(|| CqlParseError::InternalError("Empty primary".to_string()))?;
             build_primary(inner)
         }
         Rule::expression => build_expression(pair),
@@ -129,15 +149,21 @@ fn build_primary(pair: pest::iterators::Pair<Rule>) -> Result<Expr, CqlParseErro
 fn build_comparison(pair: pest::iterators::Pair<Rule>) -> Result<Expr, CqlParseError> {
     let mut inner = pair.into_inner();
 
-    let field_pair = inner.next().unwrap();
+    let field_pair = inner
+        .next()
+        .ok_or_else(|| CqlParseError::InternalError("Missing field in comparison".to_string()))?;
     let field = parse_field(field_pair.as_str())?;
 
-    let op_pair = inner.next().unwrap();
+    let op_pair = inner.next().ok_or_else(|| {
+        CqlParseError::InternalError("Missing operator in comparison".to_string())
+    })?;
     let op_str = op_pair.as_str();
     let op = ComparisonOp::from_str(op_str)
         .ok_or_else(|| CqlParseError::SyntaxError(format!("Unknown operator: {}", op_str)))?;
 
-    let value_pair = inner.next().unwrap();
+    let value_pair = inner
+        .next()
+        .ok_or_else(|| CqlParseError::InternalError("Missing value in comparison".to_string()))?;
     let value = parse_value(value_pair, field)?;
 
     Ok(Expr::Comparison { field, op, value })
@@ -147,12 +173,16 @@ fn build_comparison(pair: pest::iterators::Pair<Rule>) -> Result<Expr, CqlParseE
 fn build_in_expr(pair: pest::iterators::Pair<Rule>) -> Result<Expr, CqlParseError> {
     let mut inner = pair.into_inner();
 
-    let field_pair = inner.next().unwrap();
+    let field_pair = inner
+        .next()
+        .ok_or_else(|| CqlParseError::InternalError("Missing field in IN expr".to_string()))?;
     let field = parse_field(field_pair.as_str())?;
 
     // Skip in_op if present as a named rule (it might be silent)
     // Next should be value_list
-    let value_list_pair = inner.next().unwrap();
+    let value_list_pair = inner
+        .next()
+        .ok_or_else(|| CqlParseError::InternalError("Missing value list in IN expr".to_string()))?;
 
     let values: Result<Vec<Value>, CqlParseError> = value_list_pair
         .into_inner()
@@ -172,11 +202,18 @@ fn parse_field(s: &str) -> Result<Field, CqlParseError> {
 
 /// Parses a value pair, using field context for type coercion.
 fn parse_value(pair: pest::iterators::Pair<Rule>, field: Field) -> Result<Value, CqlParseError> {
-    let inner = pair.into_inner().next().unwrap();
+    let inner = pair
+        .into_inner()
+        .next()
+        .ok_or_else(|| CqlParseError::InternalError("Empty value".to_string()))?;
 
     match inner.as_rule() {
         Rule::quoted_string => {
-            let raw = inner.into_inner().next().unwrap().as_str();
+            let raw = inner
+                .into_inner()
+                .next()
+                .ok_or_else(|| CqlParseError::InternalError("Empty quoted string".to_string()))?
+                .as_str();
             let unescaped = unescape_string(raw);
 
             // For modified field, try to parse as date

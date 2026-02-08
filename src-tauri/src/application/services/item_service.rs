@@ -53,6 +53,23 @@ impl ItemService {
         Ok(item.map(Self::to_dto))
     }
 
+    /// Gets multiple items by paths (batch query to avoid N+1).
+    pub async fn get_by_paths(&self, paths: Vec<String>) -> Result<Vec<ItemDto>, DomainError> {
+        if paths.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // Validate all paths first
+        let validated_paths: Result<Vec<String>, _> = paths
+            .iter()
+            .map(|p| FilePath::new(p).map(|fp| fp.as_str().to_string()))
+            .collect();
+        let validated_paths = validated_paths?;
+
+        let items = self.item_repo.find_by_paths(&validated_paths).await?;
+        Ok(items.into_iter().map(Self::to_dto).collect())
+    }
+
     /// Updates an item.
     pub async fn update(&self, id: i64, dto: UpdateItemDto) -> Result<(), DomainError> {
         let item = self

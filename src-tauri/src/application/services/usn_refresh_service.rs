@@ -314,9 +314,7 @@ impl UsnRefreshService {
             let create_frns: HashSet<u64> = ctx
                 .records
                 .iter()
-                .filter(|r| {
-                    r.reason & (USN_REASON_FILE_CREATE | USN_REASON_RENAME_NEW_NAME) != 0
-                })
+                .filter(|r| r.reason & (USN_REASON_FILE_CREATE | USN_REASON_RENAME_NEW_NAME) != 0)
                 .map(|r| r.file_reference_number)
                 .collect();
 
@@ -482,7 +480,6 @@ impl UsnRefreshService {
 
         Ok(results)
     }
-
 }
 
 /// Loads USN state (last_usn, journal_id) for a drive.

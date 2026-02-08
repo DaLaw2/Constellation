@@ -52,6 +52,17 @@ export const useItemsStore = defineStore('items', () => {
     }
   }
 
+  async function getItemsByPaths(paths: string[]) {
+    try {
+      const items = await invoke<Item[]>('get_items_by_paths', { paths })
+      return items
+    } catch (e) {
+      error.value = e as string
+      console.error('Failed to get items by paths:', e)
+      throw e
+    }
+  }
+
   async function addTagToItem(itemId: number, tagId: number) {
     try {
       await invoke('add_tag_to_item', {
@@ -120,6 +131,7 @@ export const useItemsStore = defineStore('items', () => {
     createItem,
     getItem,
     getItemByPath,
+    getItemsByPaths,
     addTagToItem,
     removeTagFromItem,
     getTagsForItem,

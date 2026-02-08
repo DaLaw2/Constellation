@@ -53,6 +53,18 @@ pub async fn get_item_by_path(
 }
 
 #[tauri::command]
+pub async fn get_items_by_paths(
+    paths: Vec<String>,
+    state: State<'_, AppState>,
+) -> AppResult<Vec<ItemDto>> {
+    state
+        .item_service
+        .get_by_paths(paths)
+        .await
+        .map_err(|e| AppError::InvalidInput(e.to_string()))
+}
+
+#[tauri::command]
 pub async fn update_item(
     id: i64,
     path: Option<String>,

@@ -13,17 +13,17 @@
     </div>
     <div class="card-overlay">
       <div class="file-name">{{ file.name }}</div>
-      <div v-if="itemTags.length > 0" class="tag-badges">
-        <span 
-          v-for="tag in itemTags.slice(0, 3)" 
-          :key="tag.id" 
+      <div v-if="tags.length > 0" class="tag-badges">
+        <span
+          v-for="tag in tags.slice(0, 3)"
+          :key="tag.id"
           class="tag-badge"
           :style="{ backgroundColor: getTagGroupColor(tag.group_id) }"
         >
           {{ tag.value }}
         </span>
-        <span v-if="itemTags.length > 3" class="tag-more">
-          +{{ itemTags.length - 3 }}
+        <span v-if="tags.length > 3" class="tag-more">
+          +{{ tags.length - 3 }}
         </span>
       </div>
     </div>
@@ -31,15 +31,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { getThumbnailUrl, getFileIcon } from '@/utils'
-import { useItemsStore } from '@/stores/items'
 import { useTagsStore } from '@/stores/tags'
 import { useSettingsStore } from '@/stores/settings'
 import type { FileEntry, Tag } from '@/types'
 
 interface Props {
   file: FileEntry
+  tags: Tag[]
 }
 
 const props = defineProps<Props>()
@@ -47,21 +47,11 @@ defineEmits<{
   click: []
 }>()
 
-const itemsStore = useItemsStore()
 const tagsStore = useTagsStore()
 const settingsStore = useSettingsStore()
 
-const itemTags = ref<Tag[]>([])
 const imageError = ref(false)
 const thumbUrl = computed(() => getThumbnailUrl(props.file.path, settingsStore.settings.thumbnail_size))
-
-onMounted(async () => {
-  // Load tags for this image
-  const item = await itemsStore.getItemByPath(props.file.path)
-  if (item) {
-    itemTags.value = await itemsStore.getTagsForItem(item.id)
-  }
-})
 
 function getTagGroupColor(groupId: number): string {
   const group = tagsStore.tagGroups.find(g => g.id === groupId)
