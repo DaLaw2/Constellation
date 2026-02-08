@@ -167,3 +167,11 @@ pub struct DriveUsnStatusDto {
     pub last_usn: i64,
     pub last_synced_at: i64,
 }
+
+/// DTO for batch tag operation results.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct BatchTagResult {
+    pub success_count: usize,
+    pub failed_count: usize,
+    pub created_count: usize,
+}

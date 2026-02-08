@@ -120,6 +120,9 @@ pub fn run() {
             commands::items::get_tags_for_item,
             commands::items::get_tags_for_items,
             commands::items::update_item_tags,
+            commands::items::batch_add_tag_to_items,
+            commands::items::batch_remove_tag_from_items,
+            commands::items::get_common_tags_for_paths,
             // Tag Template commands
             commands::tag_templates::create_tag_template,
             commands::tag_templates::get_tag_templates,

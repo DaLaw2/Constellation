@@ -1,7 +1,7 @@
 <template>
   <div
     :class="['file-item', { selected: isSelected, directory: entry.is_directory }]"
-    @click="handleClick"
+    @click="handleClick($event)"
     @dblclick="handleDoubleClick"
     @contextmenu.prevent="handleContextMenu"
   >
@@ -65,7 +65,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  click: [entry: FileEntry]
+  click: [entry: FileEntry, event: MouseEvent]
   doubleClick: [entry: FileEntry]
   contextMenu: [entry: FileEntry, event: MouseEvent]
   resizeStart: [event: MouseEvent]
@@ -78,8 +78,8 @@ const nameSegments = computed(() => {
   return getHighlightRanges(props.entry.name, props.highlightQuery)
 })
 
-function handleClick() {
-  emit('click', props.entry)
+function handleClick(event: MouseEvent) {
+  emit('click', props.entry, event)
 }
 
 function handleDoubleClick() {

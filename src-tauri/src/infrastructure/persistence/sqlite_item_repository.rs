@@ -307,6 +307,88 @@ impl ItemRepository for SqliteItemRepository {
         .map_err(map_db_error)
     }
 
+    async fn batch_add_tag(&self, item_ids: &[i64], tag_id: i64) -> Result<(), DomainError> {
+        if item_ids.is_empty() {
+            return Ok(());
+        }
+
+        let conn = self.pool.get().await.map_err(map_pool_error)?;
+        let item_ids = item_ids.to_vec();
+
+        conn.interact(move |conn: &mut Connection| {
+            conn.execute("BEGIN IMMEDIATE", [])?;
+
+            let result = (|| {
+                for item_id in &item_ids {
+                    conn.execute(
+                        "INSERT OR IGNORE INTO item_tags (item_id, tag_id) VALUES (?1, ?2)",
+                        (*item_id, tag_id),
+                    )?;
+                }
+                Ok::<(), rusqlite::Error>(())
+            })();
+
+            match result {
+                Ok(_) => {
+                    conn.execute("COMMIT", [])?;
+                    Ok(())
+                }
+                Err(e) => {
+                    conn.execute("ROLLBACK", [])?;
+                    Err(e)
+                }
+            }
+        })
+        .await
+        .map_err(map_interact_error)?
+        .map_err(map_db_error)
+    }
+
+    async fn batch_remove_tag(&self, item_ids: &[i64], tag_id: i64) -> Result<(), DomainError> {
+        if item_ids.is_empty() {
+            return Ok(());
+        }
+
+        let conn = self.pool.get().await.map_err(map_pool_error)?;
+        let item_ids = item_ids.to_vec();
+
+        conn.interact(move |conn: &mut Connection| {
+            conn.execute("BEGIN IMMEDIATE", [])?;
+
+            let result = (|| {
+                // Chunk for SQLite parameter limit safety
+                const CHUNK_SIZE: usize = 500;
+                for chunk in item_ids.chunks(CHUNK_SIZE) {
+                    let placeholders: Vec<&str> = chunk.iter().map(|_| "?").collect();
+                    let sql = format!(
+                        "DELETE FROM item_tags WHERE tag_id = ?1 AND item_id IN ({})",
+                        placeholders.join(", ")
+                    );
+
+                    let mut params: Vec<&dyn rusqlite::ToSql> = vec![&tag_id];
+                    params.extend(chunk.iter().map(|id| id as &dyn rusqlite::ToSql));
+
+                    conn.execute(&sql, params.as_slice())?;
+                }
+                Ok::<(), rusqlite::Error>(())
+            })();
+
+            match result {
+                Ok(_) => {
+                    conn.execute("COMMIT", [])?;
+                    Ok(())
+                }
+                Err(e) => {
+                    conn.execute("ROLLBACK", [])?;
+                    Err(e)
+                }
+            }
+        })
+        .await
+        .map_err(map_interact_error)?
+        .map_err(map_db_error)
+    }
+
     async fn find_active_by_path_prefix(&self, prefix: &str) -> Result<Vec<Item>, DomainError> {
         let conn = self.pool.get().await.map_err(map_pool_error)?;
         let pattern = format!("{}%", prefix);

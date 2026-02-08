@@ -2,7 +2,7 @@
 //!
 //! Orchestrates item-related operations.
 
-use crate::application::dto::{CreateItemDto, ItemDto, TagDto, UpdateItemDto};
+use crate::application::dto::{BatchTagResult, CreateItemDto, ItemDto, TagDto, UpdateItemDto};
 use crate::domain::entities::Item;
 use crate::domain::errors::DomainError;
 use crate::domain::repositories::{ItemRepository, TagRepository};
@@ -132,6 +132,163 @@ impl ItemService {
     /// Replaces all tags for an item.
     pub async fn update_tags(&self, item_id: i64, tag_ids: Vec<i64>) -> Result<(), DomainError> {
         self.item_repo.replace_tags(item_id, tag_ids).await
+    }
+
+    /// Batch adds a tag to multiple items by path.
+    /// Creates items in DB if they don't exist.
+    pub async fn batch_add_tag(
+        &self,
+        paths: Vec<String>,
+        tag_id: i64,
+    ) -> Result<BatchTagResult, DomainError> {
+        let mut result = BatchTagResult::default();
+
+        if paths.is_empty() {
+            return Ok(result);
+        }
+
+        // Validate and collect paths
+        let validated_paths: Vec<String> = paths
+            .iter()
+            .filter_map(|p| FilePath::new(p).ok().map(|fp| fp.as_str().to_string()))
+            .collect();
+
+        // Find existing items
+        let existing_items = self.item_repo.find_by_paths(&validated_paths).await?;
+        let existing_paths: std::collections::HashSet<String> = existing_items
+            .iter()
+            .map(|i| i.path().to_string())
+            .collect();
+
+        let mut item_ids: Vec<i64> = existing_items.iter().filter_map(|i| i.id()).collect();
+
+        // Create missing items
+        for path in &validated_paths {
+            if !existing_paths.contains(path) {
+                let metadata = std::fs::metadata(path).ok();
+                let is_directory = metadata.as_ref().map(|m| m.is_dir()).unwrap_or(false);
+                let size = metadata.as_ref().and_then(|m| m.len().try_into().ok());
+                let modified = metadata.as_ref().and_then(|m| {
+                    m.modified()
+                        .ok()?
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .ok()?
+                        .as_secs()
+                        .try_into()
+                        .ok()
+                });
+
+                let dto = CreateItemDto {
+                    path: path.clone(),
+                    is_directory,
+                    size,
+                    modified_time: modified,
+                };
+
+                if let Ok(id) = self.create(dto).await {
+                    item_ids.push(id);
+                    result.created_count += 1;
+                }
+            }
+        }
+
+        // Batch add tag
+        match self.item_repo.batch_add_tag(&item_ids, tag_id).await {
+            Ok(_) => result.success_count = item_ids.len(),
+            Err(e) => {
+                result.failed_count = item_ids.len();
+                return Err(e);
+            }
+        }
+
+        Ok(result)
+    }
+
+    /// Batch removes a tag from multiple items by path.
+    pub async fn batch_remove_tag(
+        &self,
+        paths: Vec<String>,
+        tag_id: i64,
+    ) -> Result<BatchTagResult, DomainError> {
+        let mut result = BatchTagResult::default();
+
+        if paths.is_empty() {
+            return Ok(result);
+        }
+
+        // Validate and collect paths
+        let validated_paths: Vec<String> = paths
+            .iter()
+            .filter_map(|p| FilePath::new(p).ok().map(|fp| fp.as_str().to_string()))
+            .collect();
+
+        // Find existing items
+        let existing_items = self.item_repo.find_by_paths(&validated_paths).await?;
+        let item_ids: Vec<i64> = existing_items.iter().filter_map(|i| i.id()).collect();
+
+        if item_ids.is_empty() {
+            return Ok(result);
+        }
+
+        // Batch remove tag
+        match self.item_repo.batch_remove_tag(&item_ids, tag_id).await {
+            Ok(_) => result.success_count = item_ids.len(),
+            Err(e) => {
+                result.failed_count = item_ids.len();
+                return Err(e);
+            }
+        }
+
+        Ok(result)
+    }
+
+    /// Gets tags common to all specified paths.
+    pub async fn get_common_tags(&self, paths: Vec<String>) -> Result<Vec<TagDto>, DomainError> {
+        if paths.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // Validate and collect paths
+        let validated_paths: Vec<String> = paths
+            .iter()
+            .filter_map(|p| FilePath::new(p).ok().map(|fp| fp.as_str().to_string()))
+            .collect();
+
+        // Find existing items
+        let existing_items = self.item_repo.find_by_paths(&validated_paths).await?;
+        if existing_items.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let item_ids: Vec<i64> = existing_items.iter().filter_map(|i| i.id()).collect();
+        let tags_map = self.tag_repo.find_by_items(&item_ids).await?;
+
+        // Find intersection of all tag sets
+        let mut common_tag_ids: Option<std::collections::HashSet<i64>> = None;
+
+        for (_item_id, tags) in &tags_map {
+            let tag_ids: std::collections::HashSet<i64> =
+                tags.iter().filter_map(|t| t.id()).collect();
+
+            common_tag_ids = match common_tag_ids {
+                None => Some(tag_ids),
+                Some(existing) => Some(existing.intersection(&tag_ids).cloned().collect()),
+            };
+        }
+
+        let common_ids = common_tag_ids.unwrap_or_default();
+
+        if common_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // Fetch full tag info for common tags
+        let all_tags = self.tag_repo.find_all().await?;
+        Ok(all_tags
+            .into_iter()
+            .filter(|t| t.id().map(|id| common_ids.contains(&id)).unwrap_or(false))
+            .map(TagDto::from)
+            .collect())
     }
 
     fn to_dto(item: Item) -> ItemDto {

@@ -367,8 +367,13 @@ impl TagRepository for SqliteTagRepository {
                     let value_str: String = row.get(3)?;
                     let value = crate::domain::value_objects::TagValue::new(value_str)
                         .unwrap_or_else(|_| crate::domain::value_objects::TagValue::invalid());
-                    let tag =
-                        Tag::reconstitute(row.get(1)?, row.get(2)?, value, row.get(4)?, row.get(5)?);
+                    let tag = Tag::reconstitute(
+                        row.get(1)?,
+                        row.get(2)?,
+                        value,
+                        row.get(4)?,
+                        row.get(5)?,
+                    );
                     map.entry(item_id).or_default().push(tag);
                 }
             }

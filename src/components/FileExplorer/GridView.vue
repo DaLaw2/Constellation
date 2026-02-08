@@ -3,6 +3,7 @@
     class="grid-view"
     :style="gridStyle"
     @wheel.ctrl.prevent="handleZoom"
+    @click.self="handleBackgroundClick"
   >
     <GridFileCard
       v-for="file in files"
@@ -10,8 +11,17 @@
       :file="file"
       :zoom-level="zoomLevel"
       :tags="getTagsForFile(file.path)"
+      :selected="selectedPaths.has(file.path)"
+      @click="handleFileClick"
       @open="handleOpen"
       @contextmenu="handleContextMenu"
+    />
+
+    <!-- Batch tag action bar -->
+    <BatchTagActionBar
+      :selected-paths="selectedPaths"
+      :selected-count="selectedCount"
+      @clear="clearSelection"
     />
   </div>
 </template>
@@ -21,6 +31,7 @@ import { ref, computed, watch } from 'vue'
 import { useItemsStore } from '@/stores/items'
 import { useTagsStore } from '@/stores/tags'
 import GridFileCard from './GridFileCard.vue'
+import BatchTagActionBar from './BatchTagActionBar.vue'
 import type { FileEntry, Tag } from '@/types'
 
 interface Props {
@@ -28,6 +39,72 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+// Multi-selection state
+const selectedPaths = ref<Set<string>>(new Set())
+const lastClickedIndex = ref<number | null>(null)
+const selectedCount = computed(() => selectedPaths.value.size)
+
+function toggleSelection(path: string) {
+  const newSet = new Set(selectedPaths.value)
+  if (newSet.has(path)) {
+    newSet.delete(path)
+  } else {
+    newSet.add(path)
+  }
+  selectedPaths.value = newSet
+}
+
+function selectRange(startIndex: number, endIndex: number, addToExisting: boolean = false) {
+  const start = Math.min(startIndex, endIndex)
+  const end = Math.max(startIndex, endIndex)
+  // If not adding to existing, start fresh
+  const newSet = addToExisting ? new Set(selectedPaths.value) : new Set<string>()
+
+  for (let i = start; i <= end; i++) {
+    if (props.files[i]) {
+      newSet.add(props.files[i].path)
+    }
+  }
+  selectedPaths.value = newSet
+}
+
+function clearSelection() {
+  selectedPaths.value = new Set()
+  lastClickedIndex.value = null
+}
+
+function handleFileClick(file: FileEntry, event: MouseEvent) {
+  const index = props.files.findIndex(f => f.path === file.path)
+
+  if (event.shiftKey && lastClickedIndex.value !== null) {
+    // Shift+Click: Range selection from anchor
+    // Ctrl+Shift: Add range to existing selection
+    selectRange(lastClickedIndex.value, index, event.ctrlKey || event.metaKey)
+    // Don't update lastClickedIndex - keep the anchor point
+    return
+  }
+
+  if (event.ctrlKey || event.metaKey) {
+    // Ctrl+Click: Toggle individual selection
+    toggleSelection(file.path)
+  } else {
+    // Regular click: Single selection (clear others)
+    selectedPaths.value = new Set([file.path])
+  }
+
+  // Update anchor point for Shift+Click
+  lastClickedIndex.value = index
+}
+
+function handleBackgroundClick() {
+  clearSelection()
+}
+
+// Clear selection when files change (navigation)
+watch(() => props.files, () => {
+  clearSelection()
+})
 
 const itemsStore = useItemsStore()
 const tagsStore = useTagsStore()
@@ -114,10 +191,15 @@ const gridStyle = computed(() => {
 })
 
 function handleOpen(file: FileEntry) {
+  clearSelection()
   emit('open', file)
 }
 
 function handleContextMenu(event: MouseEvent, file: FileEntry) {
+  // If right-clicked file is not in selection, select only it
+  if (!selectedPaths.value.has(file.path)) {
+    selectedPaths.value = new Set([file.path])
+  }
   emit('contextmenu', event, file)
 }
 

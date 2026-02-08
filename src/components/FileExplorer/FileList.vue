@@ -57,10 +57,11 @@
       :item-size="LAYOUT.FILE_ITEM_HEIGHT"
       key-field="path"
       v-slot="{ item }"
+      @click="handleScrollerClick"
     >
       <FileItem
         :entry="item"
-        :selected="selectedPath === item.path"
+        :selected="selectedPaths.has(item.path)"
         :tag-area-width="tagAreaWidth"
         :highlight-query="appStore.searchQuery"
         :tags="getTagsForFile(item.path)"
@@ -87,6 +88,13 @@
       type="error"
       @dismiss="clearError"
     />
+
+    <!-- Batch tag action bar -->
+    <BatchTagActionBar
+      :selected-paths="selectedPaths"
+      :selected-count="selectedCount"
+      @clear="clearSelection"
+    />
   </div>
 </template>
 
@@ -103,6 +111,7 @@ import { LAYOUT, STORAGE_KEYS } from '@/constants'
 import { AlertDialog } from '@/components/base'
 import FileItem from './FileItem.vue'
 import GridView from './GridView.vue'
+import BatchTagActionBar from './BatchTagActionBar.vue'
 import type { FileEntry, Tag } from '@/types'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 
@@ -208,8 +217,49 @@ const filteredFiles = computed(() => {
   return files.value.filter(file => fuzzyMatch(file.name, query))
 })
 
-// Local selection state
-const selectedPath = ref<string | null>(null)
+// Multi-selection state
+const selectedPaths = ref<Set<string>>(new Set())
+const lastClickedIndex = ref<number | null>(null)
+
+// Computed for selection
+const selectedCount = computed(() => selectedPaths.value.size)
+
+function toggleSelection(path: string) {
+  const newSet = new Set(selectedPaths.value)
+  if (newSet.has(path)) {
+    newSet.delete(path)
+  } else {
+    newSet.add(path)
+  }
+  selectedPaths.value = newSet
+}
+
+function selectRange(startIndex: number, endIndex: number, addToExisting: boolean = false) {
+  const start = Math.min(startIndex, endIndex)
+  const end = Math.max(startIndex, endIndex)
+  // If not adding to existing, start fresh
+  const newSet = addToExisting ? new Set(selectedPaths.value) : new Set<string>()
+
+  for (let i = start; i <= end; i++) {
+    if (filteredFiles.value[i]) {
+      newSet.add(filteredFiles.value[i].path)
+    }
+  }
+  selectedPaths.value = newSet
+}
+
+function clearSelection() {
+  selectedPaths.value = new Set()
+  lastClickedIndex.value = null
+}
+
+function handleScrollerClick(event: MouseEvent) {
+  // Only clear selection if clicking on empty area (not on a file item)
+  const target = event.target as HTMLElement
+  if (!target.closest('.file-item')) {
+    clearSelection()
+  }
+}
 
 // Shared tag area width for all file items with persistence
 const savedTagWidth = useLocalStorage<number>(STORAGE_KEYS.TAG_AREA_WIDTH, LAYOUT.DEFAULT_TAG_AREA_WIDTH)
@@ -229,31 +279,53 @@ const canNavigateUp = computed(() => {
 
 function navigateUp() {
   fileExplorerStore.navigateUp()
-  selectedPath.value = null
+  clearSelection()
 }
 
 function refresh() {
   if (currentPath.value) {
     fileExplorerStore.readDirectory(currentPath.value)
-    selectedPath.value = null
+    clearSelection()
   }
 }
 
-function handleFileClick(entry: FileEntry) {
-  selectedPath.value = entry.path
+function handleFileClick(entry: FileEntry, event: MouseEvent) {
+  const index = filteredFiles.value.findIndex(f => f.path === entry.path)
+
+  if (event.shiftKey && lastClickedIndex.value !== null) {
+    // Shift+Click: Range selection from anchor
+    // Ctrl+Shift: Add range to existing selection
+    selectRange(lastClickedIndex.value, index, event.ctrlKey || event.metaKey)
+    // Don't update lastClickedIndex - keep the anchor point
+    return
+  }
+
+  if (event.ctrlKey || event.metaKey) {
+    // Ctrl+Click: Toggle individual selection
+    toggleSelection(entry.path)
+  } else {
+    // Regular click: Single selection (clear others)
+    selectedPaths.value = new Set([entry.path])
+  }
+
+  // Update anchor point for Shift+Click
+  lastClickedIndex.value = index
 }
 
 function handleFileDoubleClick(entry: FileEntry) {
   if (entry.is_directory) {
     fileExplorerStore.navigateTo(entry.path)
-    selectedPath.value = null
+    clearSelection()
   } else {
     fileExplorerStore.openFileExternal(entry.path)
   }
 }
 
 function handleFileContextMenu(entry: FileEntry, event: MouseEvent) {
-  selectedPath.value = entry.path
+  // If right-clicked file is not in selection, select only it
+  if (!selectedPaths.value.has(entry.path)) {
+    selectedPaths.value = new Set([entry.path])
+  }
 
   showFileContextMenu({
     entry,
