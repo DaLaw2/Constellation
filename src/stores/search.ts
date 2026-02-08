@@ -17,7 +17,8 @@ export const useSearchStore = defineStore('search', () => {
   const cqlError = ref<string | null>(null)
 
   const hasSearchCriteria = computed(() => {
-    return selectedTagIds.value.length > 0 || filenameQuery.value.trim().length > 0
+    // Must have at least one tag selected to search
+    return selectedTagIds.value.length > 0
   })
 
   const resultCount = computed(() => results.value.length)

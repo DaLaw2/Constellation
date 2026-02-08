@@ -18,6 +18,7 @@
           <span class="checkbox-label">{{ ft.label }}</span>
         </label>
       </div>
+      <p class="filter-hint">Directories excluded when active</p>
     </div>
 
     <!-- Size Filter -->
@@ -40,7 +41,7 @@
           min="0"
         />
       </div>
-      <p class="filter-hint">Files only. Directories are excluded.</p>
+      <p class="filter-hint">Directories excluded when active</p>
     </div>
 
     <!-- Date Filter -->
@@ -150,8 +151,13 @@ function emitFilter() {
 
   const filterFn = (items: Item[]): Item[] => {
     return items.filter(item => {
+      // Exclude directories when File Types or Size filter is active
+      if (item.is_directory && (types.size > 0 || minBytes !== null || maxBytes !== null)) {
+        return false
+      }
+
       // File type filter
-      if (types.size > 0 && !item.is_directory) {
+      if (types.size > 0) {
         const ext = getExtension(item.path)
         const matchesType = [...types].some(type => {
           const extensions = FILE_TYPE_EXTENSIONS[type]
@@ -160,8 +166,8 @@ function emitFilter() {
         if (!matchesType) return false
       }
 
-      // Size filter (files only, directories pass through)
-      if (!item.is_directory && (minBytes !== null || maxBytes !== null)) {
+      // Size filter
+      if (minBytes !== null || maxBytes !== null) {
         if (minBytes !== null && (item.size === null || item.size === undefined || item.size < minBytes)) {
           return false
         }
