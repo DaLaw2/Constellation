@@ -53,10 +53,10 @@ Then search using **Boolean logic** (AND/OR) to find exactly what you need:
 
 ## 📸 Screenshots
 
-| **Tag Management with Color Groups** | **Boolean Search & Filtering** |
+| **Tag Management** | **Advanced Search** |
 |:---:|:---:|
 | <img src="assets/preview_02.png" width="400" /> | <img src="assets/preview_03.png" width="400" /> |
-| *Create tag groups with custom colors for visual organization* | *Combine multiple tags to find exactly what you need* |
+| *Batch operations with multi-select support* | *Filter by tags, file types, size, and date* |
 
 ---
 
@@ -69,22 +69,33 @@ Then search using **Boolean logic** (AND/OR) to find exactly what you need:
 - **Auto-Complete**: Suggestions while typing to avoid duplicates
 
 ### 🔍 Powerful Search
-- **Boolean Queries**: Combine tags with AND/OR logic
+- **CQL Search Engine**: Full boolean syntax with `AND`, `OR`, `NOT`, and parentheses
+- **Mixed Queries**: Combine tag filters, filename patterns, size, and date conditions
 - **Real-Time Filtering**: Click tags in the sidebar to instantly filter results
-- **Fuzzy Filename Search**: Quick partial matching for file names
+- **Search History**: Automatically saves recent queries for quick reuse
+
+### 🖼️ Media Preview
+- **Thumbnail Generation**: Image and video thumbnails with disk caching
+- **Configurable Cache**: Adjustable cache size with automatic eviction
+- **Preview Settings**: Dedicated settings tab to configure thumbnail behavior
+
+### 📁 Automatic File Tracking
+- **Path Sync**: Detects file renames, moves, and deletions automatically
+- **Cross-Volume Detection**: Tracks files moved between different drives
+- **NTFS Journal Integration**: One-click enable for drives without Change Journal
 
 ### 🗂️ Integrated File Browser
-- **Dual-Panel Interface**: 
+- **Dual-Panel Interface**:
   - Left: Toggle between file tree or tag management
   - Right: File list with tag information
-- **Multiple View Modes**: 
-  - Detail view with sortable tag columns
-  - Large icon view with tags below filenames
+- **Expanded Panels**: Full-featured tag management and advanced search views
+- **Multiple View Modes**: Detail view, large icon view, and picture grid view
 - **Smooth Performance**: Virtual scrolling handles thousands of files effortlessly
 
-### 🧘 Zen Mode
-- Collapse the file browser to focus purely on tag organization
-- Perfect for organizing and refining your tag system
+### ⚙️ Settings
+- **File Tracking**: Configure auto-refresh and per-drive status
+- **Preview Settings**: Thumbnail cache size and behavior
+- **About**: Version info and license
 
 ---
 
@@ -114,7 +125,7 @@ Then search using **Boolean logic** (AND/OR) to find exactly what you need:
 ## 🚀 Getting Started
 
 ### For Users
-Download the latest release from the [Releases](https://github.com/yourusername/constellation/releases) page.
+Download the latest release from the [Releases](https://github.com/DaLaw2/Constellation/releases) page.
 
 **System Requirements:**
 - Windows 10 or later
@@ -130,8 +141,8 @@ Download the latest release from the [Releases](https://github.com/yourusername/
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/yourusername/constellation.git
-cd constellation
+git clone https://github.com/DaLaw2/Constellation.git
+cd Constellation
 
 # 2. Install dependencies
 npm install
@@ -150,11 +161,9 @@ The executable will be in `src-tauri/target/release/`.
 
 ---
 
-## 📝 Known Limitations (v1.0.0)
+## 📝 Known Limitations
 
-- Thumbnail generation not yet implemented (image/video/folder previews)
-- Automatic path tracking not yet implemented (manual update needed if folders are renamed outside the app)
-- Windows only (utilizes Windows-specific APIs)
+- Windows only (utilizes Windows-specific APIs like NTFS Change Journal)
 
 ---
 

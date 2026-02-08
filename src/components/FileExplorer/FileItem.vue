@@ -40,7 +40,7 @@
     <div class="file-tags-container" :style="{ width: tagAreaWidth + 'px' }">
       <div class="resize-handle" @mousedown="startResize"></div>
       <div class="file-tags" @click.stop>
-        <FileItemTags :entry="entry" />
+        <FileItemTags :entry="entry" :tags="tags" @tags-updated="$emit('tagsUpdated')" />
       </div>
     </div>
   </div>
@@ -50,22 +50,26 @@
 import { computed } from 'vue'
 import { getHighlightRanges, formatBytes, formatRelativeDate, getFileIcon } from '@/utils'
 import FileItemTags from './FileItemTags.vue'
-import type { FileEntry } from '@/types'
+import type { FileEntry, Tag } from '@/types'
 
 interface Props {
   entry: FileEntry
   selected?: boolean
   tagAreaWidth: number
   highlightQuery?: string
+  tags?: Tag[]
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  tags: () => []
+})
 
 const emit = defineEmits<{
   click: [entry: FileEntry]
   doubleClick: [entry: FileEntry]
   contextMenu: [entry: FileEntry, event: MouseEvent]
   resizeStart: [event: MouseEvent]
+  tagsUpdated: []
 }>()
 
 const isSelected = computed(() => props.selected)

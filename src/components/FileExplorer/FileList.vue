@@ -63,10 +63,12 @@
         :selected="selectedPath === item.path"
         :tag-area-width="tagAreaWidth"
         :highlight-query="appStore.searchQuery"
+        :tags="getTagsForFile(item.path)"
         @click="handleFileClick"
         @double-click="handleFileDoubleClick"
         @context-menu="handleFileContextMenu"
         @resize-start="handleResizeStart"
+        @tags-updated="refreshTagsCache"
       />
     </RecycleScroller>
 
@@ -95,19 +97,60 @@ import { RecycleScroller } from 'vue-virtual-scroller'
 import { useFileExplorerStore } from '@/stores/fileExplorer'
 import { useAppStore } from '@/stores/app'
 import { useTagsStore } from '@/stores/tags'
+import { useItemsStore } from '@/stores/items'
 import { useFileContextMenu, useResizable, useLocalStorage } from '@/composables'
 import { fuzzyMatch } from '@/utils'
 import { LAYOUT, STORAGE_KEYS } from '@/constants'
 import { AlertDialog } from '@/components/base'
 import FileItem from './FileItem.vue'
 import GridView from './GridView.vue'
-import type { FileEntry } from '@/types'
+import type { FileEntry, Tag } from '@/types'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 
 const fileExplorerStore = useFileExplorerStore()
 const appStore = useAppStore()
 const tagsStore = useTagsStore()
+const itemsStore = useItemsStore()
 const { showFileContextMenu } = useFileContextMenu()
+
+// Cache for tags: path -> tags (used by detail view)
+const tagsCache = ref<Map<string, Tag[]>>(new Map())
+
+async function refreshTagsCache() {
+  const fileList = files.value
+  if (fileList.length === 0) {
+    tagsCache.value = new Map()
+    return
+  }
+
+  const paths = fileList.map(f => f.path)
+
+  // Batch fetch items by paths
+  const items = await itemsStore.getItemsByPaths(paths)
+
+  if (items.length === 0) {
+    tagsCache.value = new Map()
+    return
+  }
+
+  // Create path -> item ID map
+  const pathToId = new Map(items.map(item => [item.path, item.id]))
+
+  // Batch fetch tags for all items
+  const itemIds = items.map(item => item.id)
+  const tagsMap = await itemsStore.getTagsForItems(itemIds)
+
+  // Build path -> tags cache
+  const newCache = new Map<string, Tag[]>()
+  for (const [path, itemId] of pathToId) {
+    newCache.set(path, tagsMap[itemId] || [])
+  }
+  tagsCache.value = newCache
+}
+
+function getTagsForFile(path: string): Tag[] {
+  return tagsCache.value.get(path) || []
+}
 
 // Preload tag data on mount for better performance
 onMounted(() => {
@@ -124,6 +167,12 @@ const files = computed(() => fileExplorerStore.currentFiles)
 const loading = computed(() => fileExplorerStore.loading)
 const error = computed(() => fileExplorerStore.error)
 const displayMode = computed(() => appStore.displayMode)
+
+// Batch load tags when files change (for detail view)
+watch(files, refreshTagsCache, { immediate: true })
+
+// Refresh cache when item-tag associations change
+watch(() => tagsStore.itemTagsVersion, refreshTagsCache)
 
 // Error dialog state
 const showErrorDialog = ref(false)

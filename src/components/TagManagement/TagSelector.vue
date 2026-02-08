@@ -84,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, computed, onMounted } from 'vue'
+import { ref, nextTick, computed, onMounted, type ComponentPublicInstance } from 'vue'
 import type { Tag, TagGroup } from '@/types'
 
 interface Props {
@@ -108,8 +108,8 @@ const isDuplicate = ref(false)
 const searchQuery = ref('')
 
 // Use a function ref for the new tag input since it's inside v-for
-function setNewTagInputRef(el: HTMLInputElement | null) {
-  if (el) {
+function setNewTagInputRef(el: Element | ComponentPublicInstance | null) {
+  if (el instanceof HTMLInputElement) {
     el.focus()
   }
 }

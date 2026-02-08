@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { getFileIcon, isImageFile, isVideoFile, getThumbnailUrl } from '@/utils'
 import { useItemsStore } from '@/stores/items'
 import { useTagsStore } from '@/stores/tags'
@@ -74,15 +74,18 @@ import type { FileEntry, Tag } from '@/types'
 interface Props {
   file: FileEntry
   zoomLevel?: number
+  tags: Tag[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  zoomLevel: 100
+  zoomLevel: 100,
+  tags: () => []
 })
 
 const emit = defineEmits<{
   open: [file: FileEntry]
   contextmenu: [event: MouseEvent, file: FileEntry]
+  tagsUpdated: []
 }>()
 
 const itemsStore = useItemsStore()
@@ -90,7 +93,6 @@ const tagsStore = useTagsStore()
 const settingsStore = useSettingsStore()
 
 const imageError = ref(false)
-const itemTags = ref<Tag[]>([])
 const itemId = ref<number | null>(null)
 
 const isImage = computed(() => !props.file.is_directory && isImageFile(props.file.name))
@@ -100,6 +102,7 @@ const fileIcon = computed(() => getFileIcon(props.file.name))
 const thumbUrl = computed(() => getThumbnailUrl(props.file.path, settingsStore.settings.thumbnail_size))
 const tagGroups = computed(() => tagsStore.tagGroups)
 const allTags = computed(() => tagsStore.tags)
+const itemTags = computed(() => props.tags)
 
 // Dynamic sizing based on zoom level
 const thumbnailHeight = computed(() => Math.floor(120 * (props.zoomLevel / 100)))
@@ -108,59 +111,26 @@ const iconHeight = computed(() => Math.floor(80 * (props.zoomLevel / 100)))
 const cardPadding = computed(() => Math.floor(12 * (props.zoomLevel / 100)))
 const fontSize = computed(() => Math.floor(12 * (props.zoomLevel / 100)))
 
-onMounted(async () => {
-  await loadTags()
-  // Load tag groups and tags if not loaded
-  if (tagsStore.tagGroups.length === 0) {
-    await tagsStore.loadTagGroups()
-  }
-  if (tagsStore.tags.length === 0) {
-    await tagsStore.loadTags()
-  }
-})
-
-watch(() => props.file.path, async () => {
-  await loadTags()
-})
-
-// Refresh tags when tags are deleted/merged/modified
-watch(() => tagsStore.itemTagsVersion, async () => {
-  await loadTags()
-})
-
-async function loadTags() {
-  try {
-    const item = await itemsStore.getItemByPath(props.file.path)
-    if (item) {
-      itemId.value = item.id
-      const tags = await itemsStore.getTagsForItem(item.id)
-      itemTags.value = tags
-    } else {
-      itemId.value = null
-      itemTags.value = []
-    }
-  } catch (error) {
-    console.error('Failed to load tags:', error)
-    itemId.value = null
-    itemTags.value = []
-  }
-}
-
 async function handleTagsUpdate(tagIds: number[]) {
   try {
     // If item doesn't exist in DB, create it first
     if (!itemId.value) {
-      const id = await itemsStore.createItem(
-        props.file.path,
-        props.file.is_directory,
-        props.file.size,
-        props.file.modified_time
-      )
-      itemId.value = id
+      const item = await itemsStore.getItemByPath(props.file.path)
+      if (item) {
+        itemId.value = item.id
+      } else {
+        const id = await itemsStore.createItem(
+          props.file.path,
+          props.file.is_directory,
+          props.file.size,
+          props.file.modified_time
+        )
+        itemId.value = id
+      }
     }
-    
+
     await itemsStore.updateItemTags(itemId.value!, tagIds)
-    await loadTags()
+    emit('tagsUpdated')
   } catch (error) {
     console.error('Failed to update tags:', error)
   }
