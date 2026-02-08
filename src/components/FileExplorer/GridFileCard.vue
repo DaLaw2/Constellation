@@ -123,6 +123,11 @@ watch(() => props.file.path, async () => {
   await loadTags()
 })
 
+// Refresh tags when tags are deleted/merged/modified
+watch(() => tagsStore.itemTagsVersion, async () => {
+  await loadTags()
+})
+
 async function loadTags() {
   try {
     const item = await itemsStore.getItemByPath(props.file.path)

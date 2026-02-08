@@ -78,15 +78,19 @@
       @contextmenu="(event, file) => handleFileContextMenu(file, event)"
     />
 
-    <!-- Error state -->
-    <div v-if="error" class="error-toast">
-      {{ error }}
-    </div>
+    <!-- Error dialog -->
+    <AlertDialog
+      v-model="showErrorDialog"
+      title="Error"
+      :message="error || ''"
+      type="error"
+      @dismiss="clearError"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import { useFileExplorerStore } from '@/stores/fileExplorer'
 import { useAppStore } from '@/stores/app'
@@ -94,6 +98,7 @@ import { useTagsStore } from '@/stores/tags'
 import { useFileContextMenu, useResizable, useLocalStorage } from '@/composables'
 import { fuzzyMatch } from '@/utils'
 import { LAYOUT, STORAGE_KEYS } from '@/constants'
+import { AlertDialog } from '@/components/base'
 import FileItem from './FileItem.vue'
 import GridView from './GridView.vue'
 import type { FileEntry } from '@/types'
@@ -119,6 +124,20 @@ const files = computed(() => fileExplorerStore.currentFiles)
 const loading = computed(() => fileExplorerStore.loading)
 const error = computed(() => fileExplorerStore.error)
 const displayMode = computed(() => appStore.displayMode)
+
+// Error dialog state
+const showErrorDialog = ref(false)
+
+// Show dialog when error occurs
+watch(error, (newError) => {
+  if (newError) {
+    showErrorDialog.value = true
+  }
+})
+
+function clearError() {
+  fileExplorerStore.clearError()
+}
 
 const filteredFiles = computed(() => {
   const query = appStore.searchQuery.trim()
@@ -292,17 +311,4 @@ function handleFileContextMenu(entry: FileEntry, event: MouseEvent) {
   max-width: 300px;
 }
 
-.error-toast {
-  position: absolute;
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 12px 24px;
-  background: #ef4444;
-  color: white;
-  border-radius: 6px;
-  font-size: 13px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  z-index: 100;
-}
 </style>

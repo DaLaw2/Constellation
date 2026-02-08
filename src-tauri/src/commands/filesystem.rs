@@ -245,9 +245,9 @@ pub async fn read_directory(path: String) -> AppResult<Vec<FileEntry>> {
                             });
                         }
                     }
-                    Err(e) => {
-                        eprintln!("Error reading directory entry: {}", e);
-                        // Continue with other entries
+                    Err(_) => {
+                        // Skip entries that can't be read (permission denied, etc.)
+                        continue;
                     }
                 }
             }
@@ -388,8 +388,6 @@ pub async fn open_file_external(path: String) -> AppResult<()> {
 
     if result == 0 {
         // Failed with "open", try "openas" to show Open With dialog
-        eprintln!("No file association, showing Open With dialog");
-
         let wide_openas: Vec<u16> = OsStr::new("openas")
             .encode_wide()
             .chain(std::iter::once(0))
@@ -398,11 +396,7 @@ pub async fn open_file_external(path: String) -> AppResult<()> {
         // Enable UI for the fallback attempt so the "Open With" dialog (or error) can be shown
         sei.fMask = 0;
         sei.lpVerb = wide_openas.as_ptr();
-        let result_openas = unsafe { ShellExecuteExW(&mut sei) };
-
-        if result_openas == 0 {
-            eprintln!("Failed to show Open With dialog");
-        }
+        let _ = unsafe { ShellExecuteExW(&mut sei) };
     }
 
     Ok(())

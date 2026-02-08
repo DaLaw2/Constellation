@@ -52,6 +52,7 @@
 
       <div class="panel-right">
         <TagDetailTable
+          ref="tagDetailTable"
           :group-id="selectedGroupId"
           :tags="tags"
           :usage-counts="usageCounts"
@@ -181,6 +182,9 @@ const editingGroup = ref<TagGroup | null>(null)
 const showCreateTag = ref(false)
 const targetGroupId = ref<number | null>(null)
 const createTagDialog = ref<InstanceType<typeof CreateTagDialog> | null>(null)
+
+// TagDetailTable ref (for clearing selection after batch ops)
+const tagDetailTable = ref<InstanceType<typeof TagDetailTable> | null>(null)
 
 // Edit Tag Dialog
 const showEditTag = ref(false)
@@ -347,6 +351,7 @@ async function executeMoveToGroup(targetGroupId: number) {
       await tagsStore.updateTag(id, undefined, targetGroupId)
     }
     await tagsStore.loadTags()
+    tagDetailTable.value?.clearSelection()
   } catch (e) {
     console.error('Failed to move tags:', e)
   }
@@ -379,6 +384,7 @@ async function executeConfirm() {
   if (pendingConfirmAction.value) {
     try {
       await pendingConfirmAction.value()
+      tagDetailTable.value?.clearSelection()
     } catch (e) {
       console.error('Confirm action failed:', e)
     } finally {

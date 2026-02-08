@@ -26,6 +26,7 @@ import { computed, ref, watch } from 'vue'
 import { useFileExplorerStore } from '@/stores/fileExplorer'
 import { useLightboxStore } from '@/stores/lightbox'
 import { useItemsStore } from '@/stores/items'
+import { useTagsStore } from '@/stores/tags'
 import { isMediaFile } from '@/utils'
 import ImageCard from './ImageCard.vue'
 import type { Tag } from '@/types'
@@ -33,6 +34,7 @@ import type { Tag } from '@/types'
 const fileExplorerStore = useFileExplorerStore()
 const lightboxStore = useLightboxStore()
 const itemsStore = useItemsStore()
+const tagsStore = useTagsStore()
 
 // Cache for tags: path -> tags
 const tagsCache = ref<Map<string, Tag[]>>(new Map())
@@ -43,8 +45,8 @@ const imageFiles = computed(() => {
   )
 })
 
-// Batch load items and tags when imageFiles changes
-watch(imageFiles, async (files) => {
+async function refreshTagsCache() {
+  const files = imageFiles.value
   if (files.length === 0) {
     tagsCache.value = new Map()
     return
@@ -73,7 +75,13 @@ watch(imageFiles, async (files) => {
     newCache.set(path, tagsMap[itemId] || [])
   }
   tagsCache.value = newCache
-}, { immediate: true })
+}
+
+// Batch load items and tags when imageFiles changes
+watch(imageFiles, refreshTagsCache, { immediate: true })
+
+// Refresh cache when item-tag associations change (e.g., tag deleted/merged)
+watch(() => tagsStore.itemTagsVersion, refreshTagsCache)
 
 function getTagsForFile(path: string): Tag[] {
   return tagsCache.value.get(path) || []

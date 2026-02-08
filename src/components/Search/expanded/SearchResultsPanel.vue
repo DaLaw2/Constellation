@@ -122,7 +122,7 @@ function toggleSortOrder() {
 function openItem(item: Item) {
   const dirPath = item.is_directory ? item.path : getParentPath(item.path)
   fileExplorerStore.navigateTo(dirPath)
-  appStore.setLeftPanelMode('file-browser')
+  // Don't change tab - user should stay on Search tab when clicking results
 }
 </script>
 

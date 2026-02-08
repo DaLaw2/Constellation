@@ -292,7 +292,7 @@ function openItem(item: Item) {
   // Navigate to the item's directory in file browser
   const dirPath = item.is_directory ? item.path : getParentPath(item.path)
   fileExplorerStore.navigateTo(dirPath)
-  appStore.setLeftPanelMode('file-browser')
+  // Don't change mode - user should stay on current panel when clicking results
 }
 </script>
 

@@ -9,6 +9,8 @@ export const useTagsStore = defineStore('tags', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const usageCounts = ref<Record<number, number>>({})
+  // Version counter: increments when item-tag associations change (for cache invalidation)
+  const itemTagsVersion = ref(0)
 
   async function loadTagGroups(silent = false) {
     if (!silent) {
@@ -129,6 +131,7 @@ export const useTagsStore = defineStore('tags', () => {
       await invoke('merge_tags', { sourceId, targetId })
       await loadTags(true)
       await loadUsageCounts()
+      itemTagsVersion.value++
     } catch (e) {
       error.value = e as string
       console.error('Failed to merge tags:', e)
@@ -162,6 +165,7 @@ export const useTagsStore = defineStore('tags', () => {
       await loadTagGroups(true)
       await loadTags(true)
       await loadUsageCounts()
+      itemTagsVersion.value++
     } catch (e) {
       error.value = e as string
       console.error('Failed to delete tag group:', e)
@@ -174,6 +178,7 @@ export const useTagsStore = defineStore('tags', () => {
       await invoke('delete_tag', { id })
       await loadTags(true)
       await loadUsageCounts()
+      itemTagsVersion.value++
     } catch (e) {
       error.value = e as string
       console.error('Failed to delete tag:', e)
@@ -187,6 +192,7 @@ export const useTagsStore = defineStore('tags', () => {
     usageCounts,
     loading,
     error,
+    itemTagsVersion,
     loadTagGroups,
     loadTags,
     loadUsageCounts,
