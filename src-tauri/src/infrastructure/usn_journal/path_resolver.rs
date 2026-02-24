@@ -5,8 +5,8 @@
 use crate::domain::errors::DomainError;
 use windows::Win32::Foundation::{CloseHandle, HANDLE};
 use windows::Win32::Storage::FileSystem::{
-    GetFinalPathNameByHandleW, OpenFileById, FILE_FLAG_BACKUP_SEMANTICS, FILE_ID_DESCRIPTOR,
-    FILE_ID_TYPE, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, VOLUME_NAME_DOS,
+    FILE_FLAG_BACKUP_SEMANTICS, FILE_ID_DESCRIPTOR, FILE_ID_TYPE, FILE_SHARE_DELETE,
+    FILE_SHARE_READ, FILE_SHARE_WRITE, GetFinalPathNameByHandleW, OpenFileById, VOLUME_NAME_DOS,
 };
 
 /// Resolves a File Reference Number to its current full path.

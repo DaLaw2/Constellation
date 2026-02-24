@@ -356,7 +356,7 @@ pub async fn open_file_external(path: String) -> AppResult<()> {
     use std::mem;
     use std::os::windows::ffi::OsStrExt;
     use std::ptr;
-    use winapi::um::shellapi::{ShellExecuteExW, SHELLEXECUTEINFOW};
+    use winapi::um::shellapi::{SHELLEXECUTEINFOW, ShellExecuteExW};
     use winapi::um::winuser::SW_SHOWNORMAL;
 
     // Convert path to wide string

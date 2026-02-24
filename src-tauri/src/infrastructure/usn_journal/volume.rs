@@ -4,13 +4,13 @@
 
 use crate::domain::errors::DomainError;
 use std::mem::MaybeUninit;
-use windows::core::HSTRING;
 use windows::Win32::Foundation::{CloseHandle, HANDLE};
 use windows::Win32::Storage::FileSystem::{
-    CreateFileW, GetVolumeInformationW, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING,
+    CreateFileW, FILE_SHARE_READ, FILE_SHARE_WRITE, GetVolumeInformationW, OPEN_EXISTING,
 };
-use windows::Win32::System::Ioctl::{FSCTL_QUERY_USN_JOURNAL, USN_JOURNAL_DATA_V0};
 use windows::Win32::System::IO::DeviceIoControl;
+use windows::Win32::System::Ioctl::{FSCTL_QUERY_USN_JOURNAL, USN_JOURNAL_DATA_V0};
+use windows::core::HSTRING;
 
 /// Minimum access right for opening a volume handle without admin privileges.
 const FILE_TRAVERSE: u32 = 0x20;

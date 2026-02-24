@@ -46,9 +46,9 @@ pub async fn get_usn_drive_status(state: State<'_, AppState>) -> AppResult<Vec<D
 /// Enables USN Journal on a drive (requires admin — triggers UAC dialog).
 #[tauri::command]
 pub async fn enable_usn_journal(drive: String) -> AppResult<()> {
-    use windows::core::PCWSTR;
     use windows::Win32::UI::Shell::ShellExecuteW;
     use windows::Win32::UI::WindowsAndMessaging::SW_HIDE;
+    use windows::core::PCWSTR;
 
     let letter = drive
         .chars()

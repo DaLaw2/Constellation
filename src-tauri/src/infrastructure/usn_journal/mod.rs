@@ -9,5 +9,5 @@ mod volume;
 
 pub use frn::get_file_reference_number;
 pub use path_resolver::resolve_path_by_frn;
-pub use reader::{read_journal_records, RawUsnRecord};
-pub use volume::{is_ntfs, VolumeHandle};
+pub use reader::{RawUsnRecord, read_journal_records};
+pub use volume::{VolumeHandle, is_ntfs};

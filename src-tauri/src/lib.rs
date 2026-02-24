@@ -11,8 +11,8 @@ mod state;
 
 use infrastructure::persistence::init_database;
 use state::{AppConfig, AppState};
-use tauri::http::Response;
 use tauri::Manager;
+use tauri::http::Response;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

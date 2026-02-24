@@ -4,11 +4,11 @@
 //! Receives thumbnail generation requests via a channel and
 //! returns WebP-encoded thumbnails.
 
-use super::generator::{generate_thumbnail, ThumbnailError};
+use super::generator::{ThumbnailError, generate_thumbnail};
 use image::ImageBuffer;
 use std::path::PathBuf;
 use tokio::sync::{mpsc, oneshot};
-use windows::Win32::System::Com::{CoInitializeEx, CoUninitialize, COINIT_APARTMENTTHREADED};
+use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx, CoUninitialize};
 
 /// A request to generate a thumbnail on the COM worker thread.
 struct ThumbnailRequest {
