@@ -13,7 +13,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::infrastructure::usn_journal::{
-    is_ntfs, read_journal_records, resolve_path_by_frn, RawUsnRecord, VolumeHandle,
+    RawUsnRecord, VolumeHandle, is_ntfs, read_journal_records, resolve_path_by_frn,
 };
 
 /// USN reason flags for matching.

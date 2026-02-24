@@ -14,12 +14,6 @@
         <span v-if="leftPanelMode === 'tag-management'">Tag Management</span>
         <span v-else-if="leftPanelMode === 'search'">Search</span>
       </div>
-
-      <!-- Normal Mode Breadcrumb -->
-      <div v-else class="path-breadcrumb">
-        <span v-if="!currentPath" class="path-empty">No path selected</span>
-        <span v-else class="path-text">{{ currentPath }}</span>
-      </div>
     </div>
 
     <!-- Normal Mode Right Side -->
@@ -65,7 +59,6 @@ import type { DisplayMode } from '@/types'
 const appStore = useAppStore()
 const showSettings = ref(false)
 
-const currentPath = computed(() => appStore.currentPath)
 const displayMode = computed(() => appStore.displayMode)
 const sidebarExpanded = computed(() => appStore.sidebarExpanded)
 const leftPanelMode = computed(() => appStore.leftPanelMode)
@@ -127,13 +120,6 @@ function handleSearch() {
   white-space: nowrap;
 }
 
-.path-breadcrumb {
-  flex: 1;
-  min-width: 0;
-  padding-left: 1rem;
-  border-left: 1px solid var(--border-color);
-}
-
 .expanded-title {
   flex: 1;
   padding-left: 1rem;
@@ -141,21 +127,6 @@ function handleSearch() {
   font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
-}
-
-.path-text {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-primary);
-  font-size: 13px;
-}
-
-.path-empty {
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-style: italic;
 }
 
 .topbar-right {

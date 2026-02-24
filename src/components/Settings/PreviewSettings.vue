@@ -20,25 +20,6 @@
         </select>
       </div>
 
-      <!-- Force Shell Cache -->
-      <div class="setting-row">
-        <div class="setting-info">
-          <label class="setting-label">Use Windows Shell Cache Only</label>
-          <span class="setting-description">
-            Skip disk cache and rely solely on Windows Shell thumbnail cache.
-            Reduces disk usage but may be slower on repeat views.
-          </span>
-        </div>
-        <label class="toggle">
-          <input
-            type="checkbox"
-            :checked="settingsStore.settings.thumbnail_force_shell_cache"
-            @change="handleForceShellChange"
-          />
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-
       <!-- Cache Max Size -->
       <div class="setting-row">
         <div class="setting-info">
@@ -108,11 +89,6 @@ async function loadCacheStats() {
 function handleThumbnailSizeChange(event: Event) {
   const value = (event.target as HTMLSelectElement).value
   settingsStore.updateSetting('thumbnail_size', value)
-}
-
-function handleForceShellChange(event: Event) {
-  const checked = (event.target as HTMLInputElement).checked
-  settingsStore.updateSetting('thumbnail_force_shell_cache', String(checked))
 }
 
 function handleCacheMaxChange(event: Event) {

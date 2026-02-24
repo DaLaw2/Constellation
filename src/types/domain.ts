@@ -56,3 +56,10 @@ export interface SearchHistory {
   criteria: SearchCriteria
   last_used_at: number
 }
+
+/** Result of a batch tag operation */
+export interface BatchTagResult {
+  success_count: number
+  failed_count: number
+  created_count: number
+}

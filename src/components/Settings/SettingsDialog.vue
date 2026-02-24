@@ -20,6 +20,12 @@
         Preview
       </button>
       <button
+        :class="['tab-btn', { active: activeTab === 'advanced' }]"
+        @click="activeTab = 'advanced'"
+      >
+        Advanced
+      </button>
+      <button
         :class="['tab-btn', { active: activeTab === 'about' }]"
         @click="activeTab = 'about'"
       >
@@ -31,6 +37,7 @@
     <div class="settings-content">
       <FileTrackingSettings v-if="activeTab === 'tracking'" />
       <PreviewSettings v-else-if="activeTab === 'preview'" />
+      <AdvancedSettings v-else-if="activeTab === 'advanced'" />
       <AboutTab v-else />
     </div>
   </BaseDialog>
@@ -41,6 +48,7 @@ import { ref } from 'vue'
 import { BaseDialog } from '@/components/base'
 import FileTrackingSettings from './FileTrackingSettings.vue'
 import PreviewSettings from './PreviewSettings.vue'
+import AdvancedSettings from './AdvancedSettings.vue'
 import AboutTab from './AboutTab.vue'
 
 defineProps<{
@@ -51,7 +59,7 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
 
-const activeTab = ref<'tracking' | 'preview' | 'about'>('tracking')
+const activeTab = ref<'tracking' | 'preview' | 'advanced' | 'about'>('tracking')
 </script>
 
 <style scoped>

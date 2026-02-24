@@ -9,6 +9,7 @@ use crate::application::services::{
 use crate::domain::repositories::{
     ItemRepository, SettingsRepository, TagGroupRepository, TagRepository, TagTemplateRepository,
 };
+use crate::error::AppError;
 use crate::infrastructure::persistence::{
     SqliteItemRepository, SqliteSearchHistoryRepository, SqliteSearchRepository,
     SqliteSettingsRepository, SqliteTagGroupRepository, SqliteTagRepository,
@@ -41,7 +42,15 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(pool: Pool, config: AppConfig, app_data_dir: std::path::PathBuf) -> Self {
+    /// Create application state with all services.
+    ///
+    /// Async because ThumbnailService reads settings to configure
+    /// worker pool size and concurrency limits.
+    pub async fn new(
+        pool: Pool,
+        config: AppConfig,
+        app_data_dir: std::path::PathBuf,
+    ) -> Result<Self, AppError> {
         let pool = Arc::new(pool);
 
         // Create repositories
@@ -71,12 +80,13 @@ impl AppState {
             item_repo.clone(),
             settings_service.clone(),
         ));
-        let thumbnail_service = Arc::new(ThumbnailService::new(
-            app_data_dir.clone(),
-            settings_service.clone(),
-        ));
+        let thumbnail_service = Arc::new(
+            ThumbnailService::new(app_data_dir.clone(), settings_service.clone())
+                .await
+                .map_err(|e| AppError::Thumbnail(e.to_string()))?,
+        );
 
-        Self {
+        Ok(Self {
             config,
             app_data_dir,
             item_service,
@@ -87,6 +97,6 @@ impl AppState {
             settings_service,
             thumbnail_service,
             usn_refresh_service,
-        }
+        })
     }
 }

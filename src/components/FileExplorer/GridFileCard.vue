@@ -1,13 +1,15 @@
 <template>
-  <div 
-    class="grid-file-card" 
+  <div
+    class="grid-file-card"
+    :class="{ selected: selected }"
     :style="{ padding: `${cardPadding}px` }"
+    @click="handleClick"
     @dblclick="handleOpen"
     @contextmenu.prevent="handleContextMenu"
   >
-    <!-- Media files (images/videos): Show thumbnail -->
+    <!-- Thumbnail preview: Media files and directories -->
     <img
-      v-if="isMedia && !imageError"
+      v-if="hasThumbnail && !imageError"
       :src="thumbUrl"
       :alt="file.name"
       loading="lazy"
@@ -16,22 +18,13 @@
       @error="handleImageError"
     />
 
-    <!-- Media fallback on error -->
+    <!-- Fallback on thumbnail error -->
     <div
-      v-else-if="isMedia && imageError"
+      v-else-if="hasThumbnail && imageError"
       class="file-icon"
       :style="{ fontSize: `${iconSize}px`, height: `${iconHeight}px`, maxHeight: `${iconHeight}px` }"
     >
-      {{ fileIcon }}
-    </div>
-
-    <!-- Directories: Show folder icon -->
-    <div 
-      v-else-if="file.is_directory" 
-      class="file-icon"
-      :style="{ fontSize: `${iconSize}px`, height: `${iconHeight}px`, maxHeight: `${iconHeight}px` }"
-    >
-      📁
+      {{ file.is_directory ? '📁' : fileIcon }}
     </div>
     
     <!-- Other files: Show file type icon -->
@@ -44,10 +37,11 @@
     </div>
     
     <div class="file-name" :style="{ fontSize: `${fontSize}px` }" :title="file.name">{{ file.name }}</div>
-    
+
     <!-- Tags section -->
-    <div 
-      class="tags-section" 
+    <div
+      v-if="showTags"
+      class="tags-section"
       :style="{ fontSize: `${Math.max(10, fontSize - 2)}px` }"
       @click.stop
     >
@@ -75,14 +69,19 @@ interface Props {
   file: FileEntry
   zoomLevel?: number
   tags: Tag[]
+  selected?: boolean
+  showTags?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   zoomLevel: 100,
-  tags: () => []
+  tags: () => [],
+  selected: false,
+  showTags: true
 })
 
 const emit = defineEmits<{
+  click: [file: FileEntry, event: MouseEvent]
   open: [file: FileEntry]
   contextmenu: [event: MouseEvent, file: FileEntry]
 }>()
@@ -97,6 +96,7 @@ const itemId = ref<number | null>(null)
 const isImage = computed(() => !props.file.is_directory && isImageFile(props.file.name))
 const isVideo = computed(() => !props.file.is_directory && isVideoFile(props.file.name))
 const isMedia = computed(() => isImage.value || isVideo.value)
+const hasThumbnail = computed(() => isMedia.value || props.file.is_directory)
 const fileIcon = computed(() => getFileIcon(props.file.name))
 const thumbUrl = computed(() => getThumbnailUrl(props.file.path, settingsStore.settings.thumbnail_size))
 const tagGroups = computed(() => tagsStore.tagGroups)
@@ -144,6 +144,10 @@ async function handleCreateTag(groupId: number, value: string) {
   }
 }
 
+function handleClick(event: MouseEvent) {
+  emit('click', props.file, event)
+}
+
 function handleOpen() {
   emit('open', props.file)
 }
@@ -175,6 +179,12 @@ function handleImageError() {
   transform: translateY(-2px);
 }
 
+.grid-file-card.selected {
+  background: rgba(25, 118, 210, 0.12);
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
+}
+
 .file-thumbnail {
   width: 100%;
   object-fit: cover;
@@ -194,8 +204,10 @@ function handleImageError() {
 .file-name {
   text-align: center;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  word-break: break-all;
   width: 100%;
   color: var(--text-primary);
   margin-bottom: 4px;

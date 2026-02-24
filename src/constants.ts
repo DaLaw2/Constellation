@@ -10,6 +10,16 @@ export const LAYOUT = {
   MIN_TAG_AREA_WIDTH: 400,
   /** Default width of the tag area in file list */
   DEFAULT_TAG_AREA_WIDTH: 500,
+  /** Base height of a grid file card row at 100% zoom */
+  GRID_ROW_HEIGHT: 220,
+  /** Minimum grid card width (matches GridView baseSize) */
+  GRID_MIN_CARD_WIDTH: 150,
+  /** Default grid gap in pixels */
+  GRID_GAP: 16,
+  /** Height of a picture grid row */
+  PICTURE_ROW_HEIGHT: 250,
+  /** Minimum picture card width */
+  PICTURE_MIN_CARD_WIDTH: 200,
 } as const
 
 // Tag display constants

@@ -2,7 +2,7 @@
 //!
 //! Thin adapters for item operations that delegate to ItemService.
 
-use crate::application::dto::{CreateItemDto, ItemDto, TagDto, UpdateItemDto};
+use crate::application::dto::{BatchTagResult, CreateItemDto, ItemDto, TagDto, UpdateItemDto};
 use crate::error::{AppError, AppResult};
 use crate::state::AppState;
 use std::collections::HashMap;
@@ -150,6 +150,44 @@ pub async fn update_item_tags(
     state
         .item_service
         .update_tags(item_id, tag_ids)
+        .await
+        .map_err(|e| AppError::InvalidInput(e.to_string()))
+}
+
+#[tauri::command]
+pub async fn batch_add_tag_to_items(
+    paths: Vec<String>,
+    tag_id: i64,
+    state: State<'_, AppState>,
+) -> AppResult<BatchTagResult> {
+    state
+        .item_service
+        .batch_add_tag(paths, tag_id)
+        .await
+        .map_err(|e| AppError::InvalidInput(e.to_string()))
+}
+
+#[tauri::command]
+pub async fn batch_remove_tag_from_items(
+    paths: Vec<String>,
+    tag_id: i64,
+    state: State<'_, AppState>,
+) -> AppResult<BatchTagResult> {
+    state
+        .item_service
+        .batch_remove_tag(paths, tag_id)
+        .await
+        .map_err(|e| AppError::InvalidInput(e.to_string()))
+}
+
+#[tauri::command]
+pub async fn get_common_tags_for_paths(
+    paths: Vec<String>,
+    state: State<'_, AppState>,
+) -> AppResult<Vec<TagDto>> {
+    state
+        .item_service
+        .get_common_tags(paths)
         .await
         .map_err(|e| AppError::InvalidInput(e.to_string()))
 }

@@ -39,6 +39,12 @@ pub trait ItemRepository: Send + Sync {
     /// Replaces all tags for an item atomically.
     async fn replace_tags(&self, item_id: i64, tag_ids: Vec<i64>) -> Result<(), DomainError>;
 
+    /// Adds a tag to multiple items in a single transaction.
+    async fn batch_add_tag(&self, item_ids: &[i64], tag_id: i64) -> Result<(), DomainError>;
+
+    /// Removes a tag from multiple items in a single transaction.
+    async fn batch_remove_tag(&self, item_ids: &[i64], tag_id: i64) -> Result<(), DomainError>;
+
     /// Finds all active (non-deleted) items whose path starts with the given prefix.
     async fn find_active_by_path_prefix(&self, prefix: &str) -> Result<Vec<Item>, DomainError>;
 }

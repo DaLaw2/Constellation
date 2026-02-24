@@ -11,8 +11,8 @@ mod state;
 
 use infrastructure::persistence::init_database;
 use state::{AppConfig, AppState};
-use tauri::http::Response;
 use tauri::Manager;
+use tauri::http::Response;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -54,7 +54,13 @@ pub fn run() {
             };
 
             // Create and manage app state
-            let app_state = AppState::new(pool, config, app_data_dir.clone());
+            // SAFETY: AppState initialization is critical for application functionality.
+            // It reads settings from DB and spawns COM worker threads.
+            // If this fails, the application cannot proceed.
+            let app_state = tauri::async_runtime::block_on(async {
+                AppState::new(pool, config, app_data_dir.clone()).await
+            })
+            .expect("Failed to initialize application state - check database and system resources");
             app.manage(app_state);
 
             // Spawn background cache eviction on startup
@@ -120,6 +126,9 @@ pub fn run() {
             commands::items::get_tags_for_item,
             commands::items::get_tags_for_items,
             commands::items::update_item_tags,
+            commands::items::batch_add_tag_to_items,
+            commands::items::batch_remove_tag_from_items,
+            commands::items::get_common_tags_for_paths,
             // Tag Template commands
             commands::tag_templates::create_tag_template,
             commands::tag_templates::get_tag_templates,

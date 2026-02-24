@@ -17,6 +17,8 @@ impl SettingsDefaults {
             "thumbnail_size" => Some("256"),
             "thumbnail_force_shell_cache" => Some("false"),
             "thumbnail_cache_max_mb" => Some("500"),
+            "thumbnail_worker_count" => Some("0"),
+            "thumbnail_semaphore_count" => Some("0"),
             _ => None,
         }
     }
@@ -30,6 +32,8 @@ impl SettingsDefaults {
         map.insert("thumbnail_size".into(), "256".into());
         map.insert("thumbnail_force_shell_cache".into(), "false".into());
         map.insert("thumbnail_cache_max_mb".into(), "500".into());
+        map.insert("thumbnail_worker_count".into(), "0".into());
+        map.insert("thumbnail_semaphore_count".into(), "0".into());
         map
     }
 }

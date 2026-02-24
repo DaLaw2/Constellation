@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useTagsStore } from '@/stores/tags'
-import type { Item, Tag } from '@/types'
+import type { BatchTagResult, Item, Tag } from '@/types'
 
 export const useItemsStore = defineStore('items', () => {
   const items = ref<Item[]>([])
@@ -130,6 +130,51 @@ export const useItemsStore = defineStore('items', () => {
     }
   }
 
+  async function batchAddTagToItems(paths: string[], tagId: number) {
+    try {
+      const result = await invoke<BatchTagResult>('batch_add_tag_to_items', {
+        paths,
+        tagId,
+      })
+      const tagsStore = useTagsStore()
+      await tagsStore.loadUsageCounts()
+      tagsStore.itemTagsVersion++
+      return result
+    } catch (e) {
+      error.value = e as string
+      console.error('Failed to batch add tag:', e)
+      throw e
+    }
+  }
+
+  async function batchRemoveTagFromItems(paths: string[], tagId: number) {
+    try {
+      const result = await invoke<BatchTagResult>('batch_remove_tag_from_items', {
+        paths,
+        tagId,
+      })
+      const tagsStore = useTagsStore()
+      await tagsStore.loadUsageCounts()
+      tagsStore.itemTagsVersion++
+      return result
+    } catch (e) {
+      error.value = e as string
+      console.error('Failed to batch remove tag:', e)
+      throw e
+    }
+  }
+
+  async function getCommonTagsForPaths(paths: string[]) {
+    try {
+      const tags = await invoke<Tag[]>('get_common_tags_for_paths', { paths })
+      return tags
+    } catch (e) {
+      error.value = e as string
+      console.error('Failed to get common tags:', e)
+      return []
+    }
+  }
+
   return {
     items,
     loading,
@@ -143,5 +188,8 @@ export const useItemsStore = defineStore('items', () => {
     getTagsForItem,
     getTagsForItems,
     updateItemTags,
+    batchAddTagToItems,
+    batchRemoveTagFromItems,
+    getCommonTagsForPaths,
   }
 })

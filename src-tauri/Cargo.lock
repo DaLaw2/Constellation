@@ -523,13 +523,14 @@ checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
 
 [[package]]
 name = "constellation"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "async-trait",
  "blake3",
  "deadpool 0.10.0",
  "deadpool-sqlite",
  "image",
+ "num_cpus",
  "opener",
  "pest",
  "pest_derive",

@@ -8,7 +8,7 @@ use crate::domain::errors::DomainError;
 use crate::domain::repositories::SearchHistoryRepository;
 use async_trait::async_trait;
 use deadpool_sqlite::Pool;
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 use std::sync::Arc;
 
 /// SQLite repository for search history operations.

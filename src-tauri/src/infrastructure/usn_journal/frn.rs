@@ -3,13 +3,12 @@
 //! Gets the NTFS File Reference Number (FRN) for a given file path.
 
 use crate::domain::errors::DomainError;
-use windows::core::HSTRING;
 use windows::Win32::Foundation::CloseHandle;
 use windows::Win32::Storage::FileSystem::{
-    CreateFileW, GetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION,
-    FILE_FLAG_BACKUP_SEMANTICS, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE,
-    OPEN_EXISTING,
+    BY_HANDLE_FILE_INFORMATION, CreateFileW, FILE_FLAG_BACKUP_SEMANTICS, FILE_SHARE_DELETE,
+    FILE_SHARE_READ, FILE_SHARE_WRITE, GetFileInformationByHandle, OPEN_EXISTING,
 };
+use windows::core::HSTRING;
 
 /// Gets the NTFS File Reference Number for a file path.
 ///

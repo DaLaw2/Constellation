@@ -6,15 +6,15 @@
 
 use std::path::Path;
 use thiserror::Error;
-use windows::core::HSTRING;
 use windows::Win32::Foundation::SIZE;
 use windows::Win32::Graphics::Gdi::{
-    CreateCompatibleDC, DeleteDC, DeleteObject, GetDIBits, GetObjectW, BITMAP, BITMAPINFO,
-    BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, RGBQUAD,
+    BI_RGB, BITMAP, BITMAPINFO, BITMAPINFOHEADER, CreateCompatibleDC, DIB_RGB_COLORS, DeleteDC,
+    DeleteObject, GetDIBits, GetObjectW, RGBQUAD,
 };
 use windows::Win32::UI::Shell::{
     IShellItemImageFactory, SHCreateItemFromParsingName, SIIGBF_RESIZETOFIT,
 };
+use windows::core::HSTRING;
 
 #[derive(Debug, Error)]
 pub enum ThumbnailError {
@@ -61,7 +61,7 @@ unsafe fn generate_thumbnail_inner(
     let hpath = HSTRING::from(path_str);
 
     // Create IShellItem from file path, then query IShellItemImageFactory
-    let factory: IShellItemImageFactory = SHCreateItemFromParsingName(&hpath, None)?;
+    let factory: IShellItemImageFactory = unsafe { SHCreateItemFromParsingName(&hpath, None) }?;
 
     let desired = SIZE {
         cx: size as i32,
@@ -69,17 +69,19 @@ unsafe fn generate_thumbnail_inner(
     };
 
     // GetImage with SIIGBF_RESIZETOFIT (default: shrink to fit, preserve aspect ratio)
-    let hbitmap = factory.GetImage(desired, SIIGBF_RESIZETOFIT)?;
+    let hbitmap = unsafe { factory.GetImage(desired, SIIGBF_RESIZETOFIT) }?;
 
     // Get bitmap dimensions via GetObject (reliable for both DDB and DIB sections)
     let mut bm = BITMAP::default();
-    let obj_result = GetObjectW(
-        hbitmap,
-        std::mem::size_of::<BITMAP>() as i32,
-        Some(&mut bm as *mut _ as *mut _),
-    );
+    let obj_result = unsafe {
+        GetObjectW(
+            hbitmap,
+            std::mem::size_of::<BITMAP>() as i32,
+            Some(&mut bm as *mut _ as *mut _),
+        )
+    };
     if obj_result == 0 || bm.bmWidth == 0 || bm.bmHeight == 0 {
-        let _ = DeleteObject(hbitmap);
+        let _ = unsafe { DeleteObject(hbitmap) };
         return Err(ThumbnailError::BitmapExtraction);
     }
 
@@ -87,9 +89,9 @@ unsafe fn generate_thumbnail_inner(
     let height = bm.bmHeight as u32;
 
     // Create compatible DC for pixel extraction
-    let hdc = CreateCompatibleDC(None);
+    let hdc = unsafe { CreateCompatibleDC(None) };
     if hdc.is_invalid() {
-        let _ = DeleteObject(hbitmap);
+        let _ = unsafe { DeleteObject(hbitmap) };
         return Err(ThumbnailError::BitmapExtraction);
     }
 
@@ -110,18 +112,20 @@ unsafe fn generate_thumbnail_inner(
     let buf_size = (width * height * 4) as usize;
     let mut buffer = vec![0u8; buf_size];
 
-    let result = GetDIBits(
-        hdc,
-        hbitmap,
-        0,
-        height,
-        Some(buffer.as_mut_ptr() as *mut _),
-        &mut bmi,
-        DIB_RGB_COLORS,
-    );
+    let result = unsafe {
+        GetDIBits(
+            hdc,
+            hbitmap,
+            0,
+            height,
+            Some(buffer.as_mut_ptr() as *mut _),
+            &mut bmi,
+            DIB_RGB_COLORS,
+        )
+    };
 
-    let _ = DeleteDC(hdc);
-    let _ = DeleteObject(hbitmap);
+    let _ = unsafe { DeleteDC(hdc) };
+    let _ = unsafe { DeleteObject(hbitmap) };
 
     if result == 0 {
         return Err(ThumbnailError::BitmapExtraction);

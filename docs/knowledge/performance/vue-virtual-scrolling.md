@@ -84,6 +84,47 @@ items.value = [...newItems]
 | Item height | Fixed 48px (recommended) |
 | Memory | Only visible items + buffer in DOM |
 
+## Grid Virtual Scrolling (Row Grouping)
+
+`RecycleScroller` requires fixed item sizes, which works for list views but not grids where column count varies with container width. The solution is to group items into rows:
+
+### useGridVirtualScroll Composable
+
+```typescript
+import { useGridVirtualScroll } from '@/composables'
+
+// Groups items into rows based on container width
+const { rows, columnCount } = useGridVirtualScroll(items, {
+  minCardWidth: 150,   // or a computed ref for zoom support
+  gap: 16,
+  containerRef,        // template ref for ResizeObserver
+})
+```
+
+### Usage with RecycleScroller
+
+```vue
+<RecycleScroller
+  :items="rows"
+  :item-size="rowHeight"
+  key-field="id"
+  v-slot="{ item: row }"
+>
+  <div class="grid-row" :style="{ display: 'grid', gridTemplateColumns: `repeat(${columnCount}, 1fr)` }">
+    <Card v-for="item in row.items" :key="item.id" :data="item" />
+  </div>
+</RecycleScroller>
+```
+
+### How It Works
+
+1. `ResizeObserver` monitors container width
+2. Column count calculated: `floor((width + gap) / (minCardWidth + gap))`
+3. Items grouped into rows of N (last row may be partial)
+4. Each row has a stable `id` (`row-{startIndex}`) for RecycleScroller
+5. `startIndex` field enables computing global index from row-local index (for lightbox, etc.)
+6. Supports reactive `minCardWidth`/`gap` (e.g., zoom level changes)
+
 ## Lazy Loading Images
 
 ```vue

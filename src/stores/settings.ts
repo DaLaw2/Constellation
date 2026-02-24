@@ -9,6 +9,8 @@ export interface AppSettings {
   thumbnail_size: number
   thumbnail_force_shell_cache: boolean
   thumbnail_cache_max_mb: number
+  thumbnail_worker_count: number
+  thumbnail_semaphore_count: number
 }
 
 export interface CacheStats {
@@ -24,6 +26,8 @@ const DEFAULTS: AppSettings = {
   thumbnail_size: 256,
   thumbnail_force_shell_cache: false,
   thumbnail_cache_max_mb: 500,
+  thumbnail_worker_count: 0,
+  thumbnail_semaphore_count: 0,
 }
 
 function parseSettings(raw: Record<string, string>): AppSettings {
@@ -34,6 +38,8 @@ function parseSettings(raw: Record<string, string>): AppSettings {
     thumbnail_size: parseInt(raw.thumbnail_size || '256', 10),
     thumbnail_force_shell_cache: raw.thumbnail_force_shell_cache === 'true',
     thumbnail_cache_max_mb: parseInt(raw.thumbnail_cache_max_mb || '500', 10),
+    thumbnail_worker_count: parseInt(raw.thumbnail_worker_count || '0', 10),
+    thumbnail_semaphore_count: parseInt(raw.thumbnail_semaphore_count || '0', 10),
   }
 }
 

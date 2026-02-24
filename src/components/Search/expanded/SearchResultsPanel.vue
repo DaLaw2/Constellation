@@ -5,16 +5,46 @@
       <span class="results-count">
         {{ filteredResults.length }} {{ filteredResults.length === 1 ? 'item' : 'items' }} found
       </span>
-      <div class="sort-controls">
-        <label class="sort-label">Sort by:</label>
-        <select v-model="sortBy" class="sort-select">
-          <option value="name">Name</option>
-          <option value="date">Date</option>
-          <option value="size">Size</option>
-        </select>
-        <button class="sort-order-btn" @click="toggleSortOrder" :title="sortOrder === 'asc' ? 'Ascending' : 'Descending'">
-          {{ sortOrder === 'asc' ? '↑' : '↓' }}
-        </button>
+      <div class="header-controls">
+        <div class="sort-controls">
+          <label class="sort-label">Sort by:</label>
+          <select v-model="sortBy" class="sort-select">
+            <option value="name">Name</option>
+            <option value="date">Date</option>
+            <option value="size">Size</option>
+          </select>
+          <button class="sort-order-btn" @click="toggleSortOrder" :title="sortOrder === 'asc' ? 'Ascending' : 'Descending'">
+            {{ sortOrder === 'asc' ? '↑' : '↓' }}
+          </button>
+        </div>
+        <div class="view-toggle">
+          <button
+            :class="['view-btn', { active: displayMode === 'detail' }]"
+            @click="displayMode = 'detail'"
+            title="Detail View"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+          </button>
+          <button
+            :class="['view-btn', { active: displayMode === 'grid' }]"
+            @click="displayMode = 'grid'"
+            title="Large Icons"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -29,8 +59,8 @@
       No results found
     </div>
 
-    <!-- Results list -->
-    <div v-else class="results-list">
+    <!-- Results list (Detail View) -->
+    <div v-else-if="displayMode === 'detail'" class="results-list">
       <div
         v-for="item in sortedResults"
         :key="item.id"
@@ -52,15 +82,36 @@
         </div>
       </div>
     </div>
+
+    <!-- Results grid (Large Icons View) -->
+    <div
+      v-else
+      class="results-grid"
+      :style="gridStyle"
+      @wheel.ctrl.prevent="handleZoom"
+    >
+      <GridFileCard
+        v-for="item in sortedResults"
+        :key="item.id"
+        :file="toFileEntry(item)"
+        :zoom-level="zoomLevel"
+        :tags="[]"
+        :show-tags="false"
+        @click="handleCardClick"
+        @open="handleCardOpen"
+      />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useFileExplorerStore } from '@/stores/fileExplorer'
+import { useAppStore } from '@/stores/app'
 import { getFileName, getParentPath } from '@/utils/path'
 import { formatBytes, formatDate } from '@/utils/format'
-import type { Item } from '@/types'
+import GridFileCard from '@/components/FileExplorer/GridFileCard.vue'
+import type { Item, FileEntry } from '@/types'
 
 interface Props {
   results: Item[]
@@ -73,9 +124,11 @@ interface Props {
 const props = defineProps<Props>()
 
 const fileExplorerStore = useFileExplorerStore()
+const appStore = useAppStore()
 
 const sortBy = ref<'name' | 'date' | 'size'>('name')
 const sortOrder = ref<'asc' | 'desc'>('asc')
+const displayMode = ref<'detail' | 'grid'>('detail')
 
 const filteredResults = computed(() => {
   if (props.clientFilter) {
@@ -120,7 +173,53 @@ function toggleSortOrder() {
 function openItem(item: Item) {
   const dirPath = item.is_directory ? item.path : getParentPath(item.path)
   fileExplorerStore.navigateTo(dirPath)
-  // Don't change tab - user should stay on Search tab when clicking results
+  // Collapse sidebar so user can see the file in File Browser
+  appStore.setSidebarExpanded(false)
+}
+
+// Grid view support
+const zoomLevel = ref(100)
+const MIN_ZOOM = 50
+const MAX_ZOOM = 300
+
+const gridStyle = computed(() => {
+  const baseSize = 150
+  const baseGap = 16
+  const cardSize = Math.floor(baseSize * (zoomLevel.value / 100))
+  const gap = Math.floor(baseGap * (zoomLevel.value / 100))
+
+  return {
+    gridTemplateColumns: `repeat(auto-fill, minmax(${cardSize}px, 1fr))`,
+    gap: `${gap}px`
+  }
+})
+
+function toFileEntry(item: Item): FileEntry {
+  return {
+    name: getFileName(item.path),
+    path: item.path,
+    is_directory: item.is_directory,
+    size: item.size ?? 0,
+    modified_time: item.modified_time ?? 0,
+    is_hidden: false
+  }
+}
+
+function handleCardClick(_file: FileEntry) {
+  // Single click - no action in search results
+}
+
+function handleCardOpen(file: FileEntry) {
+  const item = sortedResults.value.find(i => i.path === file.path)
+  if (item) {
+    openItem(item)
+  }
+}
+
+function handleZoom(event: WheelEvent) {
+  const delta = event.deltaY > 0 ? -10 : 10
+  const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoomLevel.value + delta))
+  zoomLevel.value = newZoom
 }
 </script>
 
@@ -148,10 +247,48 @@ function openItem(item: Item) {
   color: var(--text-secondary);
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .sort-controls {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.view-toggle {
+  display: flex;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.view-btn {
+  padding: 5px 8px;
+  border: none;
+  background: var(--surface);
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-fast);
+}
+
+.view-btn:first-child {
+  border-right: 1px solid var(--border-color);
+}
+
+.view-btn:hover:not(.active) {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.view-btn.active {
+  background: var(--primary-color);
+  color: white;
 }
 
 .sort-label {
@@ -263,5 +400,14 @@ function openItem(item: Item) {
   font-size: 11px;
   color: var(--text-secondary);
   white-space: nowrap;
+}
+
+/* Grid View */
+.results-grid {
+  display: grid;
+  grid-auto-rows: min-content;
+  padding: 16px;
+  flex: 1;
+  overflow-y: auto;
 }
 </style>
