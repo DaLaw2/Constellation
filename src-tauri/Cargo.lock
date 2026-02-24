@@ -530,6 +530,7 @@ dependencies = [
  "deadpool 0.10.0",
  "deadpool-sqlite",
  "image",
+ "num_cpus",
  "opener",
  "pest",
  "pest_derive",

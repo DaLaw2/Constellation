@@ -26,21 +26,21 @@ pub struct ComWorker {
 }
 
 impl ComWorker {
-    /// Spawn the dedicated COM STA thread.
+    /// Spawn a named COM STA thread with the given index.
     ///
     /// The thread initializes COM, then loops processing requests
     /// until the channel is closed (when `ComWorker` is dropped).
-    pub fn spawn() -> Self {
+    pub fn spawn_named(index: usize) -> Result<Self, ThumbnailError> {
         let (tx, mut rx) = mpsc::channel::<ThumbnailRequest>(64);
 
         std::thread::Builder::new()
-            .name("com-thumbnail-worker".into())
+            .name(format!("com-thumb-worker-{}", index))
             .spawn(move || {
                 // Initialize COM in Single-Threaded Apartment mode
                 unsafe {
                     let hr = CoInitializeEx(None, COINIT_APARTMENTTHREADED);
                     if let Err(e) = hr.ok() {
-                        eprintln!("Failed to initialize COM: {}", e);
+                        eprintln!("COM worker {} failed to initialize: {}", index, e);
                         // Drain remaining requests with error
                         while let Some(req) = rx.blocking_recv() {
                             let _ = req.response.send(Err(ThumbnailError::Com(e.clone())));
@@ -59,9 +59,9 @@ impl ComWorker {
                     CoUninitialize();
                 }
             })
-            .expect("Failed to spawn COM worker thread");
+            .map_err(ThumbnailError::Io)?;
 
-        Self { sender: tx }
+        Ok(Self { sender: tx })
     }
 
     /// Generate a thumbnail asynchronously.

@@ -1,5 +1,5 @@
 <template>
-  <div class="picture-grid-container">
+  <div ref="containerRef" class="picture-grid-container">
     <div v-if="!hasImages" class="empty-state">
       <div class="empty-icon">🖼️</div>
       <div class="empty-title">No Media Found</div>
@@ -8,41 +8,58 @@
       </div>
     </div>
 
-    <div v-else class="picture-grid" :style="gridStyle">
-      <PictureCard
-        v-for="(image, index) in currentImages"
-        :key="image.path"
-        :entry="image"
-        @click="handleCardClick(index)"
-      />
-    </div>
+    <RecycleScroller
+      v-else
+      class="picture-scroller"
+      :items="rows"
+      :item-size="LAYOUT.PICTURE_ROW_HEIGHT"
+      key-field="id"
+      v-slot="{ item: row }"
+    >
+      <div class="picture-row" :style="rowStyle">
+        <PictureCard
+          v-for="(image, localIndex) in row.items"
+          :key="image.path"
+          :entry="image"
+          @click="handleCardClick(row.startIndex + localIndex)"
+        />
+      </div>
+    </RecycleScroller>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { RecycleScroller } from 'vue-virtual-scroller'
+import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 import { usePictureViewStore } from '@/stores/pictureView'
 import { useLightboxStore } from '@/stores/lightbox'
+import { useGridVirtualScroll } from '@/composables'
+import { LAYOUT } from '@/constants'
 import PictureCard from './PictureCard.vue'
 
 const pictureViewStore = usePictureViewStore()
 const lightboxStore = useLightboxStore()
 
+const containerRef = ref<HTMLElement | null>(null)
+
 const currentImages = computed(() => pictureViewStore.currentImages)
 const hasImages = computed(() => pictureViewStore.hasImages)
 
-const gridStyle = computed(() => ({
-  gridTemplateColumns: `repeat(auto-fill, minmax(${getCardSize()}px, 1fr))`
-}))
+// Virtual scroll row grouping
+const { rows, columnCount } = useGridVirtualScroll(currentImages, {
+  minCardWidth: LAYOUT.PICTURE_MIN_CARD_WIDTH,
+  gap: LAYOUT.GRID_GAP,
+  containerRef,
+})
 
-function getCardSize(): number {
-  // Calculate card size based on grid columns
-  // Assuming container width ~1200px, with 16px gaps
-  const columns = pictureViewStore.gridColumns
-  const gap = 16
-  const containerWidth = 1200
-  return Math.floor((containerWidth - (gap * (columns + 1))) / columns)
-}
+const rowStyle = computed(() => ({
+  display: 'grid',
+  gridTemplateColumns: `repeat(${columnCount.value}, 1fr)`,
+  gap: `${LAYOUT.GRID_GAP}px`,
+  height: `${LAYOUT.PICTURE_ROW_HEIGHT}px`,
+  alignContent: 'start',
+}))
 
 function handleCardClick(index: number) {
   lightboxStore.open(currentImages.value, index)
@@ -52,14 +69,17 @@ function handleCardClick(index: number) {
 <style scoped>
 .picture-grid-container {
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
+}
+
+.picture-scroller {
+  height: 100%;
   padding: 16px;
 }
 
-.picture-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 16px;
+.picture-row {
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .empty-state {

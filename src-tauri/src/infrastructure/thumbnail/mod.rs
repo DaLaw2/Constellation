@@ -5,8 +5,9 @@
 
 mod cache;
 mod com_worker;
+mod com_worker_pool;
 mod generator;
 
 pub use cache::ThumbnailCache;
-pub use com_worker::ComWorker;
+pub use com_worker_pool::ComWorkerPool;
 pub use generator::ThumbnailError;

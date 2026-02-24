@@ -195,10 +195,7 @@ impl ItemService {
         // Batch add tag
         match self.item_repo.batch_add_tag(&item_ids, tag_id).await {
             Ok(_) => result.success_count = item_ids.len(),
-            Err(e) => {
-                result.failed_count = item_ids.len();
-                return Err(e);
-            }
+            Err(e) => return Err(e),
         }
 
         Ok(result)
@@ -233,10 +230,7 @@ impl ItemService {
         // Batch remove tag
         match self.item_repo.batch_remove_tag(&item_ids, tag_id).await {
             Ok(_) => result.success_count = item_ids.len(),
-            Err(e) => {
-                result.failed_count = item_ids.len();
-                return Err(e);
-            }
+            Err(e) => return Err(e),
         }
 
         Ok(result)

@@ -3,7 +3,7 @@
 //! Orchestrates thumbnail generation with caching and concurrency control.
 
 use crate::application::services::SettingsService;
-use crate::infrastructure::thumbnail::{ComWorker, ThumbnailCache, ThumbnailError};
+use crate::infrastructure::thumbnail::{ComWorkerPool, ThumbnailCache, ThumbnailError};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
@@ -18,7 +18,7 @@ pub struct CacheStats {
 /// Service for thumbnail generation with disk caching and concurrency control.
 pub struct ThumbnailService {
     cache: ThumbnailCache,
-    worker: ComWorker,
+    pool: ComWorkerPool,
     semaphore: Arc<Semaphore>,
     settings_service: Arc<SettingsService>,
 }
@@ -26,20 +26,57 @@ pub struct ThumbnailService {
 impl ThumbnailService {
     /// Create a new thumbnail service.
     ///
+    /// Reads worker count and semaphore count from settings.
+    /// Falls back to CPU-based defaults if not configured (value 0 = auto).
+    ///
     /// - `app_data_dir`: Base AppData directory (thumbnails stored in `{dir}/thumbnails/`)
     /// - `settings_service`: For reading thumbnail-related settings
-    pub fn new(app_data_dir: PathBuf, settings_service: Arc<SettingsService>) -> Self {
+    pub async fn new(
+        app_data_dir: PathBuf,
+        settings_service: Arc<SettingsService>,
+    ) -> Result<Self, ThumbnailError> {
         let cache_dir = app_data_dir.join("thumbnails");
         let cache = ThumbnailCache::new(cache_dir);
-        let worker = ComWorker::spawn();
-        let semaphore = Arc::new(Semaphore::new(4));
 
-        Self {
+        // Read worker count: 0 = auto (CPU cores / 2, min 2)
+        let worker_count_raw = settings_service
+            .get("thumbnail_worker_count")
+            .await
+            .ok()
+            .flatten()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(0);
+
+        let worker_count = if worker_count_raw == 0 {
+            num_cpus::get().div_ceil(2).max(2)
+        } else {
+            worker_count_raw.clamp(1, 16)
+        };
+
+        // Read semaphore count: 0 = auto (worker_count * 2)
+        let semaphore_count_raw = settings_service
+            .get("thumbnail_semaphore_count")
+            .await
+            .ok()
+            .flatten()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(0);
+
+        let semaphore_count = if semaphore_count_raw == 0 {
+            worker_count * 2
+        } else {
+            semaphore_count_raw.clamp(1, 32)
+        };
+
+        let pool = ComWorkerPool::spawn(worker_count)?;
+        let semaphore = Arc::new(Semaphore::new(semaphore_count));
+
+        Ok(Self {
             cache,
-            worker,
+            pool,
             semaphore,
             settings_service,
-        }
+        })
     }
 
     /// Get or generate a thumbnail. Returns WebP-encoded bytes.
@@ -66,7 +103,7 @@ impl ThumbnailService {
         }
 
         let webp = self
-            .worker
+            .pool
             .generate(PathBuf::from(file_path), thumb_size)
             .await?;
 

@@ -13,3 +13,4 @@ export { useFileContextMenu, type ContextMenuOptions } from './useFileContextMen
 export { useResizablePanel, type UseResizablePanelOptions } from './useResizablePanel'
 export { useContextMenu, type ContextMenuState } from './useContextMenu'
 export { useDragAndDrop, extractIds, type DragState, type UseDragAndDropOptions } from './useDragAndDrop'
+export { useGridVirtualScroll, type GridRow, type UseGridVirtualScrollOptions } from './useGridVirtualScroll'

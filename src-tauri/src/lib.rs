@@ -54,7 +54,13 @@ pub fn run() {
             };
 
             // Create and manage app state
-            let app_state = AppState::new(pool, config, app_data_dir.clone());
+            // SAFETY: AppState initialization is critical for application functionality.
+            // It reads settings from DB and spawns COM worker threads.
+            // If this fails, the application cannot proceed.
+            let app_state = tauri::async_runtime::block_on(async {
+                AppState::new(pool, config, app_data_dir.clone()).await
+            })
+            .expect("Failed to initialize application state - check database and system resources");
             app.manage(app_state);
 
             // Spawn background cache eviction on startup
